@@ -32,9 +32,9 @@ jobs:
           DIFF=$(cat diff.txt | head -c 8000)
 
           JSON=$(jq -n --arg diff "$DIFF" '{
-            "model": "claude-3-5-sonnet-20240620",
+            "model": "claude-sonnet-4-6",
             "max_tokens": 1500,
-            "system": "You are an AI code reviewer. Review the following git diff and provide suggestions, bug risks, and style comments.",
+            "system": "You are an AI code reviewer. Review the following git diff and provide suggestions, bug risks, and style comments. Be concise and structured.",
             "messages": [
               {
                 "role": "user",
@@ -56,3 +56,21 @@ jobs:
 
           echo "=== RAW RESPONSE ==="
           echo "$RESPONSE"
+
+          # ดึงเฉพาะข้อความรีวิวออกมาเก็บในไฟล์
+          echo "$RESPONSE" | jq -r '.content[0].text' > review.txt
+
+      - name: Post review as PR comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REVIEW=$(cat review.txt)
+
+          # กัน JSON แตกเวลาเจอ newline / quote
+          BODY=$(jq -n --arg body "$REVIEW" '{ body: $body }')
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -d "$BODY"
