@@ -30,11 +30,11 @@ jobs:
           -H "Authorization: Bearer $OPENAI_API_KEY" \
           -H "Content-Type: application/json" \
           -d '{
-            "model": "gpt-4.1-mini",
+            "model": "gpt-4o-mini",
             "messages": [
               {
                 "role": "system",
-                "content": "You are a senior iOS engineer reviewing SwiftUI code."
+                "content": "You are a senior iOS engineer. Review SwiftUI code for bugs, memory leaks, AVPlayer misuse, and performance issues. Give concise actionable feedback."
               },
               {
                 "role": "user",
@@ -43,9 +43,19 @@ jobs:
             ]
           }')
 
+          echo "=== RAW RESPONSE ==="
+          echo "$RESPONSE" | jq .
+
           echo "$RESPONSE" > response.json
 
-          POST_COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          # กัน error response
+          ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+
+          if [ ! -z "$ERROR" ]; then
+            POST_COMMENT="❌ OpenAI API Error: $ERROR"
+          else
+            POST_COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No response from AI"')
+          fi
 
           echo "comment<<EOF" >> $GITHUB_OUTPUT
           echo "$POST_COMMENT" >> $GITHUB_OUTPUT
