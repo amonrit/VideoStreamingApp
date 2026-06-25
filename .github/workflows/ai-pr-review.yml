@@ -1,0 +1,57 @@
+name: AI PR Review
+
+on:
+  pull_request:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git diff origin/${{ github.event.pull_request.base.ref }} > diff.txt
+
+      - name: AI Review
+        id: ai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+          -H "Authorization: Bearer $OPENAI_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "model": "gpt-4.1-mini",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are a senior iOS engineer reviewing SwiftUI code."
+              },
+              {
+                "role": "user",
+                "content": "'"$(cat diff.txt | head -c 12000)"'"
+              }
+            ]
+          }')
+
+          echo "$RESPONSE" > response.json
+
+          POST_COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "$POST_COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post comment to PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            -d "{\"body\":\"${{ steps.ai.outputs.comment }}\"}"
