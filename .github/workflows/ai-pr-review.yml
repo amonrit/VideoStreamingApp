@@ -23,21 +23,34 @@ jobs:
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
 
-      - name: Call OpenAI (SAFE JSON)
+      - name: Call Claude (Anthropic API)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "=== CALL OPENAI ==="
+          echo "=== CALL CLAUDE ==="
 
           DIFF=$(cat diff.txt | head -c 8000)
 
           JSON=$(jq -n --arg diff "$DIFF" '{
-            model: "gpt-4.1-mini",
-            input: ("Review this code diff:\n\n" + $diff)
+            "model": "claude-3-5-sonnet-20240620",
+            "max_tokens": 1500,
+            "system": "You are an AI code reviewer. Review the following git diff and provide suggestions, bug risks, and style comments.",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": ("Review this code diff:\n\n" + $diff)
+                  }
+                ]
+              }
+            ]
           }')
 
-          RESPONSE=$(curl -s https://api.openai.com/v1/responses \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
             -H "Content-Type: application/json" \
             -d "$JSON")
 
