@@ -15,21 +15,23 @@ jobs:
 
     steps:
       # =========================
-      # 1. Checkout
+      # Checkout repo
       # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
       # =========================
-      # 2. Install jq (for JSON parsing)
+      # Install tools
       # =========================
-      - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
 
       # =========================
-      # 3. Get PR diff (BEST PRACTICE - NO GIT ISSUES)
+      # Get PR diff (stable method)
       # =========================
-      - name: Get PR Diff from GitHub API
+      - name: Fetch PR Diff
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -48,7 +50,7 @@ jobs:
           head -c 2000 diff.txt
 
       # =========================
-      # 4. AI Review
+      # AI REVIEW (SAFE JSON BUILD)
       # =========================
       - name: AI Review
         id: ai
@@ -57,22 +59,26 @@ jobs:
         run: |
           echo "Calling OpenAI..."
 
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "gpt-4o-mini",
-              "messages": [
+          PROMPT=$(cat diff.txt | head -c 12000)
+
+          RESPONSE=$(jq -n \
+            --arg prompt "$PROMPT" \
+            '{
+              model: "gpt-4o-mini",
+              messages: [
                 {
-                  "role": "system",
-                  "content": "You are a senior iOS engineer reviewing SwiftUI + AVPlayer streaming apps. Focus on bugs, memory leaks, architecture, and performance."
+                  role: "system",
+                  content: "You are a senior iOS engineer reviewing SwiftUI + AVPlayer streaming apps. Focus on bugs, performance issues, memory leaks, and architecture problems."
                 },
                 {
-                  "role": "user",
-                  "content": "'"$(cat diff.txt | head -c 12000)"'"
+                  role: "user",
+                  content: $prompt
                 }
               ]
-            }')
+            }' | curl -s https://api.openai.com/v1/chat/completions \
+              -H "Authorization: Bearer '"$OPENAI_API_KEY"'" \
+              -H "Content-Type: application/json" \
+              -d @-)
 
           echo "=== RAW RESPONSE ==="
           echo "$RESPONSE" | jq .
@@ -84,13 +90,12 @@ jobs:
             COMMENT="❌ OpenAI Error: $ERROR"
 
           elif [ -z "$CONTENT" ]; then
-            COMMENT="⚠️ Empty AI response (check model / quota / diff size)"
+            COMMENT="⚠️ Empty AI response (check quota / prompt size / model)"
 
           else
             COMMENT="## 🤖 AI PR REVIEW\n\n$CONTENT"
           fi
 
-          # escape multiline for GitHub output
           {
             echo "comment<<EOF"
             echo "$COMMENT"
@@ -98,9 +103,9 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       # =========================
-      # 5. Post comment to PR
+      # Post comment to PR
       # =========================
-      - name: Comment on PR
+      - name: Comment PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
