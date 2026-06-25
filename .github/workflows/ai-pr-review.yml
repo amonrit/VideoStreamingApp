@@ -2,7 +2,6 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -14,71 +13,89 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Generate diff
+      # =========================
+      # GET DIFF (safe + reliable)
+      # =========================
+      - name: Get diff
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
 
+          echo "=== DIFF SIZE ==="
+          wc -c diff.txt
+
+      # =========================
+      # CALL OPENAI (NEW API)
+      # =========================
       - name: AI Review
         id: ai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "=== CALLING OPENAI ==="
+          set -e
 
-          DIFF=$(head -c 12000 diff.txt | jq -Rs .)
+          echo "=== CALLING OPENAI (RESPONSES API) ==="
 
-          JSON=$(jq -n \
-            --arg model "gpt-4o-mini" \
-            --arg diff "$DIFF" \
-            '{
-              model: $model,
-              messages: [
-                {
-                  role: "system",
-                  content: "You are a senior iOS SwiftUI engineer."
-                },
-                {
-                  role: "user",
-                  content: $diff
-                }
-              ]
-            }')
-
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Authorization: Bearer '"$OPENAI_API_KEY"'" \
+          RESPONSE=$(curl -s https://api.openai.com/v1/responses \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "$JSON")
+            -d @- <<EOF
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": "You are a senior iOS engineer reviewing SwiftUI code. Focus on bugs, architecture, performance, and best practices."
+    },
+    {
+      "role": "user",
+      "content": "$(sed ':a;N;$!ba;s/"/\\"/g' diff.txt | head -c 12000)"
+    }
+  ]
+}
+EOF
+          )
 
           echo "=== RAW RESPONSE ==="
-          echo "$RESPONSE" | jq .
+          echo "$RESPONSE" | jq . || true
 
-          ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+          # =========================
+          # EXTRACT TEXT SAFELY
+          # =========================
+          COMMENT=$(echo "$RESPONSE" | jq -r '.output[0].content[0].text // empty')
 
-          if [ ! -z "$ERROR" ]; then
-            echo "❌ OPENAI ERROR: $ERROR"
+          if [ -z "$COMMENT" ]; then
+            echo "❌ OpenAI returned empty response"
+            echo "$RESPONSE"
             exit 1
           fi
 
-          COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No review"')
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          {
-            echo "comment<<EOF"
-            echo "$COMMENT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-      - name: Post comment
+      # =========================
+      # POST COMMENT
+      # =========================
+      - name: Post comment to PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+
+          BODY="${{ steps.ai.outputs.comment }}"
+
+          if [ -z "$BODY" ]; then
+            BODY="❌ AI review failed: empty response"
+          fi
+
           curl -s -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            -d "{\"body\":\"${{ steps.ai.outputs.comment }}\"}"
+            -d "{\"body\": $(echo "$BODY" | jq -Rsa .)}"
