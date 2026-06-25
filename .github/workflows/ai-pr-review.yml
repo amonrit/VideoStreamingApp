@@ -2,7 +2,6 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -14,104 +13,89 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # 1. Checkout
-      # =========================
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # =========================
-      # 2. Install jq (for JSON parsing)
+      # GET DIFF (safe + reliable)
       # =========================
-      - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      # =========================
-      # 3. Get PR diff (BEST PRACTICE - NO GIT ISSUES)
-      # =========================
-      - name: Get PR Diff from GitHub API
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get diff
         run: |
-          echo "Fetching PR diff..."
-
-          curl -s \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3.diff" \
-            https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
-            > diff.txt
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
 
           echo "=== DIFF SIZE ==="
           wc -c diff.txt
 
-          echo "=== DIFF PREVIEW ==="
-          head -c 2000 diff.txt
-
       # =========================
-      # 4. AI Review
+      # CALL OPENAI (NEW API)
       # =========================
       - name: AI Review
         id: ai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "Calling OpenAI..."
+          set -e
 
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+          echo "=== CALLING OPENAI (RESPONSES API) ==="
+
+          RESPONSE=$(curl -s https://api.openai.com/v1/responses \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{
-              "model": "gpt-4o-mini",
-              "messages": [
-                {
-                  "role": "system",
-                  "content": "You are a senior iOS engineer reviewing SwiftUI + AVPlayer streaming apps. Focus on bugs, memory leaks, architecture, and performance."
-                },
-                {
-                  "role": "user",
-                  "content": "'"$(cat diff.txt | head -c 12000)"'"
-                }
-              ]
-            }')
+            -d @- <<EOF
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": "You are a senior iOS engineer reviewing SwiftUI code. Focus on bugs, architecture, performance, and best practices."
+    },
+    {
+      "role": "user",
+      "content": "$(sed ':a;N;$!ba;s/"/\\"/g' diff.txt | head -c 12000)"
+    }
+  ]
+}
+EOF
+          )
 
           echo "=== RAW RESPONSE ==="
-          echo "$RESPONSE" | jq .
+          echo "$RESPONSE" | jq . || true
 
-          ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
-          CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+          # =========================
+          # EXTRACT TEXT SAFELY
+          # =========================
+          COMMENT=$(echo "$RESPONSE" | jq -r '.output[0].content[0].text // empty')
 
-          if [ ! -z "$ERROR" ]; then
-            COMMENT="❌ OpenAI Error: $ERROR"
-
-          elif [ -z "$CONTENT" ]; then
-            COMMENT="⚠️ Empty AI response (check model / quota / diff size)"
-
-          else
-            COMMENT="## 🤖 AI PR REVIEW\n\n$CONTENT"
+          if [ -z "$COMMENT" ]; then
+            echo "❌ OpenAI returned empty response"
+            echo "$RESPONSE"
+            exit 1
           fi
 
-          # escape multiline for GitHub output
-          {
-            echo "comment<<EOF"
-            echo "$COMMENT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       # =========================
-      # 5. Post comment to PR
+      # POST COMMENT
       # =========================
-      - name: Comment on PR
+      - name: Post comment to PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMENT="${{ steps.ai.outputs.comment }}"
+          set -e
 
-          echo "Posting comment..."
+          BODY="${{ steps.ai.outputs.comment }}"
+
+          if [ -z "$BODY" ]; then
+            BODY="❌ AI review failed: empty response"
+          fi
 
           curl -s -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            -d "{\"body\":\"$COMMENT\"}"
-
-          echo "Done"
+            -d "{\"body\": $(echo "$BODY" | jq -Rsa .)}"
