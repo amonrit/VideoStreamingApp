@@ -12,6 +12,7 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
 
     steps:
       - name: Checkout
@@ -34,13 +35,14 @@ jobs:
             exit 1
           fi
 
+          # Full PR diff: merge-base of base branch and PR head
           git fetch origin "$BASE_REF"
           git diff "origin/$BASE_REF"...HEAD > diff.txt
 
           DIFF_SIZE=$(wc -c < diff.txt)
           echo "Diff size: $DIFF_SIZE bytes"
-          if [ "$DIFF_SIZE" -gt 8000 ]; then
-            echo "Warning: diff truncated to 8000 bytes for AI review"
+          if [ "$DIFF_SIZE" -gt 20000 ]; then
+            echo "Warning: diff will be truncated to 20000 bytes for AI review"
           fi
 
       - name: Call Claude (Anthropic API)
@@ -49,19 +51,42 @@ jobs:
         run: |
           echo "=== CALL CLAUDE ==="
 
-          DIFF=$(head -c 8000 diff.txt)
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "Error: ANTHROPIC_API_KEY is not set"
+            exit 1
+          fi
+
+          DIFF=$(head -c 20000 diff.txt)
 
           JSON=$(jq -n --arg diff "$DIFF" '{
             "model": "claude-sonnet-4-6",
-            "max_tokens": 1500,
-            "system": "You are an AI code reviewer. Review the following git diff and provide suggestions, bug risks, and style comments. Be concise and structured.",
+            "max_tokens": 2000,
+            "system": "You are a strict senior engineer doing code review. Your job is to point out SPECIFIC issues and suggest CONCRETE fixes. Do NOT waste tokens on generic compliments, restating the diff, or high-level summaries without action items.",
             "messages": [
               {
                 "role": "user",
                 "content": [
                   {
                     "type": "text",
-                    "text": ("Review this code diff:\n\n" + $diff)
+                    "text": (
+                      "คุณกำลังรีวิว GitHub Pull Request ทั้งชุด (ไม่ใช่แค่ commit ล่าสุด).\n\n" +
+                      "สิ่งที่ต้องทำ (สำคัญมาก):\n" +
+                      "- โฟกัสที่ \"ต้องแก้ตรงไหนอย่างไร\" เท่านั้น\n" +
+                      "- สำหรับแต่ละประเด็น ให้ระบุให้ชัด:\n" +
+                      "  - ไฟล์ / ฟังก์ชัน / บรรทัด (ถ้าพอระบุได้จาก diff)\n" +
+                      "  - ปัญหาคืออะไร (bug risk, logic, performance, security, DX ฯลฯ)\n" +
+                      "  - ควรแก้อย่างไร (ตัวอย่างโค้ด หรือแนวทางที่ชัดเจน)\n" +
+                      "- ห้ามเขียนน้ำ เช่น “โค้ดนี้ดูดีแล้ว”, “โดยรวมโอเค” ถ้าไม่มี action item ไม่ต้องเขียน\n" +
+                      "- ถ้าไม่มีอะไรต้องแก้จริง ๆ ให้เขียนสั้น ๆ ว่า \"ไม่พบประเด็นที่ต้องแก้\" เท่านั้น\n" +
+                      "- ใช้ภาษาไทยได้เต็มที่ แต่ชื่อไฟล์ / identifier ให้คงเป็นภาษาอังกฤษตามโค้ด\n\n" +
+                      "รูปแบบคำตอบ (ห้ามใส่อย่างอื่นเพิ่ม):\n" +
+                      "1) Issues ที่ต้องแก้ (ถ้ามี)\n" +
+                      "- [ไฟล์:บรรทัดโดยประมาณ] คำอธิบายปัญหา + ข้อเสนอวิธีแก้\n" +
+                      "- ....\n\n" +
+                      "2) หมายเหตุเพิ่มเติมที่อาจพิจารณา (optional, ถ้าจำเป็นจริง ๆ เท่านั้น)\n\n" +
+                      "นี่คือ diff ของทั้ง PR:\n\n" +
+                      $diff
+                    )
                   }
                 ]
               }
@@ -102,6 +127,12 @@ jobs:
 
           curl -sS --fail -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
             -d "$BODY"
+
+      - name: Cleanup artifacts
+        if: always()
+        run: |
+          rm -f diff.txt response.json review.txt
