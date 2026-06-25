@@ -14,11 +14,10 @@ struct VideoPlayerView: View {
     
     var body: some View {
         VideoPlayer(player: viewModel.player)
-            .onAppear {
-                viewModel.play()
-            }
-            .onDisappear {
-                viewModel.pause()
-            }
+            .ignoresSafeArea()
     }
+}
+
+#Preview {
+    VideoPlayerView(viewModel: VideoPlayerViewModel())
 }

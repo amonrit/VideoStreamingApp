@@ -9,27 +9,33 @@ import SwiftUI
 
 struct ContentView: View {
     
-    @StateObject private var vm = VideoPlayerViewModel()
+    @StateObject private var viewModel = VideoPlayerViewModel()
     
     var body: some View {
         VStack {
             
-            VideoPlayerView(viewModel: vm)
+            VideoPlayerView(viewModel: viewModel)
                 .frame(height: 250)
             
             HStack {
                 
                 Button("Play") {
-                    vm.play()
+                    viewModel.play()
                 }
                 .buttonStyle(.borderedProminent)
                 
                 Button("Pause") {
-                    vm.pause()
+                    viewModel.pause()
                 }
                 .buttonStyle(.bordered)
             }
+            
+            Spacer()
         }
         .padding()
     }
+}
+
+#Preview {
+    ContentView()
 }
