@@ -14,64 +14,57 @@ struct VideoPlayerView: View {
     
     var body: some View {
         ZStack {
-            // Video Player
+            // Main video player
             VideoPlayer(player: viewModel.player)
-                .ignoresSafeArea()
+                .background(Color.black)
+                .clipped()
             
-            // Loading Indicator
+            // Loading overlay
             if viewModel.isLoading {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .tint(.white)
-                        .scaleEffect(1.5, anchor: .center)
-                    
-                    Text("Loading...")
-                        .foregroundColor(.white)
-                        .font(.caption)
+                ZStack {
+                    Color.black.opacity(0.3)
+                    VStack(spacing: 8) {
+                        ProgressView()
+                            .tint(.white)
+                        Text("Loading...")
+                            .foregroundColor(.white)
+                            .font(.caption)
+                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.3))
             }
             
-            // Error Message
+            // Error overlay
             if let error = viewModel.errorMessage {
-                VStack(spacing: 16) {
+                ZStack {
+                    Color.black.opacity(0.6)
                     VStack(spacing: 12) {
                         Text(error)
                             .foregroundColor(.white)
                             .font(.body)
                             .multilineTextAlignment(.center)
-                            .padding()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .background(Color.black.opacity(0.8))
-                    .cornerRadius(12)
-                    
-                    // Show Retry button only for specific errors
-                    if error.contains("Failed") || error.contains("Playback error") {
-                        Button(action: {
+                            .padding(.horizontal)
+                        
+                        Button {
                             viewModel.retry()
-                        }) {
+                        } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("Retry")
                             }
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
                             .background(Color.blue)
                             .foregroundColor(.white)
                             .cornerRadius(8)
                         }
                     }
+                    .padding()
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.7))
             }
         }
     }
 }
 
 #Preview {
-    VideoPlayerView(viewModel: VideoPlayerViewModel())
+    VideoPlayerView(viewModel: VideoPlayerViewModel(stream: .sample))
 }

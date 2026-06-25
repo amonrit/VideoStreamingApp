@@ -9,85 +9,129 @@ import SwiftUI
 
 struct ContentView: View {
     
-    @StateObject private var viewModel = VideoPlayerViewModel()
+    @StateObject private var viewModel = VideoPlayerViewModel(stream: .sample)
+    @State private var streams: [VideoStream] = VideoStream.sampleStreams
     
     var body: some View {
-        VStack(spacing: 16) {
-            
-            // Video Player
-            VideoPlayerView(viewModel: viewModel)
-                .frame(height: 250)
-            
-            // Error Display (fallback if not shown in player)
-            if let error = viewModel.errorMessage, error.contains("Invalid URL") {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                        .font(.title3)
-                    
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .lineLimit(3)
-                    
-                    Spacer()
-                }
-                .padding()
-                .background(Color.red.opacity(0.1))
-                .border(Color.red.opacity(0.3), width: 1)
-                .cornerRadius(8)
-                .padding(.horizontal)
-            }
-            
-            // Controls
-            HStack(spacing: 12) {
-                Button(action: {
-                    viewModel.play()
-                }) {
-                    HStack {
-                        Image(systemName: "play.fill")
-                        Text("Play")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(12)
-                    .background(viewModel.errorMessage != nil ? Color.gray.opacity(0.5) : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .font(.subheadline.bold())
-                }
-                .disabled(viewModel.errorMessage != nil)
+        NavigationView {
+            VStack(spacing: 16) {
                 
-                Button(action: {
-                    viewModel.pause()
-                }) {
-                    HStack {
-                        Image(systemName: "pause.fill")
-                        Text("Pause")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(12)
-                    .background(Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .font(.subheadline.bold())
-                }
-            }
-            .padding(.horizontal)
-            
-            // Status Info
-            if viewModel.isLoading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Buffering...")
+                // Main video player
+                VideoPlayerView(viewModel: viewModel)
+                    .frame(height: 240)
+                    .background(Color.black)
+                
+                // Now playing title
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Now Playing")
                         .font(.caption)
                         .foregroundColor(.gray)
+                    
+                    Text(viewModel.currentStream.title)
+                        .font(.headline)
+                        .lineLimit(2)
                 }
-                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                
+                Divider()
+                
+                // Suggested videos list
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(streams) { stream in
+                            SuggestedVideoRow(
+                                stream: stream,
+                                isCurrent: stream.id == viewModel.currentStream.id
+                            )
+                            .onTapGesture {
+                                select(stream: stream)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                }
+            }
+            .navigationTitle("Video Player")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func select(stream: VideoStream) {
+        // เปลี่ยนวิดีโอหลัก
+        viewModel.currentStream = stream
+        
+        // reset list: ย้ายวิดีโอที่เลือกมาอยู่บนสุด
+        streams = reorderedStreams(selected: stream, from: streams)
+    }
+    
+    private func reorderedStreams(selected: VideoStream, from list: [VideoStream]) -> [VideoStream] {
+        var result = list
+        // ลบตัวที่เลือกออกจาก list เดิม
+        result.removeAll { $0.id == selected.id }
+        // แทรกไว้ข้างหน้า
+        result.insert(selected, at: 0)
+        return result
+    }
+}
+
+// MARK: - Suggested Video Row
+
+private struct SuggestedVideoRow: View {
+    
+    let stream: VideoStream
+    let isCurrent: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Thumbnail
+            AsyncImage(url: stream.thumbnailURL) { phase in
+                switch phase {
+                case .empty:
+                    ZStack {
+                        Color.gray.opacity(0.2)
+                        ProgressView()
+                    }
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    ZStack {
+                        Color.gray.opacity(0.2)
+                        Image(systemName: "video.slash")
+                            .foregroundColor(.gray)
+                    }
+                @unknown default:
+                    Color.gray.opacity(0.2)
+                }
+            }
+            .frame(width: 120, height: 68)
+            .clipped()
+            .cornerRadius(8)
+            
+            // Title
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stream.title)
+                    .font(.subheadline)
+                    .fontWeight(isCurrent ? .bold : .regular)
+                    .lineLimit(2)
+                
+                if isCurrent {
+                    Text("Now playing")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                }
             }
             
             Spacer()
         }
+        .padding(8)
+        .background(isCurrent ? Color.blue.opacity(0.08) : Color.clear)
+        .cornerRadius(10)
     }
 }
 
