@@ -3,6 +3,11 @@ name: AI PR Review
 on:
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   review:
     runs-on: ubuntu-latest
