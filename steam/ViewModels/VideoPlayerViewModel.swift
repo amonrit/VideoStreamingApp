@@ -22,12 +22,9 @@ final class VideoPlayerViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
-    // MARK: - Player
     let player: AVPlayer
     private var cancellables = Set<AnyCancellable>()
     private var timeObserver: Any?
-    
-    // MARK: - Init
     
     init(stream: VideoStream) {
         self.currentStream = stream
@@ -35,11 +32,9 @@ final class VideoPlayerViewModel: ObservableObject {
         load(stream: stream)
     }
     
-    // MARK: - Load / Switch stream
-    
     private func load(stream: VideoStream) {
         guard let url = stream.url else {
-            self.errorMessage = "❌ Invalid URL: \(stream.urlString)"
+            self.errorMessage = "Invalid URL: \(stream.urlString)"
             self.isLoading = false
             self.isPlaying = false
             player.replaceCurrentItem(with: nil)
@@ -57,10 +52,8 @@ final class VideoPlayerViewModel: ObservableObject {
     }
     
     private func setupObservers(for item: AVPlayerItem) {
-        // clear ของเก่า
         cancellables.removeAll()
         
-        // สถานะ ready/failed/unknown
         item.publisher(for: \.status)
             .sink { [weak self] status in
                 guard let self = self else { return }
@@ -70,7 +63,7 @@ final class VideoPlayerViewModel: ObservableObject {
                     self.errorMessage = nil
                 case .failed:
                     self.isLoading = false
-                    self.errorMessage = "❌ Failed to load video: \(item.error?.localizedDescription ?? "Unknown error")"
+                    self.errorMessage = "Failed to load video: \(item.error?.localizedDescription ?? "Unknown error")"
                 case .unknown:
                     self.isLoading = true
                 @unknown default:
@@ -79,38 +72,32 @@ final class VideoPlayerViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // buffering / keep up
         item.publisher(for: \.isPlaybackLikelyToKeepUp)
             .sink { [weak self] keepUp in
                 guard let self = self else { return }
                 if self.player.rate > 0 {
-                    // กำลังเล่นอยู่
                     self.isLoading = !keepUp
                 }
             }
             .store(in: &cancellables)
         
-        // stalled
         NotificationCenter.default.publisher(for: .AVPlayerItemPlaybackStalled, object: item)
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 self.isLoading = true
-                self.errorMessage = "⏸️ Buffering..."
+                self.errorMessage = "Buffering..."
             }
             .store(in: &cancellables)
         
-        // failed to play to end
         NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
             .sink { [weak self] notification in
                 guard let self = self else { return }
                 if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error {
-                    self.errorMessage = "❌ Playback error: \(error.localizedDescription)"
+                    self.errorMessage = "Playback error: \(error.localizedDescription)"
                 }
             }
             .store(in: &cancellables)
     }
-    
-    // MARK: - Controls
     
     func play() {
         guard errorMessage == nil else { return }
@@ -125,7 +112,6 @@ final class VideoPlayerViewModel: ObservableObject {
     }
     
     func retry() {
-        // โหลด stream ปัจจุบันใหม่
         load(stream: currentStream)
     }
     
