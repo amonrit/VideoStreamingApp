@@ -23,19 +23,23 @@ jobs:
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
 
-      - name: Call OpenAI (RAW)
+      - name: Call OpenAI (SAFE JSON)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "=== CALL OPENAI ==="
 
+          DIFF=$(cat diff.txt | head -c 8000)
+
+          JSON=$(jq -n --arg diff "$DIFF" '{
+            model: "gpt-4.1-mini",
+            input: ("Review this code diff:\n\n" + $diff)
+          }')
+
           RESPONSE=$(curl -s https://api.openai.com/v1/responses \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{
-              "model": "gpt-4.1-mini",
-              "input": "Review this code diff:\n\n'"$(head -c 8000 diff.txt)"'"
-            }')
+            -d "$JSON")
 
           echo "=== RAW RESPONSE ==="
           echo "$RESPONSE"
