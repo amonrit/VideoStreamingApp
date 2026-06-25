@@ -2,6 +2,7 @@ name: AI PR Review
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -18,10 +19,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure jq is installed
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+
       - name: Get diff
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          if [ -z "$BASE_REF" ]; then
+            echo "Error: github.event.pull_request.base.ref is empty"
+            exit 1
+          fi
+
+          git fetch origin "$BASE_REF"
+          git diff "origin/$BASE_REF"...HEAD > diff.txt
+
+          DIFF_SIZE=$(wc -c < diff.txt)
+          echo "Diff size: $DIFF_SIZE bytes"
+          if [ "$DIFF_SIZE" -gt 8000 ]; then
+            echo "Warning: diff truncated to 8000 bytes for AI review"
+          fi
 
       - name: Call Claude (Anthropic API)
         env:
@@ -29,7 +49,7 @@ jobs:
         run: |
           echo "=== CALL CLAUDE ==="
 
-          DIFF=$(cat diff.txt | head -c 8000)
+          DIFF=$(head -c 8000 diff.txt)
 
           JSON=$(jq -n --arg diff "$DIFF" '{
             "model": "claude-sonnet-4-6",
@@ -48,17 +68,29 @@ jobs:
             ]
           }')
 
-          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+          HTTP_STATUS=$(curl -sS -o response.json -w "%{http_code}" \
+            https://api.anthropic.com/v1/messages \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
             -H "Content-Type: application/json" \
             -d "$JSON")
 
+          echo "HTTP status: $HTTP_STATUS"
           echo "=== RAW RESPONSE ==="
-          echo "$RESPONSE"
+          cat response.json
 
-          # ดึงเฉพาะข้อความรีวิวออกมาเก็บในไฟล์
-          echo "$RESPONSE" | jq -r '.content[0].text' > review.txt
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Claude API call failed"
+            exit 1
+          fi
+
+          TEXT=$(jq -r '.content[0].text // empty' response.json)
+          if [ -z "$TEXT" ]; then
+            echo "No review text returned from Claude"
+            exit 1
+          fi
+
+          echo "$TEXT" > review.txt
 
       - name: Post review as PR comment
         env:
@@ -66,10 +98,9 @@ jobs:
         run: |
           REVIEW=$(cat review.txt)
 
-          # กัน JSON แตกเวลาเจอ newline / quote
           BODY=$(jq -n --arg body "$REVIEW" '{ body: $body }')
 
-          curl -s -X POST \
+          curl -sS --fail -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
