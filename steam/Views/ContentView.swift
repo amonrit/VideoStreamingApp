@@ -11,17 +11,15 @@ struct ContentView: View {
     
     @StateObject private var viewModel = VideoPlayerViewModel(stream: .sample)
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
+    @State private var isFullScreen = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                
-                // Main video player
-                VideoPlayerView(viewModel: viewModel)
+                VideoPlayerView(viewModel: viewModel, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
                 
-                // Now playing title
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Now Playing")
                         .font(.caption)
@@ -36,7 +34,6 @@ struct ContentView: View {
                 
                 Divider()
                 
-                // Suggested videos list
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(streams) { stream in
@@ -55,30 +52,24 @@ struct ContentView: View {
             }
             .navigationTitle("Video Player")
             .navigationBarTitleDisplayMode(.inline)
+            .fullScreenCover(isPresented: $isFullScreen) {
+                FullScreenPlayerView(viewModel: viewModel, isPresented: $isFullScreen)
+            }
         }
     }
     
-    // MARK: - Actions
-    
     private func select(stream: VideoStream) {
-        // เปลี่ยนวิดีโอหลัก
         viewModel.currentStream = stream
-        
-        // reset list: ย้ายวิดีโอที่เลือกมาอยู่บนสุด
         streams = reorderedStreams(selected: stream, from: streams)
     }
     
     private func reorderedStreams(selected: VideoStream, from list: [VideoStream]) -> [VideoStream] {
         var result = list
-        // ลบตัวที่เลือกออกจาก list เดิม
         result.removeAll { $0.id == selected.id }
-        // แทรกไว้ข้างหน้า
         result.insert(selected, at: 0)
         return result
     }
 }
-
-// MARK: - Suggested Video Row
 
 private struct SuggestedVideoRow: View {
     
@@ -87,7 +78,6 @@ private struct SuggestedVideoRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Thumbnail
             AsyncImage(url: stream.thumbnailURL) { phase in
                 switch phase {
                 case .empty:
@@ -113,7 +103,6 @@ private struct SuggestedVideoRow: View {
             .clipped()
             .cornerRadius(8)
             
-            // Title
             VStack(alignment: .leading, spacing: 4) {
                 Text(stream.title)
                     .font(.subheadline)
