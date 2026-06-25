@@ -15,7 +15,7 @@ jobs:
 
     steps:
       # =========================
-      # Checkout repo
+      # Checkout
       # =========================
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,9 +29,9 @@ jobs:
           sudo apt-get install -y jq curl
 
       # =========================
-      # Get PR diff (stable method)
+      # Get PR diff (stable GitHub API)
       # =========================
-      - name: Fetch PR Diff
+      - name: Fetch PR diff
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,14 +50,14 @@ jobs:
           head -c 2000 diff.txt
 
       # =========================
-      # AI REVIEW (SAFE JSON BUILD)
+      # AI REVIEW (Responses API - FIXED)
       # =========================
       - name: AI Review
         id: ai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "Calling OpenAI..."
+          echo "Calling OpenAI Responses API..."
 
           PROMPT=$(cat diff.txt | head -c 12000)
 
@@ -65,7 +65,7 @@ jobs:
             --arg prompt "$PROMPT" \
             '{
               model: "gpt-4o-mini",
-              messages: [
+              input: [
                 {
                   role: "system",
                   content: "You are a senior iOS engineer reviewing SwiftUI + AVPlayer streaming apps. Focus on bugs, performance issues, memory leaks, and architecture problems."
@@ -75,7 +75,7 @@ jobs:
                   content: $prompt
                 }
               ]
-            }' | curl -s https://api.openai.com/v1/chat/completions \
+            }' | curl -s https://api.openai.com/v1/responses \
               -H "Authorization: Bearer '"$OPENAI_API_KEY"'" \
               -H "Content-Type: application/json" \
               -d @-)
@@ -84,13 +84,16 @@ jobs:
           echo "$RESPONSE" | jq .
 
           ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
-          CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+
+          CONTENT=$(echo "$RESPONSE" | jq -r '
+            .output[0].content[0].text // empty
+          ')
 
           if [ ! -z "$ERROR" ]; then
             COMMENT="❌ OpenAI Error: $ERROR"
 
           elif [ -z "$CONTENT" ]; then
-            COMMENT="⚠️ Empty AI response (check quota / prompt size / model)"
+            COMMENT="⚠️ Empty response from OpenAI (check model / permissions / prompt size)"
 
           else
             COMMENT="## 🤖 AI PR REVIEW\n\n$CONTENT"
@@ -103,7 +106,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       # =========================
-      # Post comment to PR
+      # Post comment
       # =========================
       - name: Comment PR
         env:
