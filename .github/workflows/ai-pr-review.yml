@@ -1,4 +1,4 @@
-name: AI PR Review (Debug Full)
+name: AI PR Review
 
 on:
   pull_request:
@@ -13,52 +13,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # =========================
+      # 1. Checkout
+      # =========================
       - name: Checkout code
         uses: actions/checkout@v4
 
       # =========================
-      # 1. DEBUG INFO
+      # 2. Debug PR Info
       # =========================
-      - name: Debug context
+      - name: Debug PR Context
         run: |
-          echo "🔍 Event: ${{ github.event_name }}"
-          echo "🔍 PR Base: ${{ github.event.pull_request.base.ref }}"
-          echo "🔍 PR Head: ${{ github.event.pull_request.head.ref }}"
+          echo "=== PR INFO ==="
+          echo "Base: ${{ github.event.pull_request.base.ref }}"
+          echo "Head: ${{ github.event.pull_request.head.ref }}"
+          echo "Repo: ${{ github.repository }}"
 
       # =========================
-      # 2. GET DIFF (FIXED)
+      # 3. Get diff (FIXED)
       # =========================
-      - name: Get PR diff
+      - name: Get Diff
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
 
-          echo "📦 Generating diff..."
+          echo "=== GENERATING DIFF ==="
           git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > diff.txt
 
-          echo "📏 Diff size:"
+          echo "=== DIFF SIZE ==="
           wc -c diff.txt
 
-          echo "📄 Diff preview:"
+          echo "=== DIFF PREVIEW ==="
           head -c 2000 diff.txt
 
       # =========================
-      # 3. CHECK EMPTY DIFF
+      # 4. Validate diff
       # =========================
-      - name: Validate diff
+      - name: Validate Diff
         id: check
         run: |
           SIZE=$(wc -c < diff.txt)
 
           if [ "$SIZE" -eq 0 ]; then
-            echo "❌ ERROR: diff.txt is EMPTY"
-            echo "comment=❌ No code changes detected in this PR." >> $GITHUB_OUTPUT
+            echo "❌ DIFF IS EMPTY"
+            echo "comment=❌ No changes detected in this PR." >> $GITHUB_OUTPUT
             exit 0
-          else
-            echo "ok=true" >> $GITHUB_OUTPUT
           fi
 
+          echo "ok=true" >> $GITHUB_OUTPUT
+
       # =========================
-      # 4. CALL OPENAI
+      # 5. Call OpenAI
       # =========================
       - name: AI Review
         if: steps.check.outputs.ok == 'true'
@@ -76,7 +80,7 @@ jobs:
             "messages": [
               {
                 "role": "system",
-                "content": "You are a senior iOS engineer. Review SwiftUI code, AVPlayer streaming, memory leaks, and performance issues. Be concise and actionable."
+                "content": "You are a senior iOS engineer reviewing SwiftUI + AVPlayer streaming code. Focus on bugs, memory leaks, performance, and architecture."
               },
               {
                 "role": "user",
@@ -85,26 +89,37 @@ jobs:
             ]
           }')
 
-          echo "📡 RAW RESPONSE:"
+          # =========================
+          # RAW DEBUG OUTPUT (IMPORTANT)
+          # =========================
+          echo "=============================="
+          echo "=== RAW RESPONSE START ==="
           echo "$RESPONSE" | jq .
+          echo "=== RAW RESPONSE END ==="
+          echo "=============================="
 
           echo "$RESPONSE" > response.json
 
           # =========================
-          # 5. ERROR HANDLING
+          # ERROR HANDLING
           # =========================
           ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
           CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
+          echo "=== EXTRACTED VALUES ==="
+          echo "ERROR: $ERROR"
+          echo "CONTENT LENGTH: ${#CONTENT}"
+
           if [ ! -z "$ERROR" ]; then
-            echo "❌ OpenAI ERROR detected: $ERROR"
-            POST_COMMENT="❌ AI FAILED: $ERROR"
+            echo "❌ OPENAI ERROR DETECTED"
+            POST_COMMENT="❌ OpenAI Error: $ERROR"
 
           elif [ -z "$CONTENT" ]; then
-            echo "⚠️ AI returned EMPTY response"
-            POST_COMMENT="⚠️ AI returned empty response. Check model or prompt size."
+            echo "⚠️ EMPTY AI RESPONSE"
+            POST_COMMENT="⚠️ AI returned empty response. Check model, quota, or diff size."
 
           else
+            echo "✅ AI RESPONSE OK"
             POST_COMMENT="### 🤖 AI PR REVIEW\n\n$CONTENT"
           fi
 
@@ -113,17 +128,17 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       # =========================
-      # 6. FALLBACK IF SKIPPED
+      # 6. Fallback (no diff)
       # =========================
-      - name: Fallback comment
+      - name: Fallback
         if: steps.check.outputs.ok != 'true'
         run: |
-          echo "ℹ️ Skipped AI because diff is empty"
+          echo "ℹ️ Skipped AI review because diff is empty"
 
       # =========================
-      # 7. POST COMMENT
+      # 7. Post comment
       # =========================
-      - name: Post PR comment
+      - name: Post PR Comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -141,4 +156,4 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
             -d "{\"body\":\"$COMMENT\"}"
 
-          echo "✅ Done posting comment"
+          echo "✅ Done"
