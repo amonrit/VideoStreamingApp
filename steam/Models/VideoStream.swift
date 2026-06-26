@@ -8,8 +8,8 @@ import Foundation
 struct VideoStream: Identifiable, Hashable {
     let id = UUID()
     let title: String
-    let urlString: String          // HLS (.m3u8)
-    let thumbnailURLString: String // รูป preview จากเน็ต
+    let urlString: String
+    let thumbnailURLString: String
     
     var url: URL? {
         URL(string: urlString)
@@ -18,23 +18,30 @@ struct VideoStream: Identifiable, Hashable {
     var thumbnailURL: URL? {
         URL(string: thumbnailURLString)
     }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: VideoStream, rhs: VideoStream) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
-// MARK: - Sample Data (.m3u8 + remote thumbnails)
 extension VideoStream {
     static let sampleStreams: [VideoStream] = [
         VideoStream(
-            title: "Apple Advanced HLS Example",
+            title: "Apple Advanced HLS",
             urlString: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8",
             thumbnailURLString: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=800&q=80"
         ),
         VideoStream(
-            title: "Apple Basic HLS Example",
+            title: "Apple Basic HLS 4:3",
             urlString: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8",
             thumbnailURLString: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80"
         ),
         VideoStream(
-            title: "Apple 16:9 HLS Example",
+            title: "Apple 16:9 HLS",
             urlString: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8",
             thumbnailURLString: "https://images.unsplash.com/photo-1517602302552-471fe67acf66?auto=format&fit=crop&w=800&q=80"
         )
@@ -44,3 +51,4 @@ extension VideoStream {
         sampleStreams[0]
     }
 }
+
