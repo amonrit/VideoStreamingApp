@@ -12,13 +12,49 @@ struct ContentView: View {
     @StateObject private var viewModel = VideoPlayerViewModel(stream: .sample)
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
+    @State private var showDebug = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
+                
                 VideoPlayerView(viewModel: viewModel, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
+                
+                HStack {
+                    Spacer()
+                    Button {
+                        showDebug.toggle()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ladybug.fill")
+                            Text("Debug")
+                        }
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(showDebug ? Color.red.opacity(0.15) : Color.gray.opacity(0.15))
+                        .foregroundColor(showDebug ? .red : .primary)
+                        .cornerRadius(8)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                if showDebug {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.resolutionText)
+                        Text(viewModel.bitrateText)
+                        Text(viewModel.bufferingText)
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.gray.opacity(0.08))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Now Playing")

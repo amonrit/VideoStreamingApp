@@ -11,7 +11,6 @@ import Combine
 
 final class VideoPlayerViewModel: ObservableObject {
     
-    // MARK: - Published state
     @Published var currentStream: VideoStream {
         didSet {
             load(stream: currentStream)
@@ -21,6 +20,7 @@ final class VideoPlayerViewModel: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var bufferingCount: Int = 0
     
     let player: AVPlayer
     private var cancellables = Set<AnyCancellable>()
@@ -44,6 +44,7 @@ final class VideoPlayerViewModel: ObservableObject {
         errorMessage = nil
         isLoading = true
         isPlaying = false
+        bufferingCount = 0
         
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
@@ -77,6 +78,9 @@ final class VideoPlayerViewModel: ObservableObject {
                 guard let self = self else { return }
                 if self.player.rate > 0 {
                     self.isLoading = !keepUp
+                    if !keepUp {
+                        self.bufferingCount += 1
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -86,6 +90,7 @@ final class VideoPlayerViewModel: ObservableObject {
                 guard let self = self else { return }
                 self.isLoading = true
                 self.errorMessage = "Buffering..."
+                self.bufferingCount += 1
             }
             .store(in: &cancellables)
         
@@ -115,6 +120,28 @@ final class VideoPlayerViewModel: ObservableObject {
         load(stream: currentStream)
     }
     
+    // MARK: - Debug helpers (จริง)
+    
+    var resolutionText: String {
+        guard let size = player.currentItem?.presentationSize,
+              size.width > 0, size.height > 0 else {
+            return "Resolution: unknown"
+        }
+        return "Resolution: \(Int(size.width))x\(Int(size.height))"
+    }
+    
+    var bitrateText: String {
+        guard let event = player.currentItem?.accessLog()?.events.last else {
+            return "Bitrate: unknown"
+        }
+        let kbps = event.observedBitrate / 1000.0
+        return String(format: "Bitrate: %.0f kbps", kbps)
+    }
+    
+    var bufferingText: String {
+        "Buffering events: \(bufferingCount)"
+    }
+    
     deinit {
         if let observer = timeObserver {
             player.removeTimeObserver(observer)
@@ -122,3 +149,4 @@ final class VideoPlayerViewModel: ObservableObject {
         cancellables.removeAll()
     }
 }
+
