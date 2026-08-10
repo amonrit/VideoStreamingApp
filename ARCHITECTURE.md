@@ -38,28 +38,38 @@ struct PlaybackState {
     var isPlaying: Bool = false
     var errorMessage: String?
     var bufferingCount: Int = 0
-    var resolution: String = ""
-    var bitrate: String = ""
+    var currentStream: VideoStream?
 }
 ```
 
 ---
 
-### 2. View Controller (Router)
+### 2. View Controller
 
-**VideoPlayerViewController** - SwiftUI wrapper + navigation
-- Manages screen transitions (fullscreen, back)
-- Handles view hierarchy
-- Routes to Interactor
+**VideoPlayerViewController** - Holds state & routes user actions
+- ObservableObject for SwiftUI binding
+- @Published properties for reactive updates
+- Strong references to components (Interactor, Presenter, Worker)
+- Routes user actions to Interactor
 
 ```swift
-class VideoPlayerRouter {
-    var viewController: VideoPlayerViewController?
-    var interactor: VideoPlayerInteractor?
-    var presenter: VideoPlayerPresenter?
+class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
+    @Published var playbackViewModel: PlaybackViewModel
+    @Published var debugViewModel: DebugInfoViewModel
     
-    func presentFullscreen()
-    func dismissFullscreen()
+    // Strong references (keep components alive)
+    private let interactor: VideoPlayerInteractorInput
+    private let presenter: VideoPlayerPresenterInput
+    private let worker: VideoPlayerWorker
+    
+    func didSelectStream(_ stream: VideoStream)
+    func playStream()
+    func pauseStream()
+    func retryLoadStream()
+    
+    // Receive formatted data from Presenter
+    func displayPlaybackState(_ viewModel: PlaybackViewModel)
+    func displayDebugInfo(_ info: DebugInfoViewModel)
 }
 ```
 
@@ -499,13 +509,19 @@ struct VideoPlayerView: View {
 │                                                                 │
 │  func displayPlaybackState(_ viewModel: PlaybackViewModel) {   │
 │    DispatchQueue.main.async {                                  │
-│      self.playbackViewModel = viewModel  ◄── Update @Published │
+│      // Update properties instead of replacing                 │
+│      self.playbackViewModel.isLoading = viewModel.isLoading    │
+│      self.playbackViewModel.isPlaying = viewModel.isPlaying    │
+│      self.playbackViewModel.errorMessage = viewModel.error     │
+│      self.playbackViewModel.bufferingCount = viewModel.count   │
 │    }                                                            │
 │  }                                                              │
 │                                                                 │
 │  func displayDebugInfo(_ info: DebugInfoViewModel) {           │
 │    DispatchQueue.main.async {                                  │
-│      self.debugViewModel = info  ◄── Update @Published         │
+│      self.debugViewModel.resolution = info.resolution          │
+│      self.debugViewModel.bitrate = info.bitrate                │
+│      self.debugViewModel.bufferingCount = info.bufferingCount   │
 │    }                                                            │
 │  }                                                              │
 │                                                                 │
@@ -668,21 +684,22 @@ steam/
 │   │
 │   ├── Scenes/
 │   │   └── VideoPlayer/
-│   │       ├── VideoPlayerViewController.swift    (Router + ViewController)
-│   │       ├── VideoPlayerInteractor.swift
-│   │       ├── VideoPlayerPresenter.swift
+│   │       ├── VideoPlayerRouter.swift            (Dependency Injection)
+│   │       ├── VideoPlayerViewController.swift    (ViewController)
+│   │       ├── VideoPlayerInteractor.swift        (Business Logic + PlaybackState)
+│   │       ├── VideoPlayerPresenter.swift         (Data Formatting)
 │   │       ├── VideoPlayerView.swift              (SwiftUI View)
-│   │       ├── VideoPlayerModels.swift            (Request, Response, ViewModel)
-│   │       └── VideoPlayerRouter.swift
+│   │       └── VideoPlayerModels.swift            (ViewModels)
 │   │
 │   ├── Workers/
-│   │   └── VideoPlayerWorker.swift
+│   │   └── VideoPlayerWorker.swift                (Reusable Utilities)
 │   │
 │   ├── Models/
-│   │   └── VideoStream.swift
+│   │   └── VideoStream.swift                      (Entity)
 │   │
-│   └── Helpers/
-│       └── PlaybackState.swift
+│   └── Views/
+│       ├── ContentView.swift
+│       └── FullScreenPlayerView.swift
 │
 └── steam.xcodeproj/
 ```
@@ -731,25 +748,33 @@ struct PlaybackViewModel: ObservableObject {
 
 ```swift
 class VideoPlayerRouter {
-    func createModule() -> UIViewController {
-        let viewModel = PlaybackViewModel()
-        let view = VideoPlayerView(viewModel: viewModel)
-        let viewController = VideoPlayerViewController(rootView: view)
-        
+    static func createModule(stream: VideoStream = .sample) -> VideoPlayerViewController {
+        // Create Components
+        let player = AVPlayer()
+        let playbackViewModel = PlaybackViewModel(player: player)
+
         let presenter = VideoPlayerPresenter()
-        presenter.viewController = viewController
-        
         let worker = VideoPlayerWorker()
-        let interactor = VideoPlayerInteractor()
+        let interactor = VideoPlayerInteractor(player: player)
+
+        // Wire up dependencies
         interactor.presenter = presenter
         interactor.worker = worker
-        
-        let router = VideoPlayerRouter()
-        router.viewController = viewController
-        router.interactor = interactor
-        
-        viewController.interactor = interactor
-        
+
+        // Create ViewController with strong references to all components
+        let viewController = VideoPlayerViewController(
+            playbackViewModel: playbackViewModel,
+            interactor: interactor,
+            presenter: presenter,
+            worker: worker
+        )
+
+        // Set presenter's viewController reference
+        presenter.viewController = viewController
+
+        // Load initial stream
+        interactor.loadStream(stream)
+
         return viewController
     }
 }

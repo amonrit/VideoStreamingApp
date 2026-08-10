@@ -9,17 +9,17 @@ import SwiftUI
 import AVKit
 
 struct VideoPlayerView: View {
-    
-    @ObservedObject var viewModel: VideoPlayerViewModel
+    @ObservedObject var viewController: VideoPlayerViewController
     @Binding var isFullScreen: Bool
-    
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            VideoPlayer(player: viewModel.player)
+            VideoPlayer(player: viewController.playbackViewModel.player)
                 .background(Color.black)
                 .clipped()
-            
-            if viewModel.isLoading {
+
+            // Loading Overlay
+            if viewController.playbackViewModel.isLoading {
                 ZStack {
                     Color.black.opacity(0.3)
                     VStack(spacing: 8) {
@@ -31,8 +31,9 @@ struct VideoPlayerView: View {
                     }
                 }
             }
-            
-            if let error = viewModel.errorMessage {
+
+            // Error Overlay
+            if let error = viewController.playbackViewModel.errorMessage {
                 ZStack {
                     Color.black.opacity(0.6)
                     VStack(spacing: 12) {
@@ -41,9 +42,9 @@ struct VideoPlayerView: View {
                             .font(.body)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
-                        
+
                         Button {
-                            viewModel.retry()
+                            viewController.retryLoadStream()
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
@@ -59,7 +60,8 @@ struct VideoPlayerView: View {
                     .padding()
                 }
             }
-            
+
+            // Fullscreen Button
             Button {
                 isFullScreen = true
             } label: {
@@ -76,8 +78,9 @@ struct VideoPlayerView: View {
 }
 
 #Preview {
-    VideoPlayerView(
-        viewModel: VideoPlayerViewModel(stream: .sample),
+    let viewController = VideoPlayerRouter.createModule(stream: .sample)
+    return VideoPlayerView(
+        viewController: viewController,
         isFullScreen: .constant(false)
     )
 }

@@ -8,24 +8,25 @@
 import SwiftUI
 
 struct ContentView: View {
-    
-    @StateObject private var viewModel = VideoPlayerViewModel(stream: .sample)
+    @StateObject private var viewController = VideoPlayerRouter.createModule(stream: .sample)
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
     @State private var showDebug = false
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                
-                VideoPlayerView(viewModel: viewModel, isFullScreen: $isFullScreen)
+                VideoPlayerView(viewController: viewController, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
-                
+
                 HStack {
                     Spacer()
                     Button {
                         showDebug.toggle()
+                        if showDebug {
+                            viewController.updateDebugInfo()
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "ladybug.fill")
@@ -40,12 +41,12 @@ struct ContentView: View {
                     }
                     .padding(.horizontal)
                 }
-                
+
                 if showDebug {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(viewModel.resolutionText)
-                        Text(viewModel.bitrateText)
-                        Text(viewModel.bufferingText)
+                        Text("Resolution: \(viewController.debugViewModel.resolution)")
+                        Text("Bitrate: \(viewController.debugViewModel.bitrate)")
+                        Text("Buffering events: \(viewController.debugViewModel.bufferingCount)")
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -55,27 +56,27 @@ struct ContentView: View {
                     .cornerRadius(10)
                     .padding(.horizontal)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Now Playing")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    
-                    Text(viewModel.currentStream.title)
+
+                    Text(viewController.playbackViewModel.currentStream?.title ?? "Select a video")
                         .font(.headline)
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                
+
                 Divider()
-                
+
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(streams) { stream in
                             SuggestedVideoRow(
                                 stream: stream,
-                                isCurrent: stream.id == viewModel.currentStream.id
+                                isCurrent: stream.id == viewController.playbackViewModel.currentStream?.id
                             )
                             .onTapGesture {
                                 select(stream: stream)
@@ -87,18 +88,20 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Video Player")
+#if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .fullScreenCover(isPresented: $isFullScreen) {
-                FullScreenPlayerView(viewModel: viewModel, isPresented: $isFullScreen)
+                FullScreenPlayerView(viewController: viewController, isPresented: $isFullScreen)
             }
+#endif
         }
     }
-    
+
     private func select(stream: VideoStream) {
-        viewModel.currentStream = stream
+        viewController.didSelectStream(stream)
         streams = reorderedStreams(selected: stream, from: streams)
     }
-    
+
     private func reorderedStreams(selected: VideoStream, from list: [VideoStream]) -> [VideoStream] {
         var result = list
         result.removeAll { $0.id == selected.id }
@@ -108,10 +111,9 @@ struct ContentView: View {
 }
 
 private struct SuggestedVideoRow: View {
-    
     let stream: VideoStream
     let isCurrent: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
             AsyncImage(url: stream.thumbnailURL) { phase in
@@ -138,20 +140,20 @@ private struct SuggestedVideoRow: View {
             .frame(width: 120, height: 68)
             .clipped()
             .cornerRadius(8)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(stream.title)
                     .font(.subheadline)
                     .fontWeight(isCurrent ? .bold : .regular)
                     .lineLimit(2)
-                
+
                 if isCurrent {
                     Text("Now playing")
                         .font(.caption2)
                         .foregroundColor(.blue)
                 }
             }
-            
+
             Spacer()
         }
         .padding(8)

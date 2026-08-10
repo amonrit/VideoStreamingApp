@@ -8,17 +8,16 @@
 import SwiftUI
 
 struct FullScreenPlayerView: View {
-    
-    @ObservedObject var viewModel: VideoPlayerViewModel
+    @ObservedObject var viewController: VideoPlayerViewController
     @Binding var isPresented: Bool
-    
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
-            
-            VideoPlayerView(viewModel: viewModel, isFullScreen: $isPresented)
+
+            VideoPlayerView(viewController: viewController, isFullScreen: $isPresented)
                 .ignoresSafeArea()
-            
+
             Button {
                 isPresented = false
             } label: {
@@ -29,13 +28,16 @@ struct FullScreenPlayerView: View {
                     .padding()
             }
         }
+#if os(iOS)
         .statusBarHidden(true)
+#endif
     }
 }
 
 #Preview {
-    FullScreenPlayerView(
-        viewModel: VideoPlayerViewModel(stream: .sample),
+    let viewController = VideoPlayerRouter.createModule(stream: .sample)
+    return FullScreenPlayerView(
+        viewController: viewController,
         isPresented: .constant(true)
     )
 }
