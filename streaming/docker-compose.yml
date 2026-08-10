@@ -1,6 +1,6 @@
 services:
   mediamtx:
-    image: bluenviron/mediamtx:1
+    image: bluenviron/mediamtx:1.20.0
     container_name: mediamtx
     restart: unless-stopped
     ports:
@@ -14,33 +14,7 @@ services:
       - ./mediamtx.yml:/mediamtx.yml:ro
       - ./recordings:/recordings
     environment:
-      # Log settings
       - MEDIAMTX_LOGLEVEL=info
-
-      # RTSP Server
-      - MEDIAMTX_RTSPDISABLE=false
-      - MEDIAMTX_RTSPPORT=8554
-
-      # RTMP Server
-      - MEDIAMTX_RTMPDISABLE=false
-      - MEDIAMTX_RTMPPORT=1935
-
-      # HLS Server
-      - MEDIAMTX_HLSDISABLE=false
-      - MEDIAMTX_HLSPORT=8888
-      - MEDIAMTX_HLSVARIANT=lowLatency
-      - MEDIAMTX_HLSSEGMENTDURATION=1s
-      - MEDIAMTX_HLSSEGMENTCOUNT=3
-      - MEDIAMTX_HLSALLOWORIGIN='*'
-
-      # WebRTC Server
-      - MEDIAMTX_WEBRTCDISABLE=false
-      - MEDIAMTX_WEBRTCPORT=8889
-
-      # Path configuration
-      - MEDIAMTX_PATHS_ALL_SOURCE=publisher
-      - MEDIAMTX_PATHS_ALL_PUBLISHUSER=publish
-      - MEDIAMTX_PATHS_ALL_PUBLISHPASS=streampass123
 
     networks:
       - mediamtx_network

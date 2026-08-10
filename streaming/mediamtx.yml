@@ -1,161 +1,33 @@
-############################
-# MediaMTX Configuration   #
-# Personal Live Streaming  #
-############################
-
-# WARNING: The comment "version" is NOT supported and must be removed
-# Use the latest version format below
-
-# Configuration version (check latest at: https://github.com/bluenviron/mediamtx/releases)
-configVersion: 0
-
-# Global settings
 logLevel: info
 
-# RTSP server
 rtsp:
   enabled: true
   listenIp: 0.0.0.0
   port: 8554
-  readTimeout: 30s
-  writeTimeout: 30s
-  # RTP
-  rtpPort: 8000
-  # RTCP
-  rtcpPort: 8001
-  # Multicast
-  multicastIp: 224.1.0.1
-  multicastPort: 8002
-  # TLS (encryption)
-  tlsPort: 8322
-  # Authentication - uncomment to enable
-  # users:
-  #   - user: publish
-  #     pass: streampass123
-  #     permissions:
-  #       - action: publish
-  #         path: ~
-  #       - action: read
-  #         path: ~
 
-# RTMP server
 rtmp:
   enabled: true
   listenIp: 0.0.0.0
   port: 1935
-  readTimeout: 30s
-  writeTimeout: 30s
-  # TLS (encryption)
-  tlsPort: 1936
 
-# HLS server
 hls:
   enabled: true
   listenIp: 0.0.0.0
   port: 8888
-  readTimeout: 30s
-  writeTimeout: 30s
-  # HLS variant (mpegts, fmp4, lowLatency)
-  variant: lowLatency
-  # Segment duration
-  segmentDuration: 1s
-  # Segment count in playlist
-  segmentCount: 3
-  # Directory for partial segments
-  partDuration: 200ms
-  partCount: 2
-  # CORS header
-  allowOrigin: '*'
 
-# WebRTC server
 webrtc:
   enabled: true
   listenIp: 0.0.0.0
   port: 8889
-  readTimeout: 30s
-  writeTimeout: 30s
-  # IP address for external connections
-  externalAddress: ''
-  # Port ranges for media
-  iceTcpPort: 8189
-  iceUdpPort: 8189
-  iceHostnameOverride: ''
-  iceInterfaceNames: []
 
-# SRT server (optional)
 srt:
   enabled: true
   listenIp: 0.0.0.0
   port: 8890
 
-# MoQ server (Media over QUIC - optional)
-moq:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 8892
-
-# Metrics (Prometheus)
-metrics:
-  enabled: false
-  listenIp: 0.0.0.0
-  port: 9997
-
-# PPROF (Go profiling)
-pprof:
-  enabled: false
-  listenIp: 0.0.0.0
-  port: 6060
-
-# Streaming paths configuration
 paths:
-  # Default configuration for all paths
   all:
-    # Source type: publisher (default), rtsp (pull), rtsps, redirect, websocket
     source: publisher
 
-    # Publisher-specific settings
-    # Username for publishing (empty = no auth required)
-    publishUser: ''
-    # Password for publishing
-    publishPass: ''
-    # IP CIDR whitelist for publishing (empty = all IPs)
-    publishIps: []
-
-    # Reader-specific settings
-    # Username for reading/playing streams
-    readUser: ''
-    # Password for reading
-    readPass: ''
-    # IP CIDR whitelist for reading
-    readIps: []
-
-    # Recording settings
-    record: false
-    recordFormat: fmp4
-    recordPath: ./recordings/%path%/%Y%m%d_%H%M%S-frag.mp4
-    recordPartDuration: 100ms
-    recordSegmentDuration: 1h
-
-    # Maximum concurrent readers (0 = unlimited)
-    maxReaders: 0
-
-    # Allow publisher override
-    overridePublisher: false
-
-    # Disable authentication and authorization
-    disableAuthAuthentication: false
-
-  # Example: Live streaming path with authentication
   live:
     source: publisher
-    publishUser: publish
-    publishPass: streampass123
-    publishIps:
-      - 127.0.0.1/32
-      - 192.168.0.0/16
-      - 172.16.0.0/12
-      - 10.0.0.0/8
-    readUser: ''
-    readPass: ''
-    readIps: []
-    record: false
