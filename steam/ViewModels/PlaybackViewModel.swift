@@ -7,6 +7,9 @@ import Foundation
 import AVFoundation
 import SwiftUI
 import Combine
+import os
+
+private let logger = Logger(subsystem: "amonrit.steam", category: "playback")
 
 class PlaybackViewModel: ObservableObject {
     @Published var isLoading: Bool = false
@@ -25,22 +28,22 @@ class PlaybackViewModel: ObservableObject {
         self.worker = VideoPlayerWorker()
     }
 
-    // MARK: - Playback Control
+    // MARK: - Stream Loading
 
     func loadStream(_ stream: VideoStream) {
         player.pause()
         cancellables.removeAll()
-        print("🛑 Stopped playback of previous stream")
+        logger.info("🛑 Stopped playback of previous stream")
 
         guard let url = stream.url else {
             let error = "Invalid URL: \(stream.urlString)"
-            print("❌ \(error)")
+            logger.error("❌ \(error, privacy: .public)")
             presentError(error)
             return
         }
 
-        print("📥 Loading stream: \(stream.title)")
-        print("   URL: \(url)")
+        logger.info("📥 Loading stream: \(stream.title, privacy: .public)")
+        logger.debug("   URL: \(url.absoluteString, privacy: .public)")
 
         playbackState = PlaybackState(loading: stream)
         updatePlaybackViewModel()
@@ -49,7 +52,7 @@ class PlaybackViewModel: ObservableObject {
         player.replaceCurrentItem(with: item)
 
         setupObservers(for: item)
-        print("✅ Player item created and observers setup")
+        logger.info("✅ Player item created and observers setup")
     }
 
     func play() {
@@ -58,14 +61,14 @@ class PlaybackViewModel: ObservableObject {
         playbackState.isPlaying = true
         playbackState.isLoading = false
         updatePlaybackViewModel()
-        print("▶️  Playing: \(playbackState.currentStream?.title ?? "unknown")")
+        logger.info("▶️  Playing: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
     func pause() {
         player.pause()
         playbackState.isPlaying = false
         updatePlaybackViewModel()
-        print("⏸️  Paused: \(playbackState.currentStream?.title ?? "unknown")")
+        logger.info("⏸️  Paused: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
     func retry() {
