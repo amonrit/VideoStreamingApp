@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # CLAUDE.md
 
@@ -48,7 +48,7 @@ Models (Data Entities)
   └─ PlaybackState — Internal state tracking
 ```
 
-**Key Decision:** `ContentView` uses `@StateObject` to preserve `PlaybackViewModel` across re-renders (prevents AVPlayer memory leaks)
+**Key Decision:** `VideoStreamListView` uses `@StateObject` to preserve `PlaybackViewModel` across re-renders (prevents AVPlayer memory leaks). `HomeView` serves as root entry point with navigation menu to main features.
 
 ---
 
@@ -143,7 +143,8 @@ Ensures the app fails fast and cleanly rather than hanging.
 | File | Purpose |
 |------|---------|
 | `steam/ViewModels/PlaybackViewModel.swift` | Core business logic & state |
-| `steam/Views/ContentView.swift` | Main UI & stream list |
+| `steam/Views/HomeView.swift` | Home menu & navigation hub |
+| `steam/Views/VideoStreamListView.swift` | Stream list & playback UI |
 | `steam/Views/VideoPlayerView.swift` | Player UI & overlays |
 | `steam/Workers/VideoPlayerWorker.swift` | KVO observers & formatting |
 | `streaming/docker-compose.yml` | Docker service config |

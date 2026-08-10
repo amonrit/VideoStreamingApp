@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # Steam — iOS Video Streaming App
 
@@ -122,7 +122,13 @@ ffmpeg -re -i video.mp4 -c copy -f flv \
 ### iOS App (MVVM)
 
 ```
-ContentView (Root UI)
+HomeView (Root UI - Navigation Hub)
+  ├─ Watch Streams → VideoStreamListView
+  ├─ Settings (Mock)
+  ├─ About (Mock)
+  └─ Help (Mock)
+       
+VideoStreamListView (Playback Screen)
   ├─ VideoPlayerView (Player + Controls)
   ├─ Stream List (Add/Select streams)
   └─ Debug Panel (Metrics)

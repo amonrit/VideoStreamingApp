@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # Steam - Video Streaming App Architecture
 
@@ -107,9 +107,20 @@ struct FullScreenPlayerView: View {
 }
 ```
 
-**ContentView** - Main app container
+**HomeView** - Root app container (Navigation Hub)
 ```swift
-struct ContentView: View {
+struct HomeView: View {
+    // Navigation menu with options:
+    // - Watch Streams (NavigationLink to VideoStreamListView)
+    // - Settings (Mock)
+    // - About (Mock)
+    // - Help (Mock)
+}
+```
+
+**VideoStreamListView** - Playback screen with stream management
+```swift
+struct VideoStreamListView: View {
     @StateObject private var playbackViewModel = PlaybackViewModel()
     @State private var showDebug = false  // UI state only
     
@@ -118,7 +129,7 @@ struct ContentView: View {
 }
 ```
 
-**Responsibilities:**
+**Responsibilities (for both Views):**
 - Pure presentation logic
 - SwiftUI bindings to ViewModel state
 - User gesture handling (passes to ViewModel)
@@ -157,10 +168,10 @@ class VideoPlayerWorker {
 ### 1️⃣ User Selects Video
 
 ```
-┌─────────────────┐
-│   ContentView   │
-│  (View Layer)   │
-└────────┬────────┘
+┌─────────────────────────┐
+│  VideoStreamListView    │
+│    (View Layer)         │
+└────────┬────────────────┘
          │
          │ onTapGesture
          ↓
@@ -268,9 +279,10 @@ steam/
 │   │   └── PlaybackViewModel.swift    (ViewModel + Business Logic)
 │   │
 │   ├── Views/
-│   │   ├── ContentView.swift
-│   │   ├── VideoPlayerView.swift
-│   │   └── FullScreenPlayerView.swift
+│   │   ├── HomeView.swift             (Root entry point - Navigation menu)
+│   │   ├── VideoStreamListView.swift  (Playback & stream management)
+│   │   ├── VideoPlayerView.swift      (Player UI component)
+│   │   └── FullScreenPlayerView.swift (Fullscreen player container)
 │   │
 │   └── Workers/
 │       └── VideoPlayerWorker.swift    (Reusable KVO/Combine Setup)
@@ -287,7 +299,8 @@ steam/
 | **PlaybackViewModel** | ViewModel | Business logic, state, observer setup |
 | **VideoPlayerView** | View | Player + overlays, calls ViewModel actions |
 | **FullScreenPlayerView** | View | Fullscreen container |
-| **ContentView** | View | List, selection, debug panel |
+| **HomeView** | View | Root menu, navigation hub |
+| **VideoStreamListView** | View | Stream list, selection, debug panel |
 | **VideoPlayerWorker** | Utility | KVO setup, formatting |
 | **PlaybackState** | Model | Data entity |
 | **VideoStream** | Model | Data entity |
@@ -301,7 +314,7 @@ steam/
 - `@Published` properties — synced to UI via Combine
 - `cancellables: Set<AnyCancellable>` — KVO subscription management
 
-### ContentView Local State
+### VideoStreamListView Local State
 - `@StateObject playbackViewModel` — preserved across re-renders (fixes D2: AVPlayer leak)
 - `@State showDebug` — pure UI state, not synced to ViewModel
 
@@ -321,7 +334,7 @@ steam/
 
 ### D2: AVPlayer Memory Leak
 - Replaced `@ObservedObject` with custom `init()` → `@StateObject` 
-- `@StateObject` preserves instance across ContentView re-renders
+- `@StateObject` preserves instance across VideoStreamListView re-renders
 
 ### D3: Dead Debug Plumbing
 - Replaced unreachable `updateDebugInfo()` method

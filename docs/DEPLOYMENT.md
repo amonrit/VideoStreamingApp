@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # 🚀 MediaMTX Streaming Server - Deployment Guide
 
@@ -180,7 +180,7 @@ ffmpeg -f gdigrab -i desktop -c:v libx264 -c:a aac \
 Update your iOS app to use the server IP:
 
 ```swift
-// In ContentView or VideoStream model
+// In VideoStreamListView or VideoStream model
 let serverURL = "rtmp://SERVER_IP:1935/live/mystream"
 ```
 
@@ -240,7 +240,7 @@ ffplay "http://localhost:8888/live/mystream/index.m3u8"
 
 Update your iOS app to point to new server:
 
-**In `ContentView.swift` or network config:**
+**In `VideoStreamListView.swift` or network config:**
 
 ```swift
 let STREAM_URL = "rtmp://YOUR_SERVER_IP:1935/live/mystream"

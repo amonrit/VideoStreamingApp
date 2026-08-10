@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786359417) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # AI Workflow Guide
 
@@ -24,7 +24,7 @@ Using specialized agents:
 
 General questions:
   "Where is PlaybackViewModel used in the codebase?"
-  "Show me the data flow from ContentView to AVPlayer"
+  "Show me the data flow from VideoStreamListView to AVPlayer"
   "Find all references to setupObservers()"
   "What's the retry logic in loadStream()?"
 ```
@@ -45,7 +45,7 @@ General questions:
 ### Performance
 
 ❌ **Don't:** "Make it faster"
-✅ **Do:** "ContentView takes 500ms to render. Profile using Instruments. What's the bottleneck and how to optimize?"
+✅ **Do:** "VideoStreamListView takes 500ms to render. Profile using Instruments. What's the bottleneck and how to optimize?"
 
 **Why:** Context helps AI give targeted advice.
 
@@ -63,7 +63,7 @@ General questions:
 ### Architecture
 
 ❌ **Don't:** "Explain MVVM"
-✅ **Do:** "In this project, explain how data flows from ContentView → PlaybackViewModel → AVPlayer when loadStream() is called"
+✅ **Do:** "In this project, explain how data flows from VideoStreamListView → PlaybackViewModel → AVPlayer when loadStream() is called"
 
 **Why:** Project-specific context makes answers relevant.
 
@@ -389,7 +389,7 @@ BAD: One question and done.
 
 1. Identify bottleneck:
    ```
-   "ContentView rendering is slow. Profile shows
+   "VideoStreamListView rendering is slow. Profile shows
    500ms in [method name]. Why?"
    ```
 
@@ -467,7 +467,7 @@ Q3: "Should we increase retries for slow networks?"
 ### 3. Ask "Why" Questions
 
 ```
-"Why do we use @StateObject in ContentView?"
+"Why do we use @StateObject in VideoStreamListView?"
 "Why is there a 3-second timeout?"
 "Why do we use [weak self] in closures?"
 ```

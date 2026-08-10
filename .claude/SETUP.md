@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # Antigravity + Claude Code Integration Guide
 
@@ -68,7 +68,7 @@ When you first open the project:
 "Where is PlaybackViewModel used in the codebase?"
 "What calls loadStream()?"
 "Show me all references to @Published variables"
-"Trace the data flow from ContentView to AVPlayer"
+"Trace the data flow from VideoStreamListView to AVPlayer"
 ```
 
 **Antigravity will:**

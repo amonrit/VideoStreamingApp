@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786362333) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # Steam - Features Roadmap & Recommendations
 
@@ -206,7 +206,7 @@ variant-480p.m3u8
 - Create `HistoryManager` worker
 - Add `PlaybackHistory` model to Models/
 - Persist with UserDefaults or CoreData
-- Update `ContentView` to show history section
+- Update `VideoStreamListView` to show history section
 - Add resume methods to `PlaybackViewModel`
 
 **Why:** Makes app feel native and personalized

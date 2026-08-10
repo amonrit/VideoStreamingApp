@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786365804) by amonrit
 
 # Development Guide
 
@@ -33,7 +33,8 @@ steam/
 │   ├── ViewModels/
 │   │   └── PlaybackViewModel.swift  ← CORE LOGIC (start here)
 │   ├── Views/
-│   │   ├── ContentView.swift        Main UI
+│   │   ├── HomeView.swift           Home menu & navigation
+│   │   ├── VideoStreamListView.swift Stream list & playback
 │   │   ├── VideoPlayerView.swift    Player UI
 │   │   └── FullScreenPlayerView.swift Fullscreen mode
 │   └── Workers/
@@ -103,7 +104,7 @@ make dev-app
 
 ```bash
 # 1. Edit the View
-open steam/Views/ContentView.swift
+open steam/Views/VideoStreamListView.swift
 
 # 2. See changes instantly
 # In Xcode: Cmd+R (hot reload)
@@ -113,7 +114,8 @@ open steam/Views/ContentView.swift
 ```
 
 **File Guide:**
-- `ContentView.swift` - Main layout
+- `HomeView.swift` - Navigation menu
+- `VideoStreamListView.swift` - Stream list & playback
 - `VideoPlayerView.swift` - Player + controls
 - `FullScreenPlayerView.swift` - Fullscreen mode
 
@@ -254,8 +256,8 @@ lsof -i :8554  # RTSP
 
 **Views** observe ViewModel:
 ```swift
-struct ContentView: View {
-    @ObservedObject var viewModel: PlaybackViewModel
+struct VideoStreamListView: View {
+    @StateObject private var viewModel = PlaybackViewModel()
     
     var body: some View {
         // Reads from viewModel.isPlaying, currentStream, etc.
@@ -327,7 +329,8 @@ struct VideoPlayerView: View {
 
 Files that matter most:
 - `steam/ViewModels/PlaybackViewModel.swift` - If changing logic
-- `steam/Views/ContentView.swift` - If changing main UI
+- `steam/Views/VideoStreamListView.swift` - If changing playback UI
+- `steam/Views/HomeView.swift` - If changing navigation menu
 - `steam/Views/VideoPlayerView.swift` - If changing player UI
 - `steam/Workers/VideoPlayerWorker.swift` - If changing observers
 
