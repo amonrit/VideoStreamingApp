@@ -186,44 +186,118 @@ struct VideoPlayerView: View {
             }
 
             // Loading Overlay (ไม่ block interaction)
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.errorMessage == nil {
                 ZStack {
-                    Color.black.opacity(0.2)
-                    VStack(spacing: 8) {
+                    Color.black.opacity(0.3)
+                    VStack(spacing: 12) {
                         ProgressView()
                             .tint(.white)
-                        Text("Loading...")
-                            .foregroundColor(.white)
-                            .font(.caption)
+                            .scaleEffect(1.5)
+                        VStack(spacing: 6) {
+                            Text("Connecting...")
+                                .foregroundColor(.white)
+                                .font(.headline)
+                            Text(viewModel.currentStream?.title ?? "Loading stream")
+                                .foregroundColor(.white.opacity(0.7))
+                                .font(.caption)
+
+                            // Show retry attempt if needed
+                            if viewModel.retryAttempt > 0 {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.clockwise.circle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text("Retry \(viewModel.retryAttempt)/2")
+                                        .foregroundColor(.orange)
+                                        .font(.caption2)
+                                }
+                                .padding(.top, 2)
+                            }
+                        }
                     }
+                    .padding()
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(12)
                 }
                 .allowsHitTesting(false)  // ✅ ปุ่มทำงานได้ตามปกติ
             }
 
-            // Error Overlay
+            // Connection Status Indicator
+            if !viewModel.isLoading && !isFullScreen {
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 8, height: 8)
+                        Text(statusText)
+                            .font(.caption2)
+                            .foregroundColor(statusColor)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.4))
+                    .cornerRadius(6)
+
+                    Spacer()
+                }
+                .padding(8)
+                .allowsHitTesting(false)
+            }
+
+            // Error Overlay with Retry
             if let error = viewModel.errorMessage {
                 ZStack {
-                    Color.black.opacity(0.6)
-                    VStack(spacing: 12) {
-                        Text(error)
-                            .foregroundColor(.white)
-                            .font(.body)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+                    Color.black.opacity(0.8)
+                    VStack(spacing: 16) {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.red)
 
-                        Button {
-                            viewModel.retry()
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Retry")
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                            Text("Connection Failed")
+                                .foregroundColor(.white)
+                                .font(.headline)
+
+                            Text(error)
+                                .foregroundColor(.white.opacity(0.8))
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(4)
                         }
+                        .padding(.horizontal)
+
+                        VStack(spacing: 10) {
+                            Button {
+                                viewModel.retry()
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Retry Connection")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .font(.subheadline.bold())
+                            }
+
+                            Button {
+                                isFullScreen = false
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "xmark")
+                                    Text("Close")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.gray.opacity(0.3))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .font(.subheadline)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                     .padding()
                 }
@@ -252,6 +326,36 @@ struct VideoPlayerView: View {
             return String(format: "%d:%02d:%02d", hours, minutes, secs)
         } else {
             return String(format: "%02d:%02d", minutes, secs)
+        }
+    }
+
+    private var statusColor: Color {
+        switch viewModel.connectionStatus {
+        case .disconnected:
+            return Color.gray
+        case .connecting:
+            return Color.yellow
+        case .connected:
+            return Color.green
+        case .buffering:
+            return Color.orange
+        case .failed:
+            return Color.red
+        }
+    }
+
+    private var statusText: String {
+        switch viewModel.connectionStatus {
+        case .disconnected:
+            return "Disconnected"
+        case .connecting:
+            return "Connecting..."
+        case .connected:
+            return "Connected"
+        case .buffering:
+            return "Buffering..."
+        case .failed(let reason):
+            return "Failed: \(reason.prefix(20))..."
         }
     }
 
