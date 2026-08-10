@@ -4,6 +4,27 @@
 
 logLevel: info
 
+# Control API configuration
+api: true
+apiAddress: :9997
+apiAllowOrigins: ["*"]
+
+# Authentication for API and metrics
+authInternalUsers:
+  # Preserve today's open (unauthenticated) publish/read/playback behavior
+  - user: any
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+
+  # Dedicated API/metrics user for the Stream Admin dashboard and iOS viewer-count polling
+  - user: apiviewer
+    pass: ${API_VIEWER_PASS}
+    permissions:
+      - action: api
+      - action: metrics
+
 paths:
   # Default path - accepts any stream publisher
   all:
