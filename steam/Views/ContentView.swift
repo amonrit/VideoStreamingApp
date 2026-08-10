@@ -79,7 +79,9 @@ struct ContentView: View {
                                 isCurrent: stream.id == viewController.playbackViewModel.currentStream?.id
                             )
                             .onTapGesture {
-                                select(stream: stream)
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    select(stream: stream)
+                                }
                             }
                         }
                     }
@@ -99,14 +101,6 @@ struct ContentView: View {
 
     private func select(stream: VideoStream) {
         viewController.didSelectStream(stream)
-        streams = reorderedStreams(selected: stream, from: streams)
-    }
-
-    private func reorderedStreams(selected: VideoStream, from list: [VideoStream]) -> [VideoStream] {
-        var result = list
-        result.removeAll { $0.id == selected.id }
-        result.insert(selected, at: 0)
-        return result
     }
 }
 

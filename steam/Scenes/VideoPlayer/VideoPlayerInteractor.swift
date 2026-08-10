@@ -33,6 +33,10 @@ class VideoPlayerInteractor: VideoPlayerInteractorInput {
     // MARK: - Load Stream
 
     func loadStream(_ stream: VideoStream) {
+        player.pause()
+        cancellables.removeAll()
+        print("🛑 Stopped playback of previous stream")
+
         guard let url = stream.url else {
             let error = "Invalid URL: \(stream.urlString)"
             print("❌ \(error)")
@@ -79,12 +83,14 @@ class VideoPlayerInteractor: VideoPlayerInteractorInput {
         playbackState.isPlaying = true
         playbackState.isLoading = false
         updatePlaybackState()
+        print("▶️  Playing: \(currentStream?.title ?? "unknown")")
     }
 
     func pause() {
         player.pause()
         playbackState.isPlaying = false
         updatePlaybackState()
+        print("⏸️  Paused: \(currentStream?.title ?? "unknown")")
     }
 
     func retry() {
@@ -179,6 +185,7 @@ class VideoPlayerInteractor: VideoPlayerInteractorInput {
 
     deinit {
         cancellables.removeAll()
+        player.replaceCurrentItem(with: nil)  // ✅ Clean up player item
     }
 }
 
