@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786362333) by amonrit
 
 # Steam - Features Roadmap & Recommendations
 
@@ -18,6 +18,8 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 - ✅ CLAUDE.md AI guidance
 - ✅ Antigravity semantic analysis
 - ✅ Commit message template
+- ✅ **Playback Controls** (Play/Pause, Seek, Speed)
+- ✅ **Manual Quality Selection** (Auto/720p/480p/360p/240p)
 
 ---
 
@@ -64,7 +66,7 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 
 ### **Tier 1: Essential Playback Features** 🔴 (Add First)
 
-#### 1️⃣ **Playback Controls** ⭐⭐⭐
+#### 1️⃣ **Playback Controls** ⭐⭐⭐ ✅ DONE
 **Problem it solves:**
 ```
 - Users cannot Play/Pause during playback
@@ -74,11 +76,11 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 ```
 
 **Features to add:**
-- [ ] Play/Pause button (toggle state)
-- [ ] Progress slider (Seek bar) with scrubbing
-- [ ] Current time / Total duration display (00:30 / 02:00)
-- [ ] Playback speed control (0.5x, 1x, 1.5x, 2x)
-- [ ] Time label updates (every 100ms)
+- [x] Play/Pause button (toggle state)
+- [x] Progress slider (Seek bar) with scrubbing
+- [x] Current time / Total duration display (00:30 / 02:00)
+- [x] Playback speed control (0.5x, 1x, 1.5x, 2x)
+- [x] Time label updates (every 100ms)
 
 **Implementation Files:**
 - Update `VideoPlayerWorker` to expose `currentTime` and `duration` publishers
@@ -92,7 +94,7 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 
 ---
 
-#### 2️⃣ **Manual Quality Selection** ⭐⭐⭐
+#### 2️⃣ **Manual Quality Selection** ⭐⭐⭐ ✅ DONE
 **Problem it solves:**
 ```
 - Users cannot manually select video quality
@@ -101,11 +103,11 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 ```
 
 **Features to add:**
-- [ ] Extract available qualities from HLS manifest (master.m3u8)
-- [ ] Display quality options: Auto, 720p, 480p, 360p, 240p
-- [ ] Quality selection menu/dropdown
-- [ ] Show current quality indicator badge
-- [ ] Persist quality preference
+- [x] Extract available qualities from HLS manifest (master.m3u8)
+- [x] Display quality options: Auto, 720p, 480p, 360p, 240p
+- [x] Quality selection menu/dropdown
+- [x] Show current quality indicator badge
+- [x] Persist quality preference
 
 **Implementation Files:**
 - Add `QualityManager` worker class
@@ -412,10 +414,10 @@ struct PlaybackHistory {
 - ✅ Phase 0: Development guides (DEVELOPMENT.md, AI_WORKFLOW.md)
 
 ```
-Phase 1 (Week 1-2):
-├── 1. Playback Controls (1 day)
-├── 2. Quality Selection (1-2 days)
-└── 3. Network Status (0.5 days)
+Phase 1 (In Progress):
+├── ✅ 1. Playback Controls (DONE!)
+├── ✅ 2. Quality Selection (DONE!)
+└── 3. Network Status (0.5 days) ← NEXT
 
 Phase 2 (Week 3-4):
 ├── 4. Gesture Controls (1 day)
@@ -437,9 +439,9 @@ Phase 3 (Week 5+):
 | Feature | Effort | Impact | Priority | Timeline |
 |---------|--------|--------|----------|----------|
 | **Development Guides** | 2-4 hrs | 🔵 Foundation | P0 | ✅ Done |
-| **Playback Controls** | 1 day | 🔴 Critical | P0 | Week 1 |
-| **Quality Selection** | 1-2 days | 🟠 High | P0 | Week 1 |
-| **Network Status** | 0.5 days | 🟠 High | P0 | Week 1 |
+| **Playback Controls** | 1 day | 🔴 Critical | P0 | ✅ Done |
+| **Quality Selection** | 1-2 days | 🟠 High | P0 | ✅ Done |
+| **Network Status** | 0.5 days | 🟠 High | P0 | Next |
 | **Test Suite** | 3-5 days | 🟠 High | P0 | Week 2+ |
 | **Gesture Controls** | 1 day | 🟡 Medium | P1 | Week 2 |
 | **Watch History** | 1 day | 🟡 Medium | P1 | Week 2 |
