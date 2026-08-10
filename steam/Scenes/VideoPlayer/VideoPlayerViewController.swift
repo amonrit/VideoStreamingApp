@@ -32,19 +32,19 @@ class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
     // MARK: - Router Methods
 
     func didSelectStream(_ stream: VideoStream) {
-        interactor.loadStream(stream)
+        playbackViewModel.loadStream(stream)
     }
 
     func playStream() {
-        interactor.play()
+        playbackViewModel.play()
     }
 
     func pauseStream() {
-        interactor.pause()
+        playbackViewModel.pause()
     }
 
     func retryLoadStream() {
-        interactor.retry()
+        playbackViewModel.retry()
     }
 
     // MARK: - Presenter Output
