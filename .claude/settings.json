@@ -115,5 +115,47 @@
         "repository_info"
       ]
     }
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "User is about to run: $ARGUMENTS\n\nIf this is a git commit command, MUST read docs/COMMIT_GUIDE.md (lines 1-100) and confirm adherence to:\n1. ❌ No Co-Authored-By footer (absolutely forbidden)\n2. ✅ Format: <type>(<scope>): <subject>\n3. ✅ Subject ≤50 chars, imperative mood (add not added)\n4. ✅ No period at end of subject\n5. ✅ Body explains why (optional but recommended)\n6. ✅ Footer: issue references only (Closes #42, Fixes #42)\n\nIf it's a git commit, report back the commit message standards you reviewed. If not a commit command, just acknowledge and proceed.",
+            "if": "Bash(git commit*)",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "make build-app 2>&1 | tail -20",
+            "if": "Bash(git push*)",
+            "timeout": 120,
+            "statusMessage": "Verifying build before push..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(jq -r '.tool_input.file_path // .tool_response.filePath' 2>/dev/null); if [[ \"$FILE\" == *.swift ]]; then echo \"Running tests after Swift file change...\"; make test-app 2>&1 | tail -20; fi",
+            "timeout": 120,
+            "statusMessage": "Running tests for Swift changes..."
+          },
+          {
+            "type": "command",
+            "command": "FILE=$(jq -r '.tool_input.file_path // .tool_response.filePath' 2>/dev/null); if [[ \"$FILE\" == *.md ]]; then TIMESTAMP=$(date +%s); DATE=$(date +%m/%d/%Y); USERNAME=$(git config user.name 2>/dev/null || echo 'amonrit'); sed -i '' \"1s/^.*$/Last Modified: $DATE ($TIMESTAMP) by $USERNAME/\" \"$FILE\" 2>/dev/null || true; echo \"Updated markdown header: $FILE\"; fi",
+            "timeout": 10,
+            "statusMessage": "Updating markdown headers..."
+          }
+        ]
+      }
+    ]
   }
 }
