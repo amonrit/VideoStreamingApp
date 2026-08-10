@@ -12,6 +12,7 @@ struct HomeView: View {
 
     enum MenuOption: Hashable {
         case watchStreams
+        case streamAdmin
         case settings
         case about
         case help
@@ -49,6 +50,20 @@ struct HomeView: View {
                                 subtitle: "Browse and play live streams",
                                 icon: "play.circle.fill",
                                 iconColor: .blue
+                            )
+                        }
+
+                        // Stream Admin
+                        NavigationLink(
+                            destination: StreamAdminView(),
+                            tag: MenuOption.streamAdmin,
+                            selection: $selectedMenuOption
+                        ) {
+                            MenuCardView(
+                                title: "Stream Admin",
+                                subtitle: "Monitor live streams & viewers",
+                                icon: "chart.bar.fill",
+                                iconColor: .purple
                             )
                         }
 
