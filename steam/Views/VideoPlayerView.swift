@@ -2,24 +2,22 @@
 //  VideoPlayerView.swift
 //  steam
 //
-//  Created by Amonrit on 25/6/2569 BE.
-//
 
 import SwiftUI
 import AVKit
 
 struct VideoPlayerView: View {
-    @ObservedObject var viewController: VideoPlayerViewController
+    @ObservedObject var viewModel: PlaybackViewModel
     @Binding var isFullScreen: Bool
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            VideoPlayer(player: viewController.playbackViewModel.player)
+            VideoPlayer(player: viewModel.player)
                 .background(Color.black)
                 .clipped()
 
             // Loading Overlay
-            if viewController.playbackViewModel.isLoading {
+            if viewModel.isLoading {
                 ZStack {
                     Color.black.opacity(0.3)
                     VStack(spacing: 8) {
@@ -33,7 +31,7 @@ struct VideoPlayerView: View {
             }
 
             // Error Overlay
-            if let error = viewController.playbackViewModel.errorMessage {
+            if let error = viewModel.errorMessage {
                 ZStack {
                     Color.black.opacity(0.6)
                     VStack(spacing: 12) {
@@ -44,7 +42,7 @@ struct VideoPlayerView: View {
                             .padding(.horizontal)
 
                         Button {
-                            viewController.retryLoadStream()
+                            viewModel.retry()
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
@@ -80,7 +78,7 @@ struct VideoPlayerView: View {
 #Preview {
     let module = VideoPlayerRouter.createModule(stream: .sample)
     VideoPlayerView(
-        viewController: module.viewController,
+        viewModel: module.playbackViewModel,
         isFullScreen: .constant(false)
     )
 }
