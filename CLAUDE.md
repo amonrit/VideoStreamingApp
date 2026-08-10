@@ -2,7 +2,17 @@ Last Modified: 08/10/2026 (1786502400) by amonrit
 
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code and AI assistants when working with code in this repository.
+
+---
+
+## 🚀 Start Here
+
+**New to the project?**
+→ Read [GETTING_STARTED.md](./GETTING_STARTED.md) (5 minutes)
+
+**All documentation:**
+→ Read [DOCUMENTATION.md](./DOCUMENTATION.md) (master index)
 
 ---
 
@@ -17,52 +27,28 @@ The project enables users to publish live video streams (via RTMP) and play them
 
 ---
 
-## Architecture: MVVM (iOS App)
+## Architecture: MVVM (Quick Reference)
 
-The iOS app follows **Model-View-ViewModel** pattern:
+The iOS app follows **Model-View-ViewModel** pattern. For deep dive, see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
+**Quick structure:**
 ```
 Views (SwiftUI)
   ↓ observe @Published properties
 PlaybackViewModel (Business Logic + State)
   ├─ Owns AVPlayer instance
   ├─ Manages stream loading, playback state, error handling
-  ├─ Coordinates with Workers for KVO/Combine setup
-  └─ Exposes @Published properties for UI binding
+  └─ Coordinates with Workers for KVO/Combine setup
   
 Workers (Reusable Utilities)
-  ├─ VideoPlayerWorker — KVO observers, resolution/bitrate extraction
-  └─ [Future workers for quality, network, subtitles, etc.]
+  └─ VideoPlayerWorker — KVO observers, resolution/bitrate extraction
 
 Models (Data Entities)
   ├─ VideoStream — URL, title, thumbnail
   └─ PlaybackState — Internal state tracking
 ```
 
-### Key Architecture Decisions
-
-- **Single ViewModel Instance**: `ContentView` uses `@StateObject` to preserve `PlaybackViewModel` across re-renders (prevents AVPlayer memory leaks)
-- **Combine Publishers**: All async work (KVO changes, buffering) delivered on main thread via `.receive(on: DispatchQueue.main)` in Workers
-- **No DTOs/Protocols**: MVVM eliminates the Clean Swift (VIPER) scaffolding that was in place before; Views directly observe ViewModel's `@Published` properties
-- **Centralized Logging**: `os.Logger` (subsystem: `amonrit.steam`, category: `playback`) for structured logging
-
-### File Organization
-
-```
-steam/
-├── steamApp.swift              — App entry point
-├── Models/
-│   ├── VideoStream.swift       — Stream metadata (URL, title, thumbnail)
-│   └── PlaybackState.swift     — Internal playback state enum
-├── ViewModels/
-│   └── PlaybackViewModel.swift — Main business logic & state owner
-├── Views/
-│   ├── ContentView.swift       — Root view (stream list + player + debug)
-│   ├── VideoPlayerView.swift   — Player UI + controls
-│   └── FullScreenPlayerView.swift — Fullscreen wrapper
-└── Workers/
-    └── VideoPlayerWorker.swift — KVO setup & format helpers
-```
+**Key Decision:** `ContentView` uses `@StateObject` to preserve `PlaybackViewModel` across re-renders (prevents AVPlayer memory leaks)
 
 ---
 
@@ -70,153 +56,71 @@ steam/
 
 **MediaMTX** (v1.20.0) runs in Docker and manages all streaming protocols:
 
-| Protocol | Port | Purpose | Use Case |
-|----------|------|---------|----------|
-| **RTMP** | 1935 | Publishing | OBS, FFmpeg, mobile app publishing |
-| **RTSP** | 8554 | Low-latency playback | Real-time monitoring |
-| **HLS** | 8888 | Web/mobile playback | iOS app, browsers |
-| **WebRTC** | 8889 | Ultra-low-latency browser | Live chat, interactive |
-| **SRT** | 8890 | Secure, high-quality | Backup/failover links |
+| Protocol | Port | Purpose |
+|----------|------|---------|
+| **RTMP** | 1935 | Publishing (OBS, FFmpeg) |
+| **RTSP** | 8554 | Low-latency playback |
+| **HLS** | 8888 | Web/mobile playback |
+| **WebRTC** | 8889 | Ultra-low-latency browser |
+| **SRT** | 8890 | Secure, high-quality |
 
-**Configuration**:
-- `docker-compose.yml` — Docker service definition (ports, volumes, environment)
-- `streaming/mediamtx.yml` — MediaMTX config (paths, auth, recording)
+**Files:**
+- `docker-compose.yml` — Docker service definition
+- `streaming/mediamtx.yml` — MediaMTX configuration
 - `recordings/` — Auto-created directory for stream recording
 
 ---
 
-## Common Development Commands
+## Quick Commands
 
-### iOS App Development
+### iOS App
 
-**Build & Run**
 ```bash
-# Build for simulator
-xcodebuild -scheme steam -destination 'generic/platform=iOS Simulator' build
-
-# Run in Xcode
-xcodebuild -scheme steam -destination 'generic/platform=iOS Simulator' test
-
-# (Preferred) Use Xcode IDE directly for full debugging experience
+# Open in Xcode
 open steam.xcodeproj
-```
 
-**Logging**
-- View logs in Xcode Console or via macOS Console.app
-- Search by subsystem: `amonrit.steam`
-- Category: `playback`
+# Build & run
+make dev-app
+
+# View logs
+# In Xcode: View → Debug Area → Show Console
+# Filter by category: [playback]
+```
 
 ### Streaming Server
 
-**Start/Stop Server**
 ```bash
-./streaming.sh start   # Start Docker container
-./streaming.sh stop    # Stop container
-./streaming.sh restart # Restart (after config changes)
-```
+# Start server
+make dev-server
 
-**Monitor & Diagnose**
-```bash
-./streaming.sh status  # Check if running
-./streaming.sh logs    # View live logs (Ctrl+C to exit)
-./streaming.sh test    # Run verification tests
-```
+# View logs
+make server-logs
 
-**Direct Docker Commands** (from `streaming/` directory)
-```bash
-cd streaming/
+# Test stream publishing
+ffmpeg -re -i video.mp4 -c copy -f flv rtmp://localhost:1935/live/mystream
 
-docker-compose up -d                    # Start
-docker-compose down                     # Stop
-docker-compose logs -f mediamtx         # Tail logs
-docker-compose restart                  # Restart after config change
-docker ps --filter "name=mediamtx"      # Check container status
-```
-
-**Test Stream Publishing**
-```bash
-# Publish video file via FFmpeg
-ffmpeg -re -i video.mp4 -c copy -f flv \
-  rtmp://publish:streampass123@localhost:1935/live/mystream
-
-# Watch via HLS
+# Play stream
 ffplay "http://localhost:8888/live/mystream/index.m3u8"
-
-# Watch via VLC
-# Media → Open Network Stream → http://localhost:8888/live/mystream/index.m3u8
 ```
 
 ---
 
-## Key Workflows
-
-### Adding a New Feature to the iOS App
-
-1. **Identify what state** the feature needs → add `@Published var` to `PlaybackViewModel`
-2. **Add business logic** → add methods to `PlaybackViewModel`
-3. **If complex**: Create a new **Worker** class for reusable utilities (e.g., `QualityManager`, `NetworkMonitor`)
-4. **Create/update Views** → SwiftUI components that observe ViewModel state
-5. **Test** → Manual testing in simulator; verify logs in Console.app
-
-**Example**: Adding playback controls (pause, seek, speed)
-- Add `currentTime`, `duration`, `playbackRate` as `@Published` to ViewModel
-- Create `VideoPlayerWorker` method `setupTimeTracking()` to monitor CMTime changes
-- Add `seek(_:)`, `setPlaybackRate(_:)` methods to ViewModel
-- Create `PlaybackControlsView` that calls these ViewModel methods
-
-### Deploying the Streaming Server to a New Machine
-
-1. Copy `steam/` folder to new machine: `scp -r ~/Documents/steam user@newmachine:~/Documents/`
-2. SSH into new machine
-3. Start server: `cd ~/Documents/steam && ./streaming.sh start`
-4. Get server IP: `ifconfig | grep "inet " | grep -v 127.0.0.1`
-5. Update iOS app with server IP → rebuild → test
-
-See **DEPLOYMENT_GUIDE.md** for detailed multi-machine setup.
-
-### Fixing Playback Issues
-
-**Debug Checklist**:
-1. Check logs: `./streaming.sh logs` → look for error messages
-2. Verify HLS endpoint: `curl -v http://localhost:8888/live/mystream/index.m3u8` → should return 302 Found or 200 OK
-3. Check network: Is stream actively publishing? Check in logs: `[path live/mystream] stream is available`
-4. Verify iOS app is using correct server IP
-5. Check firewall: Are ports 1935, 8554, 8888, 8889, 8890 open?
-
----
-
-## Important Files & Their Purposes
-
-| File | Purpose | When to Edit |
-|------|---------|--------------|
-| `PlaybackViewModel.swift` | Core business logic, state management, retry logic | Adding features, fixing playback bugs |
-| `VideoPlayerWorker.swift` | KVO observers, format extraction (resolution, bitrate) | Expanding playback metrics |
-| `ContentView.swift` | Root UI, stream list, debug panel | Changing app layout, adding controls |
-| `VideoPlayerView.swift` | Player UI, loading/error overlays | Styling, adding player controls |
-| `docker-compose.yml` | Docker service config (ports, volumes, environment) | Changing ports, adding volumes |
-| `streaming/mediamtx.yml` | MediaMTX server config (paths, auth, recording) | Enabling recording, changing auth |
-| `ARCHITECTURE.md` | Detailed MVVM architecture overview | Reference for understanding design decisions |
-| `DEPLOYMENT_GUIDE.md` | Multi-machine deployment instructions | Deploying to new servers |
-| `FEATURES_ROADMAP.md` | Planned features ranked by priority/impact | Understanding feature priorities |
-
----
-
-## Critical Context
+## Critical Context (For AI)
 
 ### Retry & Timeout Strategy
 
-**PlaybackViewModel** uses aggressive retry logic for HLS playback:
+**PlaybackViewModel** uses aggressive retry logic:
 - **Load Timeout**: 3 seconds per attempt
 - **Stall Timeout**: 2 seconds for recovery
 - **Max Retries**: 2 attempts before failure
 - **Retry Backoff**: 1–2 seconds between attempts
 
-This ensures the app fails fast and cleanly rather than hanging indefinitely.
+Ensures the app fails fast and cleanly rather than hanging.
 
 ### AVPlayer Configuration
 
 - `allowsExternalPlayback = true` — Enables AirPlay, HDMI casting
-- `automaticallyWaitsToMinimizeStalling = true` — Allows intelligent buffering for HLS
+- `automaticallyWaitsToMinimizeStalling = true` — Intelligent buffering
 - All player state changes observed via KVO (playback status, buffering, errors)
 
 ### Threading Model
@@ -225,83 +129,59 @@ This ensures the app fails fast and cleanly rather than hanging indefinitely.
 - **Background**: KVO observations (via Combine), but callbacks always deliver on main thread
 - **Guarantee**: No manual `DispatchQueue.main.async` calls needed in Views — Worker ensures main-thread delivery
 
-### Session URL Cleaning
+### Known Quirks
 
-iOS HLS playback may append session parameters (`?session=...`) to stream URLs. The app detects and strips these for MediaMTX compatibility.
-
----
-
-## Performance & Debugging Tips
-
-1. **Check Buffering**: If `bufferingCount` keeps incrementing, network is slow or server is lagging
-2. **Resolution/Bitrate**: Debug panel shows current quality; watch it change as network conditions fluctuate
-3. **Logs**: Search `os.Logger` output for `[playback]` category to filter app-specific logs
-4. **Server Health**: `./streaming.sh logs` shows real-time connection counts and stream status
-5. **Network Latency**: Use RTSP (port 8554) for low-latency testing; HLS has inherent buffering delay
+- **URL Session Parameters**: iOS HLS may append `?session=...`. App strips these for MediaMTX compatibility.
+- **Audio Track Mismatch**: If server publishes H.264 video + audio but client expects different codec, playback may hang.
+- **Docker on Mac**: Uses bridge network; `localhost` works from host, but cross-machine access requires actual IP.
+- **Firewall**: All 5 protocols (RTMP, RTSP, HLS, WebRTC, SRT) need open ports.
 
 ---
 
-## Gotchas & Known Issues
+## Important Files
 
-- **URL Session Parameters**: HLS can append `?session=UUID`. The app strips these, but some servers may reject stripped URLs. Verify with direct curl test.
-- **Audio Track Mismatch**: If server publishes H.264 video + audio, but iOS app expects different codec, playback may hang. Check server logs for track info.
-- **Firewall**: All 5 protocols (RTMP, RTSP, HLS, WebRTC, SRT) need open ports. Don't forget UDP for SRT, RTP/RTCP.
-- **Docker on Mac**: Uses bridge network; `localhost` works from host, but cross-machine access requires actual IP (not `localhost:8888`).
-
----
-
-## Next Steps / Future Work
-
-See **FEATURES_ROADMAP.md** for detailed feature proposals. Priority features:
-
-1. **Playback Controls** — Play/Pause, seek bar, speed control (1 day effort)
-2. **Quality Selection** — Manual bitrate switching (1–2 days)
-3. **Network Status Indicator** — WiFi strength, connection type (0.5 days)
-4. **Gesture Controls** — Swipe to seek, double-tap to play (1 day)
-5. **Picture-in-Picture** — Multitasking while streaming (1 day)
+| File | Purpose |
+|------|---------|
+| `steam/ViewModels/PlaybackViewModel.swift` | Core business logic & state |
+| `steam/Views/ContentView.swift` | Main UI & stream list |
+| `steam/Views/VideoPlayerView.swift` | Player UI & overlays |
+| `steam/Workers/VideoPlayerWorker.swift` | KVO observers & formatting |
+| `streaming/docker-compose.yml` | Docker service config |
+| `streaming/mediamtx.yml` | MediaMTX configuration |
 
 ---
 
+## Documentation Map
+
+| Document | For AI | Purpose |
+|----------|--------|---------|
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | Humans | Setup guide (5 min) |
+| [DOCUMENTATION.md](./DOCUMENTATION.md) | Humans | Master index |
+| [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Humans | Local dev workflows |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | AI + Humans | Deep MVVM dive |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Humans | Production setup |
+| [docs/COMMIT_GUIDE.md](./docs/COMMIT_GUIDE.md) | Humans | Commit standards |
+| [docs/AI_WORKFLOW.md](./docs/AI_WORKFLOW.md) | Humans | Using AI tools |
+| [FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md) | AI + Humans | Future features |
+| [.claude/SETUP.md](./.claude/SETUP.md) | AI | Antigravity config |
+| [.claude/instructions/swift-style.md](./.claude/instructions/swift-style.md) | AI | Code style rules |
+
 ---
 
-## Documentation Standards
+## Markdown Header Rule
 
-### Markdown File Headers (REQUIRED)
-
-All `.md` files MUST start with a modification header:
-
+**All `.md` files MUST start with:**
 ```
 Last Modified: MM/DD/YYYY (UNIX_TIMESTAMP) by USERNAME
 
-[Rest of document content...]
+[Document content...]
 ```
 
-**Example:**
-```
-Last Modified: 08/10/2026 (1786502400) by amonrit
-
-# Document Title
-```
-
-**Details:**
-- Date format: `MM/DD/YYYY` (e.g., `08/10/2026`)
-- Unix timestamp: Current epoch seconds
-- Username: Git user who made the edit
-- Always on line 1, followed by blank line
-
-**Update whenever you edit a .md file** — change date, timestamp, and your username.
-
-For full details, see: `.claude/markdown-header-rule.md`
+Update whenever you edit. See [.claude/markdown-header-rule.md](./.claude/markdown-header-rule.md) for details.
 
 ---
 
-## Questions?
-
-Refer to:
-- **ARCHITECTURE.md** — Deep dive into MVVM structure
-- **DEPLOYMENT_GUIDE.md** — Multi-machine setup
-- **README_SETUP.md** — Quick start reference
-- **FEATURES_ROADMAP.md** — Feature priorities & estimates
+**Last Updated:** 2026-08-10 (1786502400) by amonrit
 
 ---
-**Last Updated:** 2026-08-10 (1786357473) by amonrit
+**Last Updated:** 2026-08-10 (1786358207) by amonrit

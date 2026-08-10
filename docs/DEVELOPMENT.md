@@ -493,10 +493,9 @@ ifconfig | grep "inet "
 
 ## Next Steps
 
-- Read `ARCHITECTURE.md` for deep architecture understanding
-- Read `AI_WORKFLOW.md` for working with AI effectively
-- Read `.claude/antigravity-guide.md` for using Antigravity
-- Check `.claude/instructions/swift-style.md` for code style
+- Read [ARCHITECTURE.md](./ARCHITECTURE.md) for deep architecture understanding
+- Read [AI_WORKFLOW.md](./AI_WORKFLOW.md) for working with AI effectively
+- Read [COMMIT_GUIDE.md](./COMMIT_GUIDE.md) for committing code properly
 
 ---
 
@@ -513,4 +512,7 @@ ifconfig | grep "inet "
 **Pro Tip:** Keep `make server-logs` running in a terminal window while developing. You'll spot issues immediately!
 
 ---
-**Last Updated:** 2026-08-10 (1786357473) by amonrit
+**Last Updated:** 2026-08-10 by amonrit
+
+---
+**Last Updated:** 2026-08-10 (1786358207) by amonrit

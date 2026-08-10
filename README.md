@@ -30,51 +30,24 @@ A production-ready iOS video streaming application with a self-hosted streaming 
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start — 5 Minutes
 
-### Prerequisites
-- macOS with Xcode 14+ (for iOS app)
-- Docker & Docker Compose (for streaming server)
-- iOS 15+ device or simulator
+**→ [Go to GETTING_STARTED.md](./GETTING_STARTED.md)**
 
-### Start Streaming Server (60 seconds)
-
-```bash
-cd steam/streaming
-docker-compose up -d
-```
-
-**Verify it's running:**
-```bash
-docker-compose ps
-```
-
-You should see `mediamtx` container with status `Up`.
-
-### Build & Run iOS App
-
-```bash
-open steam.xcodeproj
-# Select iPhone simulator or device
-# Press Cmd+R to build and run
-```
-
-**Update server IP in the app:**
-- Get your server IP: `ifconfig | grep "inet " | grep -v 127.0.0.1`
-- In iOS app, find the sample stream URL and replace the IP
-- Hit play!
+Complete setup guide with all steps covered.
 
 ---
 
-## 📚 Documentation
+## 📚 Documentation Hub
 
-| Document | Purpose |
-|----------|---------|
-| **[CLAUDE.md](./CLAUDE.md)** | Development guide for AI assistants & engineers |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Deep dive into MVVM architecture & data flow |
-| **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** | Deploy server to production/new machines |
-| **[FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md)** | Planned features & priorities |
-| **[README_SETUP.md](./README_SETUP.md)** | Quick reference for common tasks |
+**[→ DOCUMENTATION.md](./DOCUMENTATION.md)** — Complete guide to all docs (where to find what you need)
+
+Or jump directly to:
+- **[GETTING_STARTED.md](./GETTING_STARTED.md)** — Setup (5 min)
+- **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** — Local development
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Deep dive into MVVM
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — Production setup
+- **[FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md)** — Planned features
 
 ---
 
@@ -263,7 +236,12 @@ See **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** for step-by-step instructio
 
 ## 📖 For Developers
 
-Start with **[CLAUDE.md](./CLAUDE.md)** for architecture, commands, and workflows.
+Start with **[DOCUMENTATION.md](./DOCUMENTATION.md)** to find what you need.
+
+**Key references:**
+- **[CLAUDE.md](./CLAUDE.md)** — AI-friendly project overview & critical context
+- **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** — Local dev workflows & debugging
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Deep MVVM architecture
 
 ### Adding Features
 
@@ -305,13 +283,17 @@ Improvements welcome! Key areas:
 ## 📞 Support
 
 For questions or issues:
-1. Check **[README_SETUP.md](./README_SETUP.md)** for common tasks
-2. Review **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** for server setup
-3. Search **[ARCHITECTURE.md](./ARCHITECTURE.md)** for design decisions
-4. Check streaming server logs: `./streaming.sh logs`
-5. View app logs in Xcode Console
+1. **[GETTING_STARTED.md](./GETTING_STARTED.md)** — Quick setup & troubleshooting
+2. **[DOCUMENTATION.md](./DOCUMENTATION.md)** — Find the right doc for your question
+3. **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** — Debugging & common issues
+4. **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — Production setup
+5. Check streaming server logs: `./streaming.sh logs`
+6. View app logs in Xcode Console
 
 **Ready to stream!** 🎬
 
 ---
-**Last Updated:** 2026-08-10 (1786357473) by amonrit
+**Last Updated:** 2026-08-10 (1786502400) by amonrit
+
+---
+**Last Updated:** 2026-08-10 (1786358207) by amonrit
