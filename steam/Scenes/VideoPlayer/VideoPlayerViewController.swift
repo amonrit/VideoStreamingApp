@@ -11,7 +11,6 @@ import Combine
 
 class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
     @Published var playbackViewModel: PlaybackViewModel
-    @Published var debugViewModel: DebugInfoViewModel
 
     // MARK: - Strong References (keep components alive)
     private let interactor: VideoPlayerInteractorInput
@@ -25,7 +24,6 @@ class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
         worker: VideoPlayerWorker
     ) {
         self.playbackViewModel = playbackViewModel
-        self.debugViewModel = DebugInfoViewModel()
         self.interactor = interactor
         self.presenter = presenter
         self.worker = worker
@@ -49,19 +47,6 @@ class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
         interactor.retry()
     }
 
-    func updateDebugInfo() {
-        let debugInfo = interactor.getDebugInfo()
-        let resolution = debugInfo.resolution
-        let bitrate = debugInfo.bitrate
-        let bufferingCount = playbackViewModel.bufferingCount
-
-        DispatchQueue.main.async {
-            self.debugViewModel.resolution = resolution
-            self.debugViewModel.bitrate = bitrate
-            self.debugViewModel.bufferingCount = bufferingCount
-        }
-    }
-
     // MARK: - Presenter Output
 
     func displayPlaybackState(_ viewModel: PlaybackViewModel) {
@@ -76,10 +61,6 @@ class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
     }
 
     func displayDebugInfo(_ info: DebugInfoViewModel) {
-        DispatchQueue.main.async {
-            self.debugViewModel.resolution = info.resolution
-            self.debugViewModel.bitrate = info.bitrate
-            self.debugViewModel.bufferingCount = info.bufferingCount
-        }
+        // No-op now that debug info is computed from PlaybackViewModel
     }
 }

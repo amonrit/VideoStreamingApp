@@ -28,3 +28,10 @@ struct VideoPlayerResponse {
     let bitrate: String
 }
 
+// MARK: - DebugInfoViewModel (deprecated, kept for Presenter compatibility)
+
+class DebugInfoViewModel: ObservableObject {
+    @Published var resolution: String = "unknown"
+    @Published var bitrate: String = "unknown"
+    @Published var bufferingCount: Int = 0
+}

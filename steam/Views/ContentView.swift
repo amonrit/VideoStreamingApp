@@ -31,9 +31,6 @@ struct ContentView: View {
                     Spacer()
                     Button {
                         showDebug.toggle()
-                        if showDebug {
-                            viewController.updateDebugInfo()
-                        }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "ladybug.fill")
@@ -51,9 +48,9 @@ struct ContentView: View {
 
                 if showDebug {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Resolution: \(viewController.debugViewModel.resolution)")
-                        Text("Bitrate: \(viewController.debugViewModel.bitrate)")
-                        Text("Buffering events: \(viewController.debugViewModel.bufferingCount)")
+                        Text("Resolution: \(playbackViewModel.resolutionText)")
+                        Text("Bitrate: \(playbackViewModel.bitrateText)")
+                        Text("Buffering events: \(playbackViewModel.bufferingCount)")
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)

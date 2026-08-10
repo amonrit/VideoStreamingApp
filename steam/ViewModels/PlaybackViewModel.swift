@@ -159,20 +159,16 @@ class PlaybackViewModel: ObservableObject {
 
     // MARK: - Debug Info
 
-    func getDebugInfo() -> (resolution: String, bitrate: String) {
-        let resolution = worker.getResolution(from: player)
-        let bitrate = worker.getBitrate(from: player)
-        return (resolution, bitrate)
+    var resolutionText: String {
+        worker.getResolution(from: player)
+    }
+
+    var bitrateText: String {
+        worker.getBitrate(from: player)
     }
 
     deinit {
         cancellables.removeAll()
         player.replaceCurrentItem(with: nil)
     }
-}
-
-class DebugInfoViewModel: ObservableObject {
-    @Published var resolution: String = "unknown"
-    @Published var bitrate: String = "unknown"
-    @Published var bufferingCount: Int = 0
 }
