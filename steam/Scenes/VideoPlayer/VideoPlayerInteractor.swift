@@ -188,13 +188,3 @@ class VideoPlayerInteractor: VideoPlayerInteractorInput {
         player.replaceCurrentItem(with: nil)  // ✅ Clean up player item
     }
 }
-
-// MARK: - PlaybackState Model
-
-struct PlaybackState {
-    var isLoading: Bool = false
-    var isPlaying: Bool = false
-    var errorMessage: String?
-    var bufferingCount: Int = 0
-    var currentStream: VideoStream?
-}
