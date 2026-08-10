@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786365804) by amonrit
+Last Modified: 08/10/2026 (1786375527) by amonrit
 
 # Steam - Features Roadmap & Recommendations
 
@@ -39,28 +39,38 @@ Last Modified: 08/10/2026 (1786365804) by amonrit
 
 ---
 
-#### 📊 **Streaming Server Features** ⭐⭐
+#### 📊 **Streaming Server Features** ⭐⭐ ✅ PARTIALLY DONE
 **Problem it solves:**
 ```
-- No way to manage multiple streams
+- No way to manage multiple streams ✅
+- No stream statistics/analytics ✅
 - No recording management UI
-- No stream statistics/analytics
-- No authentication management
+- No authentication management ✅
 ```
 
 **Features to add:**
-- [ ] Stream management dashboard (list active streams)
+- [x] Stream management dashboard (list active streams) — **In-app dashboard, auto-refreshing stream list**
+- [x] Stream analytics (viewers) — **Live viewer count, bucketed by protocol (HLS/RTMP/RTSP/WebRTC/SRT)**
+- [x] Authentication management — **MediaMTX API user + credentials in .env**
 - [ ] Recording browser (view saved recordings)
-- [ ] Stream analytics (viewers, bitrate, duration)
+- [ ] Bitrate/bandwidth monitoring per stream
 - [ ] Multi-server support (deploy to multiple machines)
 - [ ] Stream on/off scheduler
 - [ ] Webhook notifications (stream started/stopped)
 
-**Implementation:** Companion web app or update server
+**Implementation:** In-app dashboard (StreamAdminView) + MediaMTX API v3 integration
 
-**Why:** Makes server production-ready and manageable
+**Why:** Makes server production-ready and manageable from iOS app
 
-**Effort:** 2-3 days | **Impact:** 🟠 High
+**Effort:** ✅ 1 day (done) | **Impact:** 🟠 High
+
+**Status:**
+- ✅ StreamAdminView (table of active streams, viewers, bytes)
+- ✅ StreamAdminViewModel (polls /v3/paths/list every 4s)
+- ✅ Viewer count badge in VideoPlayerView (Feature A)
+- ✅ MediaMTX API enabled with auth in mediamtx.yml
+- ⏳ Recording browser (deferred)
+- ⏳ Bitrate monitoring (deferred)
 
 ---
 
@@ -412,15 +422,19 @@ struct PlaybackHistory {
 
 **Foundation (Complete):**
 - ✅ Phase 0: Development guides (DEVELOPMENT.md, AI_WORKFLOW.md)
+- ✅ Phase 0+: Streaming Server Features (In-app dashboard + Viewer count)
 
 ```
 Phase 1 (In Progress):
 ├── ✅ 1. Playback Controls (DONE!)
 ├── ✅ 2. Quality Selection (DONE!)
-└── 3. Network Status (0.5 days) ← NEXT
+├── ✅ 3. Streaming Server Features (DONE!) 🎉
+│   ├── Live viewer count badge
+│   └── In-app stream admin dashboard
+└── 4. Network Status (0.5 days) ← NEXT
 
 Phase 2 (Week 3-4):
-├── 4. Gesture Controls (1 day)
+├── 5. Gesture Controls (1 day)
 ├── 5. Watch History (1 day)
 ├── 6. PiP Support (1 day)
 └── 7. Test Suite (3-5 days) ← Parallel
