@@ -222,7 +222,7 @@ struct VideoPlayerView: View {
                 .allowsHitTesting(false)  // ✅ ปุ่มทำงานได้ตามปกติ
             }
 
-            // Connection Status Indicator
+            // Connection Status Indicator + Viewer Count
             if !viewModel.isLoading && !isFullScreen {
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 6) {
@@ -237,6 +237,20 @@ struct VideoPlayerView: View {
                     .padding(.vertical, 4)
                     .background(Color.black.opacity(0.4))
                     .cornerRadius(6)
+
+                    // Viewer Count Badge
+                    if let count = viewModel.viewerCount {
+                        HStack(spacing: 4) {
+                            Image(systemName: "eye.fill")
+                            Text("\(count)")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.4))
+                        .cornerRadius(6)
+                    }
 
                     Spacer()
                 }

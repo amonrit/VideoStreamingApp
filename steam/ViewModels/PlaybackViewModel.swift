@@ -19,6 +19,7 @@ class PlaybackViewModel: ObservableObject {
     @Published var currentStream: VideoStream?
     @Published var connectionStatus: ConnectionStatus = .disconnected
     @Published var retryAttempt: Int = 0
+    @Published var viewerCount: Int?
 
     let player: AVPlayer
     private let worker: VideoPlayerWorker
@@ -30,6 +31,14 @@ class PlaybackViewModel: ObservableObject {
     private var timeoutTimer: Timer?
     private var isAutoRetrying: Bool = false
     private var totalRetryTime: TimeInterval = 0
+
+    // Viewer count polling
+    private var viewerCountTimer: Timer?
+    private var mediaMTXClient: MediaMTXAPIClient?
+    private var mediaMTXPathName: String?
+    private var viewerCountFailureCount: Int = 0
+    private let viewerCountPollInterval: TimeInterval = 4.0
+    private let maxViewerCountFailures: Int = 3
 
     // Network timeout constants - FAST retry strategy
     private let loadTimeout: TimeInterval = 3.0   // 3 seconds per attempt
@@ -74,10 +83,13 @@ class PlaybackViewModel: ObservableObject {
         // ยกเลิก timers เก่า
         retryTimer?.invalidate()
         timeoutTimer?.invalidate()
+        stopViewerCountPolling()
 
         player.pause()
         cancellables.removeAll()
         retryCount = 0
+        viewerCount = nil
+        viewerCountFailureCount = 0
 
         logger.info("🛑 Stopped playback of previous stream")
 
@@ -114,6 +126,16 @@ class PlaybackViewModel: ObservableObject {
 
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
+
+        // Setup viewer count polling if this is a MediaMTX stream
+        if let (baseURL, pathName) = MediaMTXConfig.mediaMTXTarget(for: url) {
+            mediaMTXClient = MediaMTXAPIClient(baseURL: baseURL)
+            mediaMTXPathName = pathName
+            logger.info("👁️  MediaMTX viewer count available for path: \(pathName, privacy: .public)")
+        } else {
+            mediaMTXClient = nil
+            mediaMTXPathName = nil
+        }
 
         setupObservers(for: item)
         startLoadingTimeout(for: stream)
@@ -184,6 +206,7 @@ class PlaybackViewModel: ObservableObject {
         playbackState.isLoading = false
         updateConnectionStatus(.connected)
         updatePlaybackViewModel()
+        startViewerCountPolling()
         logger.info("▶️  Playing: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
@@ -192,6 +215,7 @@ class PlaybackViewModel: ObservableObject {
         playbackState.isPlaying = false
         updateConnectionStatus(.disconnected)
         updatePlaybackViewModel()
+        stopViewerCountPolling()
         logger.info("⏸️  Paused: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
@@ -313,6 +337,46 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Viewer Count Polling
+
+    private func startViewerCountPolling() {
+        guard let client = mediaMTXClient, let pathName = mediaMTXPathName else { return }
+        viewerCountTimer?.invalidate()
+        viewerCountTimer = Timer.scheduledTimer(withTimeInterval: viewerCountPollInterval, repeats: true) { [weak self] _ in
+            self?.pollViewerCount(client: client, pathName: pathName)
+        }
+        // Fire immediately
+        viewerCountTimer?.fire()
+    }
+
+    private func stopViewerCountPolling() {
+        viewerCountTimer?.invalidate()
+        viewerCountTimer = nil
+    }
+
+    private func pollViewerCount(client: MediaMTXAPIClient, pathName: String) {
+        Task { [weak self] in
+            do {
+                let path = try await client.fetchPath(named: pathName)
+                await MainActor.run {
+                    self?.viewerCount = path.viewerCount
+                    self?.viewerCountFailureCount = 0
+                }
+            } catch {
+                await MainActor.run {
+                    guard let self else { return }
+                    self.viewerCountFailureCount += 1
+                    logger.warning("👁️  Viewer count poll failed: \(error.localizedDescription, privacy: .public)")
+
+                    // Hide stale count after 3 consecutive failures
+                    if self.viewerCountFailureCount >= self.maxViewerCountFailures {
+                        self.viewerCount = nil
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Debug Info
 
     var resolutionText: String {
@@ -327,6 +391,7 @@ class PlaybackViewModel: ObservableObject {
         cancellables.removeAll()
         retryTimer?.invalidate()
         timeoutTimer?.invalidate()
+        viewerCountTimer?.invalidate()
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
     }
