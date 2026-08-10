@@ -283,7 +283,18 @@ struct AddStreamSheet: View {
 
     var isValidURL: Bool {
         guard !customURL.isEmpty else { return false }
-        return customURL.starts(with: "http://") || customURL.starts(with: "https://") || customURL.starts(with: "rtmp://")
+        let isValidProtocol = customURL.starts(with: "http://") ||
+                             customURL.starts(with: "https://") ||
+                             customURL.starts(with: "rtmp://")
+
+        if !isValidProtocol { return false }
+
+        // For HLS, must end with .m3u8
+        if customURL.contains("http") {
+            return customURL.hasSuffix(".m3u8")
+        }
+
+        return true
     }
 
     var body: some View {
@@ -300,9 +311,14 @@ struct AddStreamSheet: View {
                             .font(.system(.title2, design: .default))
                             .fontWeight(.bold)
 
-                        Text("Connect to your MediaMTX streaming server")
-                            .font(.system(.caption, design: .default))
-                            .foregroundColor(.secondary)
+                        VStack(spacing: 4) {
+                            Text("Connect to your MediaMTX streaming server")
+                                .font(.system(.caption, design: .default))
+                                .foregroundColor(.secondary)
+                            Text("Use HLS URLs (.m3u8) for best experience")
+                                .font(.system(.caption2, design: .default))
+                                .foregroundColor(.orange)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -340,6 +356,48 @@ struct AddStreamSheet: View {
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
 
+                    // Protocol Info
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Stream Protocol", systemImage: "network")
+                            .font(.system(.headline, design: .default))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("HLS (Recommended)")
+                                        .font(.subheadline.bold())
+                                    Text("More stable & reliable")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(10)
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(8)
+
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(.orange)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("RTMP (Not Recommended)")
+                                        .font(.subheadline.bold())
+                                    Text("AVPlayer has limited support")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(10)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+
                     // Example URLs Section
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Example URLs", systemImage: "info.circle")
@@ -348,40 +406,50 @@ struct AddStreamSheet: View {
                             .foregroundColor(.blue)
 
                         VStack(alignment: .leading, spacing: 12) {
-                            // Local Example
+                            // HLS Example (Recommended)
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("🖥️ Local Machine")
-                                    .font(.system(.subheadline, design: .default))
-                                    .fontWeight(.semibold)
-                                Text("http://localhost:8888/live/{streamname}/index.m3u8")
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    Text("HLS (Recommended)")
+                                        .font(.system(.subheadline, design: .default))
+                                        .fontWeight(.semibold)
+                                }
+                                Text("http://10.117.6.98:8888/live/mystream/index.m3u8")
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
                             }
                             .padding(10)
-                            .background(Color(.systemGray5))
+                            .background(Color.green.opacity(0.05))
                             .cornerRadius(8)
 
-                            // Network Example
+                            // RTMP Example (Not Recommended)
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("📱 Network Device")
-                                    .font(.system(.subheadline, design: .default))
-                                    .fontWeight(.semibold)
-                                Text("http://10.117.6.98:8888/live/{streamname}/index.m3u8")
+                                HStack {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text("RTMP (Limited Support)")
+                                        .font(.system(.subheadline, design: .default))
+                                        .fontWeight(.semibold)
+                                }
+                                Text("rtmp://10.117.6.98:1935/live/mystream")
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
                             }
                             .padding(10)
-                            .background(Color(.systemGray5))
+                            .background(Color.orange.opacity(0.05))
                             .cornerRadius(8)
 
                             // Replace Note
                             HStack(spacing: 8) {
-                                Image(systemName: "pencil.tip")
+                                Image(systemName: "lightbulb.fill")
                                     .font(.system(.caption, design: .default))
-                                    .foregroundColor(.orange)
-                                Text("Replace {streamname} with your stream name")
+                                    .foregroundColor(.yellow)
+                                Text("Use HLS for better stability and auto-retry support")
                                     .font(.system(.caption2, design: .default))
                                     .foregroundColor(.secondary)
                             }
