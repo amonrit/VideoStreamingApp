@@ -3,7 +3,7 @@
 
 set -e
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 GIT_HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
 ANALYSIS_DIR="$PROJECT_ROOT/.claude/analysis"
 PYTHON_SCRIPT="$ANALYSIS_DIR/analyze-dependencies.py"
