@@ -35,9 +35,9 @@ struct FullScreenPlayerView: View {
 }
 
 #Preview {
-    let viewController = VideoPlayerRouter.createModule(stream: .sample)
-    return FullScreenPlayerView(
-        viewController: viewController,
+    let module = VideoPlayerRouter.createModule(stream: .sample)
+    FullScreenPlayerView(
+        viewController: module.viewController,
         isPresented: .constant(true)
     )
 }

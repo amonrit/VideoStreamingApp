@@ -11,7 +11,12 @@ import AVFoundation
 class VideoPlayerRouter {
     // MARK: - Module Creation
 
-    static func createModule(stream: VideoStream = .sample) -> VideoPlayerViewController {
+    struct Module {
+        let viewController: VideoPlayerViewController
+        let playbackViewModel: PlaybackViewModel
+    }
+
+    static func createModule(stream: VideoStream = .sample) -> Module {
         // Create Components
         let player = AVPlayer()
         let playbackViewModel = PlaybackViewModel(player: player)
@@ -41,6 +46,6 @@ class VideoPlayerRouter {
         // Load initial stream
         interactor.loadStream(stream)
 
-        return viewController
+        return Module(viewController: viewController, playbackViewModel: playbackViewModel)
     }
 }

@@ -8,10 +8,17 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var viewController = VideoPlayerRouter.createModule(stream: .sample)
+    @ObservedObject var viewController: VideoPlayerViewController
+    @ObservedObject var playbackViewModel: PlaybackViewModel
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
     @State private var showDebug = false
+
+    init() {
+        let module = VideoPlayerRouter.createModule(stream: .sample)
+        self._viewController = ObservedObject(initialValue: module.viewController)
+        self._playbackViewModel = ObservedObject(initialValue: module.playbackViewModel)
+    }
 
     var body: some View {
         NavigationView {
@@ -62,7 +69,7 @@ struct ContentView: View {
                         .font(.caption)
                         .foregroundColor(.gray)
 
-                    Text(viewController.playbackViewModel.currentStream?.title ?? "Select a video")
+                    Text(playbackViewModel.currentStream?.title ?? "Select a video")
                         .font(.headline)
                         .lineLimit(2)
                 }
@@ -76,7 +83,7 @@ struct ContentView: View {
                         ForEach(streams) { stream in
                             SuggestedVideoRow(
                                 stream: stream,
-                                isCurrent: stream.id == viewController.playbackViewModel.currentStream?.id
+                                isCurrent: stream.id == playbackViewModel.currentStream?.id
                             )
                             .onTapGesture {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -157,5 +164,6 @@ private struct SuggestedVideoRow: View {
 }
 
 #Preview {
-    ContentView()
+    let module = VideoPlayerRouter.createModule(stream: .sample)
+    return ContentView()
 }
