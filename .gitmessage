@@ -1,3 +1,6 @@
+# 📖 See COMMIT_GUIDE.md for detailed tips on writing good commits
+# Quick: type(scope): subject | Keep ≤50 chars | Imperative mood | One logical change
+#
 # <type>(<scope>): <subject>
 #
 # <body>
