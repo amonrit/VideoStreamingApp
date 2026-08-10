@@ -376,6 +376,3 @@ func testPlaybackStateDuringBuffering() { }
 | Line length | ≤120 chars | — |
 | Access level | Explicit | `private`, `public` |
 | Threading | Main only for UI | No background UI updates |
-
----
-**Last Updated:** 2026-08-10 (1786357473) by amonrit

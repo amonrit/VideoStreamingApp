@@ -148,6 +148,3 @@ docker-compose down && docker-compose up -d
 ---
 
 **Happy streaming! 🎬**
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

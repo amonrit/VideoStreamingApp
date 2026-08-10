@@ -121,6 +121,3 @@ docker-compose restart
 - MediaMTX: https://github.com/bluenviron/mediamtx
 - Docker Docs: https://docs.docker.com/
 - HLS Player: https://hls-js.netlify.app/
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

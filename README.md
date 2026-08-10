@@ -291,9 +291,3 @@ For questions or issues:
 6. View app logs in Xcode Console
 
 **Ready to stream!** 🎬
-
----
-**Last Updated:** 2026-08-10 (1786502400) by amonrit
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

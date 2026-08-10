@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786359417) by amonrit
+
 # GitHub Copilot Instructions - Steam iOS Streaming App
 
 This file provides guidance to GitHub Copilot when working on this repository.

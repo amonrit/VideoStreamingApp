@@ -89,6 +89,3 @@ make dev-server          # Start via Makefile
 > "Deploy to a new machine - what commands?"
 > "HLS buffering - how to reduce latency?"
 > "Protocol selection - what's best for [use case]?"
-
----
-**Last Updated:** 2026-08-10 (1786357473) by amonrit

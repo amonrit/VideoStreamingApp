@@ -510,9 +510,3 @@ ifconfig | grep "inet "
 | Fresh start | `make clean && make dev-all` | 10 min |
 
 **Pro Tip:** Keep `make server-logs` running in a terminal window while developing. You'll spot issues immediately!
-
----
-**Last Updated:** 2026-08-10 by amonrit
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

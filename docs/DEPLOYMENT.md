@@ -340,9 +340,3 @@ docker-compose up -d
 6. ✅ Publish stream and verify playback
 
 **You're ready to stream across your network! 🚀**
-
----
-**Last Updated:** 2026-08-10 (1786357473) by amonrit
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

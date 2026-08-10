@@ -219,6 +219,3 @@ docker-compose logs mediamtx
 ---
 
 **Ready to stream!** 🎥 Start with `docker-compose up -d` in this directory.
-
----
-**Last Updated:** 2026-08-10 (1786357473) by amonrit

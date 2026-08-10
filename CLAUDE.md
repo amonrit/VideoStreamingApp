@@ -178,10 +178,3 @@ Last Modified: MM/DD/YYYY (UNIX_TIMESTAMP) by USERNAME
 ```
 
 Update whenever you edit. See [.claude/markdown-header-rule.md](./.claude/markdown-header-rule.md) for details.
-
----
-
-**Last Updated:** 2026-08-10 (1786502400) by amonrit
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit

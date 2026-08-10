@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786359417) by amonrit
+
 # AI Workflow Guide
 
 How to work effectively with Claude Code, Cursor IDE, and GitHub Copilot on this project.
@@ -560,6 +562,3 @@ Use /streaming-expert for:
 **Remember:** AI is most powerful when used strategically, not for every keystroke. Think first, ask smart questions, review carefully.
 
 Happy coding! 🚀
-
----
-**Last Updated:** 2026-08-10 (1786358207) by amonrit
