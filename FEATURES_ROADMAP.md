@@ -11,10 +11,54 @@
 - ✅ Debug metrics (resolution, bitrate, buffering)
 - ✅ Fullscreen mode
 - ✅ MVVM architecture
+- ✅ Streaming server (MediaMTX, Docker)
+- ✅ Multi-protocol support (RTMP, RTSP, WebRTC, SRT)
+- ✅ CLAUDE.md AI guidance
+- ✅ Antigravity semantic analysis
+- ✅ Commit message template
 
 ---
 
 ## 💡 Recommended Features (Priority Order)
+
+### **Tier 0: Development & Infrastructure** 🔵 (Foundation)
+
+#### 0️⃣ **Development Guides (DONE!)** ⭐⭐⭐
+- ✅ DEVELOPMENT.md - Local development guide
+- ✅ AI_WORKFLOW.md - Working with AI effectively
+- ✅ TROUBLESHOOTING.md - Common issues & solutions (defer)
+- ✅ CONTRIBUTING.md - Contribution guidelines (defer)
+
+**Why:** Essential for productivity and onboarding
+
+**Effort:** 2-4 hours | **Impact:** 🔵 Foundation
+
+---
+
+#### 📊 **Streaming Server Features** ⭐⭐
+**Problem it solves:**
+```
+- No way to manage multiple streams
+- No recording management UI
+- No stream statistics/analytics
+- No authentication management
+```
+
+**Features to add:**
+- [ ] Stream management dashboard (list active streams)
+- [ ] Recording browser (view saved recordings)
+- [ ] Stream analytics (viewers, bitrate, duration)
+- [ ] Multi-server support (deploy to multiple machines)
+- [ ] Stream on/off scheduler
+- [ ] Webhook notifications (stream started/stopped)
+
+**Implementation:** Companion web app or update server
+
+**Why:** Makes server production-ready and manageable
+
+**Effort:** 2-3 days | **Impact:** 🟠 High
+
+---
 
 ### **Tier 1: Essential Playback Features** 🔴 (Add First)
 
@@ -272,9 +316,40 @@ struct PlaybackHistory {
 
 ---
 
-### **Tier 4: Analytics & Monitoring** 🟢
+### **Tier 4: Testing & Quality** 🟢
 
-#### 9️⃣ **Enhanced Debug Dashboard** ⭐
+#### 9️⃣ **Comprehensive Test Suite** ⭐⭐
+**Problem it solves:**
+```
+- Limited test coverage
+- No integration tests
+- No UI tests
+- Manual testing required before release
+```
+
+**Features to add:**
+- [ ] Unit tests (PlaybackViewModel, Workers)
+- [ ] Integration tests (ViewModel + Worker)
+- [ ] UI tests (SwiftUI components)
+- [ ] Snapshot tests (visual regression)
+- [ ] Performance tests (memory, CPU)
+- [ ] E2E tests (full flow)
+- [ ] CI/CD pipeline (automated testing on every PR)
+
+**Implementation:**
+- XCTest framework (built-in)
+- Consider: SnapshotTesting library
+- GitHub Actions for CI/CD
+
+**Why:** Catch bugs early, ensure quality, enable refactoring safely
+
+**Effort:** 3-5 days | **Impact:** 🟢 Quality Assurance
+
+---
+
+### **Tier 5: Analytics & Monitoring** 🟢
+
+#### 🔟 **Enhanced Debug Dashboard** ⭐
 **Problem it solves:**
 ```
 - Debug metrics are hidden behind toggle
@@ -305,25 +380,52 @@ struct PlaybackHistory {
 
 ---
 
+#### 1️⃣1️⃣ **App Analytics** ⭐
+**Problem it solves:**
+```
+- No visibility into how users interact with app
+- Can't measure feature adoption
+- Can't identify performance bottlenecks in production
+```
+
+**Features to add:**
+- [ ] Analytics event tracking (stream loaded, played, errors)
+- [ ] User session tracking
+- [ ] Crash reporting (Sentry/Firebase)
+- [ ] Performance monitoring
+- [ ] Feature adoption metrics
+- [ ] Error trend analysis
+
+**Why:** Data-driven decisions for prioritizing features
+
+**Effort:** 2 days | **Impact:** 🟢 Analytics
+
+---
+
 ## 🔧 Implementation Roadmap
 
 ### **Recommended Implementation Order**
 
+**Foundation (Complete):**
+- ✅ Phase 0: Development guides (DEVELOPMENT.md, AI_WORKFLOW.md)
+
 ```
-Phase 1 (Week 1):
+Phase 1 (Week 1-2):
 ├── 1. Playback Controls (1 day)
 ├── 2. Quality Selection (1-2 days)
 └── 3. Network Status (0.5 days)
 
-Phase 2 (Week 2):
+Phase 2 (Week 3-4):
 ├── 4. Gesture Controls (1 day)
 ├── 5. Watch History (1 day)
-└── 6. PiP Support (1 day)
+├── 6. PiP Support (1 day)
+└── 7. Test Suite (3-5 days) ← Parallel
 
-Phase 3 (Week 3+):
-├── 7. Subtitles (2-3 days)
-├── 8. Offline Download (3-4 days)
-└── 9. Enhanced Debug Dashboard (2 days)
+Phase 3 (Week 5+):
+├── 8. Streaming Server Features (2-3 days)
+├── 9. Subtitles (2-3 days)
+├── 10. Offline Download (3-4 days)
+└── 11. Debug Dashboard + Analytics (4 days)
 ```
 
 ---
@@ -332,15 +434,19 @@ Phase 3 (Week 3+):
 
 | Feature | Effort | Impact | Priority | Timeline |
 |---------|--------|--------|----------|----------|
+| **Development Guides** | 2-4 hrs | 🔵 Foundation | P0 | ✅ Done |
 | **Playback Controls** | 1 day | 🔴 Critical | P0 | Week 1 |
 | **Quality Selection** | 1-2 days | 🟠 High | P0 | Week 1 |
 | **Network Status** | 0.5 days | 🟠 High | P0 | Week 1 |
+| **Test Suite** | 3-5 days | 🟠 High | P0 | Week 2+ |
 | **Gesture Controls** | 1 day | 🟡 Medium | P1 | Week 2 |
 | **Watch History** | 1 day | 🟡 Medium | P1 | Week 2 |
 | **PiP Support** | 1 day | 🟡 Medium | P1 | Week 2 |
+| **Server Features** | 2-3 days | 🟠 High | P1 | Week 3+ |
 | **Subtitles** | 2-3 days | 🟡 Medium | P2 | Week 3+ |
 | **Offline Download** | 3-4 days | 🟢 Nice | P2 | Week 4+ |
 | **Debug Dashboard** | 2 days | 🟢 Dev Tool | P2 | Week 3+ |
+| **Analytics** | 2 days | 🟢 Analytics | P2 | Week 4+ |
 
 ---
 
