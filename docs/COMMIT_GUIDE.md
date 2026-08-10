@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/10/2026 (1786359014) by amonrit
 
 # Commit Guide
 
@@ -69,7 +69,7 @@ Optional but recommended. Area of change:
 
 - Reference issues: `Closes #42` or `Fixes #42`
 - Note breaking changes: `BREAKING CHANGE: description`
-- Add co-authors: `Co-Authored-By: Name <email>` (if pair programming)
+- ❌ **Do NOT use** `Co-Authored-By:` footer — forbidden
 
 ---
 
@@ -566,3 +566,6 @@ Recent good examples:
 
 ---
 **Last Updated:** 2026-08-10 (1786358207) by amonrit
+
+---
+**Last Updated:** 2026-08-10 (1786359025) by amonrit
