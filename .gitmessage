@@ -1,0 +1,73 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+
+# COMMIT TYPES
+# feat:     A new feature
+# fix:      A bug fix
+# docs:     Documentation only changes
+# style:    Changes that do not affect the meaning of the code (formatting, missing semicolons, etc)
+# refactor: A code change that neither fixes a bug nor adds a feature
+# perf:     A code change that improves performance
+# test:     Adding missing tests or correcting existing tests
+# chore:    Changes to the build process, dependencies, tooling, or configuration
+# ci:       Changes to CI configuration files and scripts
+
+# SCOPES (examples)
+# ios-app, streaming-server, docker, config, documentation
+# playback, ui, network, error-handling, architecture
+
+# SUBJECT LINE RULES
+# - Use imperative, present tense: "change" not "changed" or "changes"
+# - Don't capitalize first letter
+# - No period (.) at the end
+# - Limit to 50 characters
+# - Reference issues and breaking changes
+
+# BODY RULES (optional)
+# - Wrap at 72 characters
+# - Use imperative, present tense
+# - Include motivation for the change
+# - Explain what and why, not how
+# - Separate from subject line with a blank line
+
+# FOOTER RULES (optional)
+# - Reference issue tracker IDs (e.g., Closes #123)
+# - Note breaking changes with "BREAKING CHANGE:"
+# - Add Co-Authored-By: Name <email> for pair programming
+
+# EXAMPLES
+# --------
+# feat(playback): add play/pause controls
+#
+# Implement pause button and play state toggling in VideoPlayerView.
+# - Add pause() method to PlaybackViewModel
+# - Create UI controls in VideoPlayerView
+# - Update debug panel to show current state
+#
+# Closes #42
+# Co-Authored-By: John Doe <john@example.com>
+
+# --------
+# fix(streaming): resolve HLS segment loading timeout
+#
+# Increase timeout from 2s to 3s to handle slower networks.
+# This fixes buffering issues on cellular connections.
+
+# --------
+# docs: update DEPLOYMENT_GUIDE with new machine steps
+#
+# Add step-by-step guide for deploying to Raspberry Pi.
+
+# --------
+# refactor(viewmodel): simplify error handling logic
+#
+# Extract repeated error handling into separate method.
+# Makes code more maintainable and testable.
+
+# --------
+# chore: update Swift formatting in .editorconfig
+#
+# Ensure consistent 4-space indentation across all editors.
