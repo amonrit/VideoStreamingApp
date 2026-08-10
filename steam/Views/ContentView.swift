@@ -23,7 +23,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                VideoPlayerView(viewController: viewController, isFullScreen: $isFullScreen)
+                VideoPlayerView(viewModel: playbackViewModel, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
 
@@ -97,7 +97,7 @@ struct ContentView: View {
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .fullScreenCover(isPresented: $isFullScreen) {
-                FullScreenPlayerView(viewController: viewController, isPresented: $isFullScreen)
+                FullScreenPlayerView(viewModel: playbackViewModel, isPresented: $isFullScreen)
             }
 #endif
         }
