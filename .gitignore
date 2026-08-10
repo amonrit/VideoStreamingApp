@@ -13,3 +13,9 @@ build/
 
 # Logs
 *.log
+
+# Auto-generated analysis outputs (regenerated on each analysis run)
+.claude/analysis/diagrams/
+.claude/analysis/history/
+.claude/analysis/dependency-map.json
+.claude/analysis/dependency-map.md

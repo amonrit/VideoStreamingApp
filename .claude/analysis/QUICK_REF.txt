@@ -1,0 +1,167 @@
+================================================================================
+                    DEPENDENCY ANALYSIS - QUICK REFERENCE
+================================================================================
+
+📍 LOCATION: /Users/amonrit/Documents/steam/.claude/analysis/
+
+================================================================================
+COMMON COMMANDS
+================================================================================
+
+View current dependencies (human-readable):
+  $ cat .claude/analysis/dependency-map.md
+
+View all snapshots (commits analyzed):
+  $ python3 .claude/analysis/snapshot-manager.py list
+
+Compare current HEAD to a commit:
+  $ python3 .claude/analysis/snapshot-manager.py compare <commit_hash>
+
+Compare two commits:
+  $ python3 .claude/analysis/snapshot-manager.py compare <commit1> <commit2>
+
+Regenerate analysis (manual):
+  $ python3 .claude/analysis/analyze-dependencies.py
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+.claude/analysis/
+├── analyze-dependencies.py          Swift dependency analyzer
+├── snapshot-manager.py              Snapshot manager & comparator
+├── setup-hook.sh                    Pre-commit hook installer
+├── dependency-map.md                Current state (HUMAN READABLE ✅)
+├── dependency-map.json              Current state (machine readable)
+├── USAGE_GUIDE.md                   Full usage guide
+├── README.md                        Technical documentation
+├── QUICK_REF.txt                    This file
+└── history/
+    ├── 0c14f81.json                Snapshot for commit 0c14f81
+    ├── abc123.json                 Snapshot for commit abc123
+    └── ...                         More snapshots as you commit
+
+================================================================================
+CURRENT PROJECT STATE
+================================================================================
+
+Files Analyzed:        8 Swift files
+Total Frameworks:      6 Apple frameworks
+Architecture:          ✅ CLEAN (no circular dependencies)
+
+Files:
+  - steamApp.swift (Entry point)
+  - ContentView.swift (UI coordinator)
+  - VideoPlayerView.swift (Player UI)
+  - FullScreenPlayerView.swift (Full-screen UI)
+  - PlaybackViewModel.swift (Business logic)
+  - VideoPlayerWorker.swift (Utilities)
+  - VideoStream.swift (Model)
+  - PlaybackState.swift (Model)
+
+Frameworks Used:
+  ✅ Foundation
+  ✅ SwiftUI
+  ✅ AVFoundation
+  ✅ AVKit
+  ✅ Combine
+  ✅ os (logging)
+
+================================================================================
+WHAT HAPPENS AUTOMATICALLY
+================================================================================
+
+Every time you commit:
+  1. Pre-commit hook runs
+  2. All Swift files are analyzed
+  3. Dependencies are extracted
+  4. Snapshot is saved: history/<commit_hash>.json
+  5. dependency-map.md is updated
+  6. Commit proceeds
+
+✅ This is automatic — no manual steps needed!
+
+================================================================================
+REAL-WORLD EXAMPLES
+================================================================================
+
+1. Did this commit break something?
+   $ python3 .claude/analysis/snapshot-manager.py compare <old_commit>
+   → See all new/removed files and dependency changes
+
+2. What's different between two versions?
+   $ python3 .claude/analysis/snapshot-manager.py compare v1.0 v2.0
+   → See exactly what changed
+
+3. Is the architecture getting messy?
+   $ cat .claude/analysis/dependency-map.md
+   → Look for circular dependencies or views importing views
+
+4. Revert a commit safely:
+   $ git log --oneline | head -3
+   $ python3 .claude/analysis/snapshot-manager.py compare <commit_to_revert>
+   $ git revert <commit_to_revert>
+
+================================================================================
+WARNINGS (Architecture Issues)
+================================================================================
+
+❌ CIRCULAR DEPENDENCIES
+   Example: View A → View B → View A
+   Solution: Use a ViewModel to mediate communication
+
+❌ VIEWS IMPORTING OTHER VIEWS
+   Example: ContentView → DetailView → EditView
+   Solution: Keep views isolated, use ViewModels
+
+❌ MODELS IMPORTING VIEWS
+   Example: PlaybackState → VideoPlayerView
+   Solution: Models should never reference Views
+
+❌ TOO MANY IMPORTS IN ONE FILE
+   Example: 10+ import statements
+   Solution: Split into smaller files
+
+Use comparisons to detect when these are added:
+  $ python3 .claude/analysis/snapshot-manager.py compare <commit>
+
+================================================================================
+MAINTENANCE
+================================================================================
+
+Keep pre-commit hook working:
+  $ bash .claude/analysis/setup-hook.sh
+
+Clean up old snapshots (optional):
+  $ cd .claude/analysis/history/
+  $ ls -t *.json | tail -n +11 | xargs rm -f   # Keep last 10
+
+Update dependency categories:
+  Edit: .claude/analysis/analyze-dependencies.py (line ~30)
+  Run: python3 .claude/analysis/analyze-dependencies.py
+
+Disable hook (temporary):
+  $ export GIT_SKIP_HOOKS=true
+  $ git commit ...
+
+================================================================================
+HELP & DOCUMENTATION
+================================================================================
+
+Quick Start:              USAGE_GUIDE.md (this directory)
+Technical Details:       README.md (this directory)
+Project Overview:        ../../CLAUDE.md
+Architecture Details:    ../../docs/ARCHITECTURE.md
+
+================================================================================
+STATUS
+================================================================================
+
+✅ Pre-commit hook:      INSTALLED
+✅ Analyzer:             READY
+✅ Snapshot system:      READY
+✅ First snapshot:       0c14f81 (2026-08-10 18:07:35)
+
+Next: Make a commit and watch the pre-commit hook create a snapshot! 🎉
+
+================================================================================
