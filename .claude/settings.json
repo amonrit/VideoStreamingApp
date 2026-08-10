@@ -1,0 +1,70 @@
+{
+  "description": "Steam iOS Streaming App - Claude Code Configuration",
+  "version": "1.0",
+
+  "environment": {
+    "workingDirectory": "/Users/amonrit/Documents/steam",
+    "projectType": "swift-ios",
+    "primaryLanguage": "swift"
+  },
+
+  "models": {
+    "default": "claude-opus",
+    "fastMode": "claude-opus",
+    "codeReview": "claude-opus",
+    "architecture": "claude-opus"
+  },
+
+  "capabilities": {
+    "enabledSkills": [
+      "code-review",
+      "tdd",
+      "codebase-design",
+      "request-refactor-plan",
+      "security-review",
+      "diagnosing-bugs"
+    ],
+    "enableArtifacts": true,
+    "enableWorkflows": true,
+    "allowMultiAgent": true
+  },
+
+  "preferences": {
+    "responseStyle": "concise",
+    "includeCodeExamples": true,
+    "explainArchitecture": true,
+    "suggestTestCases": true
+  },
+
+  "gitignore": [
+    "DerivedData/",
+    "build/",
+    ".build/",
+    "*.xcuserstate",
+    "*.xcuserdata",
+    ".DS_Store",
+    "recordings/"
+  ],
+
+  "keyFiles": {
+    "readme": "README.md",
+    "architecture": "ARCHITECTURE.md",
+    "claude": "CLAUDE.md",
+    "deployment": "DEPLOYMENT_GUIDE.md",
+    "roadmap": "FEATURES_ROADMAP.md",
+    "makefile": "Makefile"
+  },
+
+  "codeStyle": {
+    "language": "swift",
+    "indentation": 4,
+    "lineLength": 120,
+    "commentStyle": "inline"
+  },
+
+  "testing": {
+    "frameworkPreference": "XCTest",
+    "testPath": "steam/Tests",
+    "generateTestStubs": true
+  }
+}
