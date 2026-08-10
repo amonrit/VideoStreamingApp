@@ -1,0 +1,50 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1
+    container_name: mediamtx
+    restart: unless-stopped
+    ports:
+      - "1935:1935"     # RTMP
+      - "8554:8554"     # RTSP
+      - "8555:8555/udp" # RTP/RTCP
+      - "8888:8888"     # HLS
+      - "8889:8889"     # WebRTC
+      - "9997:9997"     # Metrics
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+      - ./recordings:/recordings
+    environment:
+      # Log settings
+      - MEDIAMTX_LOGLEVEL=info
+
+      # RTSP Server
+      - MEDIAMTX_RTSPDISABLE=false
+      - MEDIAMTX_RTSPPORT=8554
+
+      # RTMP Server
+      - MEDIAMTX_RTMPDISABLE=false
+      - MEDIAMTX_RTMPPORT=1935
+
+      # HLS Server
+      - MEDIAMTX_HLSDISABLE=false
+      - MEDIAMTX_HLSPORT=8888
+      - MEDIAMTX_HLSVARIANT=lowLatency
+      - MEDIAMTX_HLSSEGMENTDURATION=1s
+      - MEDIAMTX_HLSSEGMENTCOUNT=3
+      - MEDIAMTX_HLSALLOWORIGIN='*'
+
+      # WebRTC Server
+      - MEDIAMTX_WEBRTCDISABLE=false
+      - MEDIAMTX_WEBRTCPORT=8889
+
+      # Path configuration
+      - MEDIAMTX_PATHS_ALL_SOURCE=publisher
+      - MEDIAMTX_PATHS_ALL_PUBLISHUSER=publish
+      - MEDIAMTX_PATHS_ALL_PUBLISHPASS=streampass123
+
+    networks:
+      - mediamtx_network
+
+networks:
+  mediamtx_network:
+    driver: bridge
