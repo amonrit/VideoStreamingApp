@@ -36,7 +36,6 @@
 # FOOTER RULES (optional)
 # - Reference issue tracker IDs (e.g., Closes #123)
 # - Note breaking changes with "BREAKING CHANGE:"
-# - Add Co-Authored-By: Name <email> for pair programming
 
 # EXAMPLES
 # --------
@@ -48,7 +47,6 @@
 # - Update debug panel to show current state
 #
 # Closes #42
-# Co-Authored-By: John Doe <john@example.com>
 
 # --------
 # fix(streaming): resolve HLS segment loading timeout
