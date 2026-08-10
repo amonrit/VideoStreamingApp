@@ -57,17 +57,6 @@ class VideoPlayerInteractor: VideoPlayerInteractorInput {
         )
 
         let item = AVPlayerItem(url: url)
-
-        // Add error monitoring for the item
-        NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
-            .sink { [weak self] notification in
-                if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error {
-                    print("❌ Playback failed: \(error.localizedDescription)")
-                    self?.handleFailedToPlayToEnd(error)
-                }
-            }
-            .store(in: &cancellables)
-
         player.replaceCurrentItem(with: item)
 
         setupObservers(for: item)
