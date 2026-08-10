@@ -1,0 +1,142 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Manual run: pre-commit run --all-files
+
+repos:
+  # ========================================================================
+  # General Checks
+  # ========================================================================
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent giant files from being committed
+      - id: check-added-large-files
+        args: ['--maxkb=5000']
+
+      # Check YAML files
+      - id: check-yaml
+        args: ['--unsafe']
+
+      # Check JSON files
+      - id: check-json
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+        exclude: '\.md$'  # Preserve trailing spaces in markdown
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Fix mixed line endings
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+      # Ensure .gitignore patterns are sorted
+      - id: sort-simple-yaml
+
+  # ========================================================================
+  # Shell Scripts
+  # ========================================================================
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.7
+    hooks:
+      - id: shellcheck
+        args: ['--severity=warning']
+
+  # ========================================================================
+  # Swift Code Quality
+  # ========================================================================
+
+  - repo: local
+    hooks:
+      # SwiftFormat (optional - requires brew install swiftformat)
+      # Uncomment if swiftformat is installed
+      # - id: swift-format
+      #   name: SwiftFormat
+      #   entry: swiftformat --lint
+      #   language: system
+      #   types: [swift]
+      #   pass_filenames: true
+
+  # ========================================================================
+  # YAML/Docker Validation
+  # ========================================================================
+
+  - repo: https://github.com/instrumenta/kubeval
+    rev: 1.27.0
+    hooks:
+      # Validate docker-compose files (optional)
+      # - id: kubeval
+      #   name: Kubeval
+      #   files: docker-compose.*\.yml$
+      #   language: system
+      #   types: [yaml]
+      #   pass_filenames: true
+
+  # ========================================================================
+  # Forbidden Files Check
+  # ========================================================================
+
+  - repo: local
+    hooks:
+      - id: forbidden-files
+        name: Forbidden Files
+        entry: Forbidden files detected (API keys, tokens, passwords)
+        language: fail
+        files: |
+          (?x)^(
+            \.env(?!\.example)|
+            .*\.pem$|
+            .*\.key$|
+            .*credentials.*|
+            .*secret.*
+          )$
+        stages: [commit]
+
+  # ========================================================================
+  # Commit Message Hook
+  # ========================================================================
+
+  - repo: local
+    hooks:
+      - id: commit-message-format
+        name: Commit Message Format
+        entry: >-
+          python3 -c "
+          import sys; msg = open(sys.argv[1]).read();
+          if not (msg.startswith(('feat:', 'fix:', 'docs:', 'chore:', 'refactor:', 'test:')) or msg.startswith('Merge')):
+              print('Commit message must start with: feat:, fix:, docs:, chore:, refactor:, or test:');
+              sys.exit(1)
+          "
+        language: system
+        stages: [commit-msg]
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Exclude files from pre-commit checks
+exclude: |
+  (?x)^(
+    DerivedData/|
+    build/|
+    \.build/|
+    \.git/|
+    recordings/|
+    node_modules/|
+    .*\.xcuserstate$|
+    .*\.xcuserdata/|
+    \.DS_Store
+  )
+
+# Fail if no files match
+fail_fast: false
+
+# Minimum Python version for hooks
+minimum_pre_commit_hook_version: 2.20.0
