@@ -8,17 +8,11 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var viewController: VideoPlayerViewController
-    @ObservedObject var playbackViewModel: PlaybackViewModel
+    @StateObject private var playbackViewModel = PlaybackViewModel()
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
     @State private var showDebug = false
-
-    init() {
-        let module = VideoPlayerRouter.createModule(stream: .sample)
-        self._viewController = ObservedObject(initialValue: module.viewController)
-        self._playbackViewModel = ObservedObject(initialValue: module.playbackViewModel)
-    }
+    @State private var didLoadInitial = false
 
     var body: some View {
         NavigationView {
@@ -26,6 +20,12 @@ struct ContentView: View {
                 VideoPlayerView(viewModel: playbackViewModel, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
+                    .onAppear {
+                        if !didLoadInitial {
+                            playbackViewModel.loadStream(.sample)
+                            didLoadInitial = true
+                        }
+                    }
 
                 HStack {
                     Spacer()
@@ -104,7 +104,7 @@ struct ContentView: View {
     }
 
     private func select(stream: VideoStream) {
-        viewController.didSelectStream(stream)
+        playbackViewModel.loadStream(stream)
     }
 }
 
@@ -161,6 +161,5 @@ private struct SuggestedVideoRow: View {
 }
 
 #Preview {
-    let module = VideoPlayerRouter.createModule(stream: .sample)
-    return ContentView()
+    ContentView()
 }
