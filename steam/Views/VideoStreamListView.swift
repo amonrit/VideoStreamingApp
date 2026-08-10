@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  VideoStreamListView.swift
 //  steam
 //
 //  Created by Amonrit on 25/6/2569 BE.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct VideoStreamListView: View {
     @StateObject private var playbackViewModel = PlaybackViewModel()
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
@@ -506,5 +506,5 @@ struct AddStreamSheet: View {
 
 
 #Preview {
-    ContentView()
+    VideoStreamListView()
 }
