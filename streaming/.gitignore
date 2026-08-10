@@ -1,0 +1,15 @@
+# MediaMTX Streaming Server - Git Ignore
+
+# Recordings directory (can be large)
+recordings/
+
+# Docker-related
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
