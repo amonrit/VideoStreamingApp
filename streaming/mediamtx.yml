@@ -1,33 +1,17 @@
+# MediaMTX Configuration - All Protocols Enabled
+# v1.20.0
+# Last Updated: 2026-08-10
+
 logLevel: info
 
-rtsp:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 8554
-
-rtmp:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 1935
-
-hls:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 8888
-
-webrtc:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 8889
-
-srt:
-  enabled: true
-  listenIp: 0.0.0.0
-  port: 8890
-
 paths:
+  # Default path - accepts any stream publisher
   all:
     source: publisher
 
+  # Named stream path
   live:
     source: publisher
+
+# Note: Protocol listeners (RTSP, RTMP, HLS, WebRTC, SRT) are configured
+# via the container's default settings and exposed via docker-compose.yml
