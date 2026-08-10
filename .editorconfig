@@ -1,0 +1,83 @@
+# EditorConfig is awesome: https://EditorConfig.org
+# Helps maintain consistent coding styles across different editors and IDEs
+
+# top-most EditorConfig file
+root = true
+
+# ============================================================================
+# Default Settings (All Files)
+# ============================================================================
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ============================================================================
+# Swift Files
+# ============================================================================
+
+[*.swift]
+# Indentation: 4 spaces (Apple's standard)
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# ============================================================================
+# YAML/YAML Configuration Files
+# ============================================================================
+
+[*.{yml,yaml}]
+# Indentation: 2 spaces (YAML standard)
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+# ============================================================================
+# JSON Files
+# ============================================================================
+
+[*.json]
+indent_style = space
+indent_size = 2
+
+# ============================================================================
+# Markdown Files
+# ============================================================================
+
+[*.md]
+# Preserve trailing spaces in markdown (for line breaks)
+trim_trailing_whitespace = false
+max_line_length = 100
+
+# ============================================================================
+# Makefiles (Tab indentation required)
+# ============================================================================
+
+[Makefile]
+indent_style = tab
+
+# ============================================================================
+# Shell Scripts
+# ============================================================================
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+
+# ============================================================================
+# Docker/Compose Files
+# ============================================================================
+
+[{docker-compose*.yml,Dockerfile*}]
+indent_style = space
+indent_size = 2
+
+# ============================================================================
+# Xcode Project Files
+# ============================================================================
+
+[*.pbxproj]
+indent_style = space
+indent_size = 4

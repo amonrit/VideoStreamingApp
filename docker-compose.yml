@@ -1,0 +1,153 @@
+version: '3.8'
+
+# ============================================================================
+# Steam Project - Full Stack Docker Compose
+# ============================================================================
+#
+# This is a reference docker-compose file for the complete Steam streaming
+# application stack. Currently only the streaming server is containerized.
+#
+# For development, use:
+#   cd streaming/ && docker-compose up -d
+#
+# For full stack deployment, this file can be extended with additional
+# services (e.g., monitoring, reverse proxy, database).
+
+services:
+  # ========================================================================
+  # MediaMTX Streaming Server
+  # ========================================================================
+  #
+  # Central streaming hub that accepts publishers (RTMP) and serves
+  # playback streams (HLS, RTSP, WebRTC, SRT)
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.20.0
+    container_name: mediamtx
+    restart: unless-stopped
+
+    # ====================================================================
+    # Port Mappings
+    # ====================================================================
+    ports:
+      # RTMP Publishing (TCP) - OBS, FFmpeg, mobile publishers
+      - "1935:1935"
+
+      # RTSP Low-latency (TCP/UDP)
+      - "8554:8554"
+      - "8555:8555/udp"     # RTP
+      - "8001:8001/udp"     # RTCP
+
+      # HLS HTTP Streaming (TCP) - iOS apps, web browsers
+      - "8888:8888"
+
+      # WebRTC Ultra-low-latency (TCP/UDP)
+      - "8189:8189/udp"     # ICE
+      - "8889:8889"
+
+      # Metrics (Prometheus)
+      - "9997:9997"
+
+    # ====================================================================
+    # Volume Mounts
+    # ====================================================================
+    volumes:
+      # Configuration file (read-only)
+      - ./streaming/mediamtx.yml:/mediamtx.yml:ro
+
+      # Recordings directory (writable)
+      - ./streaming/recordings:/recordings
+
+    # ====================================================================
+    # Environment Variables
+    # ====================================================================
+    environment:
+      # Log level: debug, info, warn, error
+      - MEDIAMTX_LOGLEVEL=info
+
+      # Optional: Load from .env file if present
+      # - MEDIAMTX_RTMPAUTHINTERNAL=false
+
+    # ====================================================================
+    # Networking
+    # ====================================================================
+    networks:
+      - steam-network
+
+    # ====================================================================
+    # Health Check
+    # ====================================================================
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9997/metrics"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    # ====================================================================
+    # Logging
+    # ====================================================================
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# Networks
+# ============================================================================
+
+networks:
+  steam-network:
+    driver: bridge
+    name: steam-network
+
+# ============================================================================
+# Usage
+# ============================================================================
+#
+# Start all services:
+#   docker-compose up -d
+#
+# Stop all services:
+#   docker-compose down
+#
+# View logs:
+#   docker-compose logs -f mediamtx
+#
+# Access streams:
+#   RTMP:   rtmp://localhost:1935/live/mystream
+#   HLS:    http://localhost:8888/live/mystream/index.m3u8
+#   RTSP:   rtsp://localhost:8554/live/mystream
+#   WebRTC: http://localhost:8889/live/mystream
+
+# ============================================================================
+# Future Services (Placeholder)
+# ============================================================================
+#
+# When adding new services, follow this template:
+#
+# services:
+#   my-service:
+#     image: my-image:latest
+#     container_name: my-service
+#     restart: unless-stopped
+#     ports:
+#       - "9000:9000"
+#     volumes:
+#       - ./config/my-service.yml:/config.yml:ro
+#       - ./data/my-service:/data
+#     environment:
+#       - ENV_VAR=value
+#     networks:
+#       - steam-network
+#     depends_on:
+#       mediamtx:
+#         condition: service_healthy
+#
+# Common candidates:
+#   - nginx/caddy - Reverse proxy, SSL termination, load balancing
+#   - prometheus + grafana - Monitoring and metrics dashboards
+#   - postgres/mongodb - Database for recording metadata, user accounts
+#   - redis - Caching, session management
+#   - backup service - Automated recording backups to S3/cloud storage
