@@ -24,6 +24,7 @@ class VideoPlayerWorker {
 
         // Monitor AVPlayerItem Status
         item.publisher(for: \.status)
+            .receive(on: DispatchQueue.main)
             .sink { status in
                 onStatusChange(status)
             }
@@ -31,8 +32,9 @@ class VideoPlayerWorker {
 
         // Monitor Buffering (isPlaybackLikelyToKeepUp)
         item.publisher(for: \.isPlaybackLikelyToKeepUp)
-            .sink { [weak self] keepUp in
-                guard self != nil else { return }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak player] keepUp in
+                guard let player = player else { return }
                 if player.rate > 0 {
                     onBufferingChange(!keepUp)
                 }
@@ -44,6 +46,7 @@ class VideoPlayerWorker {
             for: .AVPlayerItemPlaybackStalled,
             object: item
         )
+        .receive(on: DispatchQueue.main)
         .sink { _ in
             onStall()
         }
@@ -54,6 +57,7 @@ class VideoPlayerWorker {
             for: .AVPlayerItemFailedToPlayToEndTime,
             object: item
         )
+        .receive(on: DispatchQueue.main)
         .sink { notification in
             let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
             onFailedToPlayToEnd(error)
@@ -61,22 +65,7 @@ class VideoPlayerWorker {
         .store(in: &cancellables)
     }
 
-    // MARK: - Formatting Helpers
-
-    func formatResolution(_ size: CGSize) -> String {
-        guard size.width > 0, size.height > 0 else {
-            return "Resolution: unknown"
-        }
-        return "Resolution: \(Int(size.width))x\(Int(size.height))"
-    }
-
-    func formatBitrate(from player: AVPlayer) -> String {
-        guard let event = player.currentItem?.accessLog()?.events.last else {
-            return "Bitrate: unknown"
-        }
-        let kbps = event.observedBitrate / 1000.0
-        return String(format: "Bitrate: %.0f kbps", kbps)
-    }
+    // MARK: - Debug Info Helpers
 
     func getResolution(from player: AVPlayer) -> String {
         guard let size = player.currentItem?.presentationSize,
