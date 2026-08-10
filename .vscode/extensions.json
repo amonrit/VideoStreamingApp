@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "Anthropic.claude",
+    "ms-python.python",
+    "ms-vscode.makefile-tools",
+    "ms-vscode-remote.remote-containers",
+    "ms-azuretools.vscode-docker",
+    "redhat.vscode-yaml",
+    "charliermarsh.ruff",
+    "GitHub.vscode-pull-request-github",
+    "eamodio.gitlens",
+    "ms-vscode.hexdump",
+    "ms-vscode.makefile-tools",
+    "James-Yu.latex-workshop"
+  ],
+
+  "unwantedRecommendations": []
+}

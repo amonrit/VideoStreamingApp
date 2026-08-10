@@ -66,5 +66,54 @@
     "frameworkPreference": "XCTest",
     "testPath": "steam/Tests",
     "generateTestStubs": true
+  },
+
+  "antigravity": {
+    "enabled": true,
+    "codeUnderstandingMode": "semantic",
+    "semanticIndexing": true,
+    "indexedPaths": [
+      "steam/ViewModels/",
+      "steam/Views/",
+      "steam/Models/",
+      "steam/Workers/",
+      "streaming/"
+    ],
+    "skipPaths": [
+      "DerivedData/",
+      "build/",
+      ".build/",
+      "recordings/",
+      "*.xcuserdata"
+    ],
+    "semanticAnalysis": {
+      "enabled": true,
+      "followImports": true,
+      "resolveTypes": true,
+      "trackDataFlow": true
+    },
+    "codeRelationships": {
+      "findUsages": true,
+      "findImplementations": true,
+      "trackDependencies": true,
+      "showCallGraphs": true
+    }
+  },
+
+  "mcp": {
+    "enabledServers": [
+      "filesystem",
+      "git",
+      "github"
+    ],
+    "github": {
+      "repository": "amonrit/VideoStreamingApp",
+      "enabled": true,
+      "features": [
+        "issues",
+        "pull_requests",
+        "repository_info"
+      ]
+    }
   }
 }
