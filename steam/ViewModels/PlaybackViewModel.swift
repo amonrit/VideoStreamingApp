@@ -14,7 +14,6 @@ class PlaybackViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var bufferingCount: Int = 0
     @Published var currentStream: VideoStream?
-    @Published var showDebug: Bool = false
 
     let player: AVPlayer
     private let worker: VideoPlayerWorker
