@@ -2,7 +2,7 @@
 
 ## 📱 Project Overview
 
-**Steam** is an iOS video streaming app using **Clean Swift (VIP) Architecture** with HLS playback, adaptive bitrate, fullscreen support, and debug metrics.
+**Steam** is an iOS video streaming app using **MVVM (Model-View-ViewModel) Architecture** with HLS playback, adaptive bitrate, fullscreen support, and debug metrics.
 
 ### Current Features
 - ✅ HLS video playback
@@ -10,7 +10,7 @@
 - ✅ Loading/Error handling
 - ✅ Debug metrics (resolution, bitrate, buffering)
 - ✅ Fullscreen mode
-- ✅ Clean Swift (VIP) architecture
+- ✅ MVVM architecture
 
 ---
 
@@ -36,9 +36,9 @@
 
 **Implementation Files:**
 - Update `VideoPlayerWorker` to expose `currentTime` and `duration` publishers
-- Add time tracking in `VideoPlayerInteractor`
+- Add time tracking properties to `PlaybackViewModel`
 - Create playback control UI in `VideoPlayerView`
-- Add `PlaybackControlsViewModel` to `VideoPlayerModels.swift`
+- Add time tracking and seeking methods to `PlaybackViewModel`
 
 **Why:** This is essential - users expect basic playback controls from any video player
 
@@ -62,10 +62,10 @@
 - [ ] Persist quality preference
 
 **Implementation Files:**
-- Add `QualityManager` to `VideoPlayerWorker`
-- Add `availableQualities` property to playback state
-- Create `QualitySelectionView` in UI
-- Parse HLS variant streams from manifest
+- Add `QualityManager` worker class
+- Add `@Published var availableQualities` to `PlaybackViewModel`
+- Create `QualitySelectionView` in Views/
+- Add quality selection methods to `PlaybackViewModel`
 
 **Why:** Gives users control over streaming quality based on their bandwidth
 
@@ -98,10 +98,10 @@ variant-480p.m3u8
 - [ ] Auto-quality adjustment indicator
 
 **Implementation Files:**
-- Add `NetworkMonitor` using `NetworkFramework`
-- Update `DebugInfoViewModel` with network properties
-- Create `NetworkStatusView` component
-- Add network monitoring to `VideoPlayerWorker`
+- Create `NetworkMonitor` worker using `Network.framework`
+- Add `@Published` properties to `PlaybackViewModel` for network state
+- Create `NetworkStatusView` component in Views/
+- Add network monitoring initialization to `PlaybackViewModel`
 
 **Why:** Users understand buffering/lag better when they see network status
 
@@ -129,9 +129,9 @@ variant-480p.m3u8
 
 **Implementation Files:**
 - Add gesture recognizers to `VideoPlayerView`
-- Create `GestureHandlerWorker`
-- Connect gestures to `VideoPlayerInteractor` methods
-- Add auto-hide control logic
+- Add gesture handler methods to `PlaybackViewModel`
+- Create helper methods for seek (rewind/forward 15s)
+- Add auto-hide control logic via @State in VideoPlayerView
 
 **Why:** Modern video players (YouTube, Netflix, Apple TV) use these gestures
 
@@ -155,11 +155,11 @@ variant-480p.m3u8
 - [ ] Clear history option
 
 **Implementation Files:**
-- Create `HistoryManager` (new Worker)
-- Add `PlaybackHistory` model
+- Create `HistoryManager` worker
+- Add `PlaybackHistory` model to Models/
 - Persist with UserDefaults or CoreData
-- Update `ContentView` to show history
-- Add resume UI in video selection
+- Update `ContentView` to show history section
+- Add resume methods to `PlaybackViewModel`
 
 **Why:** Makes app feel native and personalized
 
@@ -193,10 +193,10 @@ struct PlaybackHistory {
 - [ ] PiP support for backgrounded playback
 
 **Implementation Files:**
-- Update `VideoPlayerViewController` to support PiP
-- Add `AVPlayerViewController` for PiP handling
-- Create PiP button in UI controls
-- Manage AVPlayer lifecycle for background
+- Add PiP button to `VideoPlayerView` or custom controls
+- Use `AVPlayerViewController` with PiP support
+- Add PiP state management to `PlaybackViewModel`
+- Ensure AVPlayer lifecycle preserved during PiP transitions
 
 **Why:** iOS users expect PiP (like YouTube, Apple TV+)
 
@@ -223,11 +223,11 @@ struct PlaybackHistory {
 - [ ] Toggle on/off
 
 **Implementation Files:**
-- Add subtitle parsing to `VideoPlayerWorker`
-- Create `SubtitleManager` class
-- Add `SubtitleTrack` model
-- Update UI with subtitle selector
-- Create subtitle rendering component
+- Create `SubtitleManager` worker with parsing logic
+- Add `SubtitleTrack` model to Models/
+- Add `@Published var subtitleTracks` to `PlaybackViewModel`
+- Create subtitle selector UI in Views/
+- Add subtitle rendering component (text overlay)
 
 **Why:** Expands audience to international users and hearing-impaired users
 
@@ -260,11 +260,11 @@ struct PlaybackHistory {
 - [ ] Batch download support
 
 **Implementation Files:**
-- Create `DownloadManager` using `AVAssetDownloadTask`
-- Add `DownloadedVideo` model
-- Create download queue/manager
-- Update `VideoPlayerInteractor` for offline playback
+- Create `DownloadManager` worker using `AVAssetDownloadTask`
+- Add `DownloadedVideo` model to Models/
+- Add download state to `PlaybackViewModel`
 - Create download progress view
+- Add offline playback detection to `PlaybackViewModel`
 
 **Why:** Common feature in streaming apps (Netflix, YouTube, Disney+)
 
@@ -293,10 +293,11 @@ struct PlaybackHistory {
 - [ ] Export debug logs
 
 **Implementation Files:**
-- Create `DebugDashboardView` with Charts
-- Add data persistence for metrics history
-- Create `MetricsCollector` worker
-- Enhance `DebugInfoViewModel` with historical data
+- Create `DebugDashboardView` in Views/ with Charts framework
+- Create `MetricsCollector` worker for historical tracking
+- Add metrics history to `PlaybackViewModel`
+- Create persistent metrics storage (UserDefaults/CoreData)
+- Enhance debug panel with real-time graphs
 
 **Why:** Helps developers and QA diagnose streaming issues quickly
 
@@ -360,32 +361,37 @@ Phase 3 (Week 3+):
 
 ## 🏗️ Architecture Considerations
 
-### Adding Features Maintains Clean Swift
+### Adding Features Maintains MVVM
 
-All recommended features can be integrated while maintaining the **VIP architecture**:
+All recommended features can be integrated while maintaining the **MVVM architecture**:
 
 ```
-View (UI Components)
-    ↓
-ViewController (Routing & State)
-    ↓
-Interactor (Business Logic + new features)
-    ↓
-Presenter (Format Data)
-    ↓
+Views (UI Components)
+    ↓ observe
+PlaybackViewModel (State + Business Logic + new features)
+    ↓ use
 Workers (Utilities - new ones as needed)
+    ↓ observe/control
+AVPlayer & Model Entities
 ```
+
+### Adding Features to PlaybackViewModel
+
+As you add features, extend `PlaybackViewModel`:
+- Add `@Published` properties for new state (currentTime, duration, qualities, etc.)
+- Add public methods for user actions (seek, selectQuality, toggleSubtitles, etc.)
+- Add private handlers for observer callbacks
+- Keep business logic encapsulated in the ViewModel
 
 ### New Workers to Create
 
-As you add features, create new workers:
-- `PlaybackControlsWorker` - Time tracking, seeking
+Create specialized workers for complex tasks:
+- `PlaybackControlsWorker` - Time tracking, seeking helpers
 - `QualityManager` - Quality selection logic
-- `NetworkMonitor` - Network status tracking
-- `GestureHandlerWorker` - Gesture recognition
+- `NetworkMonitor` - Network status tracking (via Network framework)
 - `HistoryManager` - Watch history persistence
-- `SubtitleManager` - Subtitle handling
-- `DownloadManager` - Offline download
+- `SubtitleManager` - Subtitle handling & parsing
+- `DownloadManager` - Offline download via AVAssetDownloadTask
 
 Each worker stays testable, reusable, and independent.
 
@@ -401,4 +407,4 @@ Each worker stays testable, reusable, and independent.
 
 ---
 
-**Last Updated:** 2026-08-10
+**Last Updated:** 2026-08-10 (Updated for MVVM architecture)
