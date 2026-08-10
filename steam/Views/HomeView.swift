@@ -52,14 +52,19 @@ struct HomeView: View {
                             )
                         }
 
-                        // Settings (Mock)
-                        MenuCardView(
-                            title: "Settings",
-                            subtitle: "Configure your preferences",
-                            icon: "gearshape.fill",
-                            iconColor: .gray
-                        )
-                        .opacity(0.5)
+                        // Settings
+                        NavigationLink(
+                            destination: SettingsView(),
+                            tag: MenuOption.settings,
+                            selection: $selectedMenuOption
+                        ) {
+                            MenuCardView(
+                                title: "Settings",
+                                subtitle: "Configure your preferences",
+                                icon: "gearshape.fill",
+                                iconColor: .gray
+                            )
+                        }
 
                         // About (Mock)
                         MenuCardView(
