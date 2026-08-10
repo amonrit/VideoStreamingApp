@@ -26,6 +26,25 @@ class PlaybackViewModel: ObservableObject {
     init(player: AVPlayer = AVPlayer()) {
         self.player = player
         self.worker = VideoPlayerWorker()
+
+        // MARK: - Native AVPlayer Settings
+        setupPlayerSettings()
+    }
+
+    private func setupPlayerSettings() {
+        // ✅ อนุญาตการแคสต์ (AirPlay, HDMI)
+        player.allowsExternalPlayback = true
+
+        // ✅ ปิด automatic wait for network หากสัญญาณอ่อน
+        player.automaticallyWaitsToMinimizeStalling = true
+
+        // ✅ ตั้งค่าเสียงเริ่มต้น
+        player.volume = 1.0
+
+        // ✅ ตั้ง rate สำหรับการเล่น
+        player.rate = 1.0
+
+        logger.info("✅ AVPlayer native settings configured")
     }
 
     // MARK: - Stream Loading
