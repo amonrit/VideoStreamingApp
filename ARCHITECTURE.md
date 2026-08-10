@@ -2,21 +2,33 @@
 
 ## Overview
 
-iOS video streaming app using **Clean Swift (VIP)** architecture pattern with HLS playback, adaptive bitrate, fullscreen support, and debug metrics.
+iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with HLS playback, adaptive bitrate, fullscreen support, and debug metrics.
 
 ### Tech Stack
 - **Language**: Swift
 - **UI Framework**: SwiftUI
-- **Architecture**: Clean Swift (VIP)
+- **Architecture**: MVVM (Model-View-ViewModel)
 - **Playback**: AVFoundation (AVPlayer)
 - **Reactive**: Combine + KVO
 - **Threading**: GCD
+- **Logging**: os.Logger
 
 ---
 
-## Clean Swift Components
+## MVVM Architecture
 
-### 1. Models
+### 1. Model
+
+**PlaybackState** (Entity)
+```swift
+struct PlaybackState {
+    var isLoading: Bool = false
+    var isPlaying: Bool = false
+    var errorMessage: String?
+    var bufferingCount: Int = 0
+    var currentStream: VideoStream?
+}
+```
 
 **VideoStream** (Entity)
 ```swift
@@ -31,647 +43,211 @@ struct VideoStream: Identifiable, Hashable {
 }
 ```
 
-**PlaybackState** (Entity)
-```swift
-struct PlaybackState {
-    var isLoading: Bool = false
-    var isPlaying: Bool = false
-    var errorMessage: String?
-    var bufferingCount: Int = 0
-    var currentStream: VideoStream?
-}
-```
-
 ---
 
-### 2. View Controller
+### 2. ViewModel
 
-**VideoPlayerViewController** - Holds state & routes user actions
-- ObservableObject for SwiftUI binding
-- @Published properties for reactive updates
-- Strong references to components (Interactor, Presenter, Worker)
-- Routes user actions to Interactor
-
+**PlaybackViewModel** - All business logic, state management, and observer setup
 ```swift
-class VideoPlayerViewController: ObservableObject, VideoPlayerPresenterOutput {
-    @Published var playbackViewModel: PlaybackViewModel
-    @Published var debugViewModel: DebugInfoViewModel
+class PlaybackViewModel: ObservableObject {
+    // MARK: - Published State
+    @Published var isLoading: Bool = false
+    @Published var isPlaying: Bool = false
+    @Published var errorMessage: String?
+    @Published var bufferingCount: Int = 0
+    @Published var currentStream: VideoStream?
     
-    // Strong references (keep components alive)
-    private let interactor: VideoPlayerInteractorInput
-    private let presenter: VideoPlayerPresenterInput
+    let player: AVPlayer
     private let worker: VideoPlayerWorker
+    private var playbackState: PlaybackState = .idle
     
-    func didSelectStream(_ stream: VideoStream)
-    func playStream()
-    func pauseStream()
-    func retryLoadStream()
-    
-    // Receive formatted data from Presenter
-    func displayPlaybackState(_ viewModel: PlaybackViewModel)
-    func displayDebugInfo(_ info: DebugInfoViewModel)
-}
-```
-
----
-
-### 3. Interactor
-
-**VideoPlayerInteractor** - Business logic & data fetching
-- Load video streams
-- Manage playback lifecycle
-- Setup observers (KVO, Notifications)
-- Handle buffering/error monitoring
-
-```swift
-protocol VideoPlayerInteractorInput {
+    // MARK: - Public Interface
     func loadStream(_ stream: VideoStream)
     func play()
     func pause()
     func retry()
-    func setupObservers(for item: AVPlayerItem)
-}
-
-class VideoPlayerInteractor: VideoPlayerInteractorInput {
-    var presenter: VideoPlayerPresenterInput?
-    var worker: VideoPlayerWorker?
-    var player: AVPlayer
-    var cancellables = Set<AnyCancellable>()
     
-    func loadStream(_ stream: VideoStream) {
-        // Load & setup playback
-    }
-    
-    func play() { player.play() }
-    func pause() { player.pause() }
-    
-    func retry() {
-        // Reload current stream
-    }
-    
-    func setupObservers(for item: AVPlayerItem) {
-        // Monitor status, buffering, errors
-    }
+    // MARK: - Debug Info
+    var resolutionText: String
+    var bitrateText: String
 }
 ```
 
+**Responsibilities:**
+- Load and manage playback lifecycle
+- Setup KVO observers for player status, buffering, errors
+- Update internal `playbackState` and publish to `@Published` properties
+- Format debug info (resolution, bitrate)
+- Handle stream errors and retry logic
+
 ---
 
-### 4. Presenter
+### 3. View
 
-**VideoPlayerPresenter** - Format data for display
-- Format resolution/bitrate text
-- Transform state for View
-- No UI framework dependencies
-
+**VideoPlayerView** - Renders video player UI
 ```swift
-protocol VideoPlayerPresenterInput {
-    func presentLoading(_ isLoading: Bool)
-    func presentPlaybackState(_ state: PlaybackState)
-    func presentError(_ message: String)
-    func presentDebugInfo(resolution: String, bitrate: String, buffering: Int)
-}
-
-protocol VideoPlayerPresenterOutput: AnyObject {
-    func displayLoading(_ isLoading: Bool)
-    func displayPlaybackState(_ viewModel: PlaybackViewModel)
-    func displayError(_ message: String)
-    func displayDebugInfo(_ info: DebugInfoViewModel)
-}
-
-class VideoPlayerPresenter: VideoPlayerPresenterInput {
-    weak var viewController: VideoPlayerPresenterOutput?
+struct VideoPlayerView: View {
+    @ObservedObject var viewModel: PlaybackViewModel
+    @Binding var isFullScreen: Bool
     
-    func presentLoading(_ isLoading: Bool) {
-        viewController?.displayLoading(isLoading)
-    }
-    
-    func presentPlaybackState(_ state: PlaybackState) {
-        let viewModel = PlaybackViewModel(
-            isPlaying: state.isPlaying,
-            isLoading: state.isLoading
-        )
-        viewController?.displayPlaybackState(viewModel)
-    }
-    
-    func presentDebugInfo(resolution: String, bitrate: String, buffering: Int) {
-        let info = DebugInfoViewModel(
-            resolution: resolution,
-            bitrate: bitrate,
-            bufferingCount: buffering
-        )
-        viewController?.displayDebugInfo(info)
+    var body: some View {
+        // VideoPlayer + Loading/Error overlays + Fullscreen button
+        // Calls viewModel.retry() on error
     }
 }
 ```
 
+**FullScreenPlayerView** - Fullscreen player wrapper
+```swift
+struct FullScreenPlayerView: View {
+    @ObservedObject var viewModel: PlaybackViewModel
+    @Binding var isPresented: Bool
+}
+```
+
+**ContentView** - Main app container
+```swift
+struct ContentView: View {
+    @StateObject private var playbackViewModel = PlaybackViewModel()
+    @State private var showDebug = false  // UI state only
+    
+    // Shows video list, current selection, debug panel
+    // Calls viewModel.loadStream() on stream selection
+}
+```
+
+**Responsibilities:**
+- Pure presentation logic
+- SwiftUI bindings to ViewModel state
+- User gesture handling (passes to ViewModel)
+- UI state management (e.g., `showDebug` panel toggle)
+
 ---
 
-### 5. Worker
+### 4. Worker
 
-**VideoPlayerWorker** - Reusable utilities
-- KVO setup & monitoring
-- Notification handling
-- Data parsing & formatting
-
+**VideoPlayerWorker** - Reusable KVO observer setup
 ```swift
 class VideoPlayerWorker {
     func setupKVOObservers(
         for item: AVPlayerItem,
+        player: AVPlayer,
         onStatusChange: @escaping (AVPlayerItem.Status) -> Void,
         onBufferingChange: @escaping (Bool) -> Void,
-        onStall: @escaping () -> Void
-    ) {
-        // Setup status publisher
-        item.publisher(for: \.status)
-            .sink { status in onStatusChange(status) }
-            .store(in: &cancellables)
-        
-        // Setup buffering publisher
-        item.publisher(for: \.isPlaybackLikelyToKeepUp)
-            .sink { keepUp in onBufferingChange(!keepUp) }
-            .store(in: &cancellables)
-        
-        // Setup stall notifications
-        NotificationCenter.default.publisher(
-            for: .AVPlayerItemPlaybackStalled,
-            object: item
-        ).sink { _ in onStall() }
-            .store(in: &cancellables)
-    }
+        onStall: @escaping () -> Void,
+        onFailedToPlayToEnd: @escaping (Error?) -> Void
+    )
     
-    func formatResolution(_ size: CGSize) -> String {
-        "Resolution: \(Int(size.width))x\(Int(size.height))"
-    }
-    
-    func formatBitrate(_ kbps: Double) -> String {
-        String(format: "Bitrate: %.0f kbps", kbps)
-    }
+    func getResolution(from player: AVPlayer) -> String
+    func getBitrate(from player: AVPlayer) -> String
 }
 ```
 
----
-
-### 6. View
-
-**VideoPlayerView** - Pure SwiftUI, receives ViewModels
-- Display playback state
-- Show loading/error UI
-- Render debug info
-- No business logic
-
-```swift
-struct VideoPlayerView: View {
-    @ObservedObject var viewModel: PlaybackViewModel
-    
-    var body: some View {
-        ZStack {
-            // Player
-            VideoPlayer(player: viewModel.player)
-                .ignoresSafeArea()
-            
-            // Loading overlay
-            if viewModel.isLoading {
-                LoadingOverlay()
-            }
-            
-            // Error overlay
-            if let error = viewModel.errorMessage {
-                ErrorOverlay(message: error, onRetry: viewModel.onRetry)
-            }
-            
-            // Debug panel
-            if viewModel.showDebug {
-                DebugPanel(info: viewModel.debugInfo)
-            }
-        }
-    }
-}
-```
+**Responsibilities:**
+- Setup Combine publishers for KVO changes
+- All publishers deliver callbacks on main thread (`.receive(on: DispatchQueue.main)`)
+- Extract debug info (resolution, bitrate)
 
 ---
 
-## Detailed Data Flow
+## Data Flow
 
-### 1️⃣ User Selects Video (Tap on Video List)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         VIEW (SwiftUI)                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  @State var streams: [VideoStream]                            │
-│  @ObservedObject var viewModel: PlaybackViewModel             │
-│                                                                 │
-│  VideoPlayerView(viewModel: viewModel)                         │
-│  SuggestedVideoRow(stream: stream)                             │
-│    .onTapGesture {                                             │
-│      viewController.didSelectStream(stream)  ◄─── USER TAP     │
-│    }                                                            │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          │ Calls
-                          ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              VIEW CONTROLLER (Router/ViewController)            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  func didSelectStream(_ stream: VideoStream) {                 │
-│    interactor?.loadStream(stream)                              │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          │ Calls
-                          ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    INTERACTOR                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  func loadStream(_ stream: VideoStream) {                      │
-│    // 1. Reset state                                           │
-│    updatePlaybackState(isLoading: true)                        │
-│                                                                 │
-│    // 2. Validate URL                                          │
-│    guard let url = stream.url else {                           │
-│      presentError("Invalid URL")                               │
-│      return                                                     │
-│    }                                                            │
-│                                                                 │
-│    // 3. Create AVPlayerItem                                   │
-│    let item = AVPlayerItem(url: url)                           │
-│    player.replaceCurrentItem(with: item)                       │
-│                                                                 │
-│    // 4. Setup Observers via Worker                            │
-│    worker?.setupKVOObservers(for: item,                        │
-│      onStatusChange: { [weak self] status in                   │
-│        self?.handleStatusChange(status)                        │
-│      },                                                         │
-│      onBufferingChange: { [weak self] isBuffering in           │
-│        self?.handleBuffering(isBuffering)                      │
-│      },                                                         │
-│      onStall: { [weak self] in                                 │
-│        self?.handlePlaybackStall()                             │
-│      }                                                          │
-│    )                                                            │
-│  }                                                              │
-│                                                                 │
-│  private var playbackState: PlaybackState = PlaybackState()    │
-│  private func updatePlaybackState(_ state: PlaybackState) {    │
-│    self.playbackState = state                                  │
-│    presenter?.presentPlaybackState(state)                      │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 2️⃣ Interactor Setup Observers (Worker)
+### 1️⃣ User Selects Video
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      WORKER                                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  func setupKVOObservers(for item: AVPlayerItem, ...) {        │
-│                                                                 │
-│    // Monitor AVPlayerItem Status Changes                       │
-│    item.publisher(for: \.status)                              │
-│      .sink { [weak self] status in                             │
-│        switch status {                                         │
-│          case .readyToPlay:                                    │
-│            onStatusChange(.readyToPlay)                        │
-│            // ✓ Ready to play                                  │
-│                                                                 │
-│          case .failed:                                         │
-│            onStatusChange(.failed)                             │
-│            // ✗ Failed to load                                 │
-│                                                                 │
-│          case .unknown:                                        │
-│            onStatusChange(.unknown)                            │
-│            // ⏳ Still loading                                 │
-│        }                                                        │
-│      }                                                          │
-│      .store(in: &cancellables)                                 │
-│                                                                 │
-│    // Monitor Playback Keep-Up (Buffering)                     │
-│    item.publisher(for: \.isPlaybackLikelyToKeepUp)            │
-│      .sink { [weak self] keepUp in                             │
-│        if !keepUp {                                            │
-│          onBufferingChange(true)    // ⏳ Buffering            │
-│        } else {                                                │
-│          onBufferingChange(false)   // ✓ Ready                │
-│        }                                                        │
-│      }                                                          │
-│      .store(in: &cancellables)                                 │
-│                                                                 │
-│    // Monitor Playback Stalled (Network Issue)                 │
-│    NotificationCenter.default.publisher(                       │
-│      for: .AVPlayerItemPlaybackStalled,                        │
-│      object: item                                              │
-│    ).sink { _ in                                               │
-│      onStall()    // ⚠️ Playback interrupted                   │
-│    }                                                            │
-│    .store(in: &cancellables)                                   │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          │ Callback: onStatusChange
-                          │ Callback: onBufferingChange
-                          │ Callback: onStall
-                          ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    INTERACTOR (Continued)                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  private func handleStatusChange(_ status: AVPlayerItem.Status) {│
-│    var state = playbackState                                  │
-│                                                                 │
-│    switch status {                                             │
-│      case .readyToPlay:                                        │
-│        state.isLoading = false                                │
-│        state.errorMessage = nil                               │
-│        // Get resolution & bitrate from player                 │
-│        if let size = player.currentItem?.presentationSize {  │
-│          state.resolution = worker?.formatResolution(size)    │
-│                              ?? ""                             │
-│        }                                                        │
-│                                                                 │
-│      case .failed:                                             │
-│        state.isLoading = false                                │
-│        state.errorMessage = "Failed to load video"            │
-│                                                                 │
-│      case .unknown:                                            │
-│        state.isLoading = true                                 │
-│        state.errorMessage = nil                               │
-│    }                                                            │
-│                                                                 │
-│    updatePlaybackState(state)                                 │
-│  }                                                              │
-│                                                                 │
-│  private func handleBuffering(_ isBuffering: Bool) {           │
-│    var state = playbackState                                  │
-│    state.isLoading = isBuffering                              │
-│    if isBuffering {                                            │
-│      state.bufferingCount += 1                                │
-│    }                                                            │
-│    updatePlaybackState(state)                                 │
-│  }                                                              │
-│                                                                 │
-│  private func handlePlaybackStall() {                          │
-│    var state = playbackState                                  │
-│    state.isLoading = true                                     │
-│    state.errorMessage = "Buffering..."                        │
-│    state.bufferingCount += 1                                  │
-│    updatePlaybackState(state)                                 │
-│  }                                                              │
-│                                                                 │
-│  private func presentError(_ message: String) {                │
-│    var state = playbackState                                  │
-│    state.isLoading = false                                    │
-│    state.errorMessage = message                               │
-│    updatePlaybackState(state)                                 │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────┐
+│   ContentView   │
+│  (View Layer)   │
+└────────┬────────┘
+         │
+         │ onTapGesture
+         ↓
+playbackViewModel.loadStream(stream)
+         ↓
+┌──────────────────────────┐
+│  PlaybackViewModel       │
+│  (ViewModel Layer)       │
+└────────┬─────────────────┘
+         │
+         ├─ 1. player.pause()
+         ├─ 2. cancellables.removeAll()
+         ├─ 3. Validate URL
+         ├─ 4. Create AVPlayerItem
+         ├─ 5. player.replaceCurrentItem(with: item)
+         ├─ 6. setupObservers()
+         └─ 7. Update @Published properties (isLoading, currentStream)
+         
+         ↓
+┌──────────────────────────┐
+│   VideoPlayerWorker      │
+│  (Utility Layer)         │
+└────────┬─────────────────┘
+         │
+         ├─ Monitor status changes
+         ├─ Monitor buffering state
+         ├─ Monitor stalls
+         ├─ Monitor failed-to-play errors
+         └─ Deliver callbacks on main thread
+         
+         ↓
+         
+Callbacks trigger ViewModel handlers:
+- handleStatusChange()
+- handleBuffering()
+- handlePlaybackStall()
+- handleFailedToPlayToEnd()
+
+         ↓
+@Published properties update
+         
+         ↓
+┌──────────────────────────┐
+│   SwiftUI Views          │
+│  (View Layer)            │
+└──────────────────────────┘
+Re-render based on state changes
 ```
 
----
-
-### 3️⃣ Interactor → Presenter (Format Data)
+### 2️⃣ Player Status Changes (Streaming)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    INTERACTOR                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  private func updatePlaybackState(_ state: PlaybackState) {    │
-│    self.playbackState = state                                  │
-│    presenter?.presentPlaybackState(state)  ◄────┐             │
-│  }                                                │             │
-│                                                  │             │
-└─────────────────────────────────────────────────────────────────┘
-                                                   │
-                                        Passes PlaybackState
-                                                   │
-                                                   ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    PRESENTER                                    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  func presentPlaybackState(_ state: PlaybackState) {           │
-│                                                                 │
-│    // Transform raw state into ViewModel                        │
-│    let viewModel = PlaybackViewModel(                           │
-│      isLoading: state.isLoading,                               │
-│      isPlaying: state.isPlaying,                               │
-│      errorMessage: state.errorMessage,                         │
-│      resolution: state.resolution,                             │
-│      bitrate: state.bitrate,                                   │
-│      bufferingCount: state.bufferingCount                      │
-│    )                                                            │
-│                                                                 │
-│    // Pass formatted ViewModel to ViewController                │
-│    viewController?.displayPlaybackState(viewModel)             │
-│  }                                                              │
-│                                                                 │
-│  func presentDebugInfo(                                         │
-│    resolution: String,                                          │
-│    bitrate: String,                                             │
-│    buffering: Int                                               │
-│  ) {                                                            │
-│    let debugViewModel = DebugInfoViewModel(                     │
-│      resolution: resolution,                                    │
-│      bitrate: bitrate,                                          │
-│      bufferingCount: buffering                                  │
-│    )                                                            │
-│                                                                 │
-│    viewController?.displayDebugInfo(debugViewModel)            │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+AVPlayerItem.status changes
+         │
+         ↓
+VideoPlayerWorker observes via KVO
+         │
+         ↓
+Calls onStatusChange() callback
+         │
+         ↓
+PlaybackViewModel.handleStatusChange()
+         │
+         ├─ Updates playbackState
+         └─ Calls updatePlaybackViewModel() → publishes @Published properties
+         │
+         ↓
+SwiftUI views re-render based on:
+- isLoading, isPlaying, errorMessage, bufferingCount
 ```
 
----
-
-### 4️⃣ Presenter → View Controller → View (Display Update)
+### 3️⃣ Buffering & Network Issues
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│              VIEW CONTROLLER (ViewController)                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  @Published var playbackViewModel: PlaybackViewModel           │
-│  @Published var debugViewModel: DebugInfoViewModel             │
-│                                                                 │
-│  func displayPlaybackState(_ viewModel: PlaybackViewModel) {   │
-│    DispatchQueue.main.async {                                  │
-│      // Update properties instead of replacing                 │
-│      self.playbackViewModel.isLoading = viewModel.isLoading    │
-│      self.playbackViewModel.isPlaying = viewModel.isPlaying    │
-│      self.playbackViewModel.errorMessage = viewModel.error     │
-│      self.playbackViewModel.bufferingCount = viewModel.count   │
-│    }                                                            │
-│  }                                                              │
-│                                                                 │
-│  func displayDebugInfo(_ info: DebugInfoViewModel) {           │
-│    DispatchQueue.main.async {                                  │
-│      self.debugViewModel.resolution = info.resolution          │
-│      self.debugViewModel.bitrate = info.bitrate                │
-│      self.debugViewModel.bufferingCount = info.bufferingCount   │
-│    }                                                            │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-             @Published property changes
-             SwiftUI observes changes
-                          │
-                          ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    VIEW (SwiftUI)                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  @ObservedObject var viewController: ViewController            │
-│                                                                 │
-│  var body: some View {                                         │
-│    ZStack {                                                     │
-│      VideoPlayer(player: viewController.player)                │
-│                                                                 │
-│      // Show loading spinner                                   │
-│      if viewController.playbackViewModel.isLoading {           │
-│        LoadingOverlay()                                         │
-│      }                                                          │
-│                                                                 │
-│      // Show error overlay                                     │
-│      if let error = viewController.playbackViewModel.error {   │
-│        ErrorOverlay(                                            │
-│          message: error,                                        │
-│          onRetry: { viewController.retry() }                   │
-│        )                                                        │
-│      }                                                          │
-│                                                                 │
-│      // Show debug panel                                       │
-│      if showDebug {                                             │
-│        DebugPanel(info: viewController.debugViewModel)         │
-│      }                                                          │
-│    }                                                            │
-│  }                                                              │
-│                                                                 │
-│  private func handleVideoTap(_ stream: VideoStream) {          │
-│    viewController.didSelectStream(stream)                      │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+AVPlayerItem.isPlaybackLikelyToKeepUp changes
+         │
+         ↓
+VideoPlayerWorker.onBufferingChange()
+         │
+         ↓
+PlaybackViewModel.handleBuffering()
+         │
+         ├─ Sets isLoading = true
+         ├─ Increments bufferingCount
+         └─ Publishes updates
+         │
+         ↓
+View shows loading spinner + debug panel updates count
 ```
-
----
-
-### Complete Cycle Diagram
-
-```
-STEP 1: USER INTERACTION
-┌─────────────────────┐
-│   VIEW              │
-│ User taps video     │ ─────┐
-└─────────────────────┘      │
-                             │
-                    User Action
-                             │
-                             ↓
-STEP 2: ROUTE TO BUSINESS LOGIC
-┌─────────────────────────────────────┐
-│   VIEW CONTROLLER (Router)          │
-│ • Receives user action              │
-│ • Routes to Interactor              │
-│ didSelectStream(stream)             │ ─────┐
-└─────────────────────────────────────┘      │
-                                             │
-                                    Calls Interactor
-                                             │
-                                             ↓
-STEP 3: BUSINESS LOGIC & DATA
-┌──────────────────────────────────────────────────┐
-│   INTERACTOR                                     │
-│ • Load stream                                    │
-│ • Create AVPlayerItem                           │
-│ • Replace player item                           │
-│ • Call Worker to setup observers                │
-│ loadStream(stream)                              │ ─────┐
-└──────────────────────────────────────────────────┘      │
-            │                                              │
-            │ Calls Worker                                │
-            ↓                                              │
-┌──────────────────────────────────────────┐              │
-│   WORKER                                 │              │
-│ • Setup KVO publishers                   │              │
-│ • Monitor status changes                 │              │
-│ • Monitor buffering                      │              │
-│ • Monitor playback stalls                │              │
-│ setupKVOObservers(for item, callbacks)   │              │
-└──────────────────────────────────────────┘              │
-            │                                              │
-            │ Callbacks triggered by state changes        │
-            ↓                                              │
-        Back to Interactor                    Calls Presenter
-            │                                              │
-            └──────────────────────────────────────────────┤
-                                                           │
-                                         Interactor passes state
-                                                           │
-                                                           ↓
-STEP 4: FORMAT DATA
-┌─────────────────────────────────────┐
-│   PRESENTER                         │
-│ • Receives PlaybackState            │
-│ • Formats for display               │
-│ • Creates ViewModel                 │
-│ presentPlaybackState(state)         │ ─────┐
-└─────────────────────────────────────┘      │
-                                             │
-                                 Calls ViewController
-                                             │
-                                             ↓
-STEP 5: UPDATE VIEW CONTROLLER
-┌──────────────────────────────────────────┐
-│   VIEW CONTROLLER                        │
-│ • Receives ViewModel                     │
-│ • Updates @Published properties          │
-│ displayPlaybackState(viewModel)          │
-└──────────────────────────────────────────┘
-            │
-     SwiftUI Observes
-     @Published changes
-            │
-            ↓
-STEP 6: RE-RENDER UI
-┌──────────────────────────────────────────┐
-│   VIEW (SwiftUI)                         │
-│ • Re-renders based on ViewModel          │
-│ • Shows/hides loading, error, debug      │
-│ • Updates UI elements                    │
-│ ✓ Loading spinner                        │
-│ ✓ Error overlay                          │
-│ ✓ Debug info                             │
-│ ✓ Video playback state                   │
-└──────────────────────────────────────────┘
-```
-
----
-
-### Models Used in Each Layer
-
-| Component | Models Used | Purpose |
-|-----------|-------------|---------|
-| **View** | `PlaybackViewModel`, `DebugInfoViewModel` | Display formatted data |
-| **ViewController** | `PlaybackState`, `PlaybackViewModel` | Translate & store state |
-| **Interactor** | `VideoStream`, `PlaybackState` | Manage playback & state |
-| **Presenter** | `PlaybackState` → `PlaybackViewModel` | Transform raw to display |
-| **Worker** | `AVPlayerItem`, `AVPlayerItem.Status` | Observe & report changes |
-| **Models** | `VideoStream`, `PlaybackState` | Raw data entities |
 
 ---
 
@@ -682,24 +258,20 @@ steam/
 ├── steam/
 │   ├── steamApp.swift
 │   │
-│   ├── Scenes/
-│   │   └── VideoPlayer/
-│   │       ├── VideoPlayerRouter.swift            (Dependency Injection)
-│   │       ├── VideoPlayerViewController.swift    (ViewController)
-│   │       ├── VideoPlayerInteractor.swift        (Business Logic + PlaybackState)
-│   │       ├── VideoPlayerPresenter.swift         (Data Formatting)
-│   │       ├── VideoPlayerView.swift              (SwiftUI View)
-│   │       └── VideoPlayerModels.swift            (ViewModels)
-│   │
-│   ├── Workers/
-│   │   └── VideoPlayerWorker.swift                (Reusable Utilities)
-│   │
 │   ├── Models/
-│   │   └── VideoStream.swift                      (Entity)
+│   │   ├── VideoStream.swift          (Entity)
+│   │   └── PlaybackState.swift        (Entity)
 │   │
-│   └── Views/
-│       ├── ContentView.swift
-│       └── FullScreenPlayerView.swift
+│   ├── ViewModels/
+│   │   └── PlaybackViewModel.swift    (ViewModel + Business Logic)
+│   │
+│   ├── Views/
+│   │   ├── ContentView.swift
+│   │   ├── VideoPlayerView.swift
+│   │   └── FullScreenPlayerView.swift
+│   │
+│   └── Workers/
+│       └── VideoPlayerWorker.swift    (Reusable KVO/Combine Setup)
 │
 └── steam.xcodeproj/
 ```
@@ -708,90 +280,115 @@ steam/
 
 ## Component Responsibilities
 
-| Component | Responsibility |
-|-----------|-----------------|
-| **View** | Render UI from ViewModels, handle user gestures |
-| **ViewController** | Wire components (Router), present View, observe ViewModel |
-| **Interactor** | Business logic, playback management, state tracking |
-| **Presenter** | Format data for display, create ViewModels |
-| **Router** | Wire up dependencies, handle navigation |
-| **Worker** | Reusable utilities (KVO, Notifications, formatting) |
-| **Models** | Data entities (VideoStream, PlaybackState) |
+| Component | Type | Responsibility |
+|-----------|------|-----------------|
+| **PlaybackViewModel** | ViewModel | Business logic, state, observer setup |
+| **VideoPlayerView** | View | Player + overlays, calls ViewModel actions |
+| **FullScreenPlayerView** | View | Fullscreen container |
+| **ContentView** | View | List, selection, debug panel |
+| **VideoPlayerWorker** | Utility | KVO setup, formatting |
+| **PlaybackState** | Model | Data entity |
+| **VideoStream** | Model | Data entity |
 
 ---
 
-## Request/Response Flow
+## State Management
 
-```swift
-// Request (from View to Interactor)
-struct VideoPlayerInteractorRequest {
-    let stream: VideoStream
-}
+### PlaybackViewModel Internal State
+- `playbackState: PlaybackState` — internal tracking of stream + playback status
+- `@Published` properties — synced to UI via Combine
+- `cancellables: Set<AnyCancellable>` — KVO subscription management
 
-// Response (from Interactor to Presenter)
-struct VideoPlayerInteractorResponse {
-    let state: PlaybackState
-}
+### ContentView Local State
+- `@StateObject playbackViewModel` — preserved across re-renders (fixes D2: AVPlayer leak)
+- `@State showDebug` — pure UI state, not synced to ViewModel
 
-// ViewModel (from Presenter to View)
-struct PlaybackViewModel: ObservableObject {
-    @Published var isLoading: Bool
-    @Published var isPlaying: Bool
-    @Published var errorMessage: String?
-    @Published var player: AVPlayer
-}
+### Data Flow
+1. User action → ViewModel method called
+2. ViewModel updates `playbackState` internally
+3. `updatePlaybackViewModel()` copies to `@Published` properties on main thread
+4. SwiftUI observes `@Published` → re-renders
+
+---
+
+## Key Fixes & Improvements
+
+### D1: Duplicate Error Subscription
+- Removed duplicate `.AVPlayerItemFailedToPlayToEndTime` from Interactor
+- Worker now handles all error monitoring (single source)
+
+### D2: AVPlayer Memory Leak
+- Replaced `@ObservedObject` with custom `init()` → `@StateObject` 
+- `@StateObject` preserves instance across ContentView re-renders
+
+### D3: Dead Debug Plumbing
+- Replaced unreachable `updateDebugInfo()` method
+- Added computed `resolutionText`, `bitrateText` properties
+- Live updates via `.onAppear()` and ViewModel state changes
+
+### D6: Dead Formatting Methods
+- Removed unused `formatResolution()` and `formatBitrate()`
+- Kept live `getResolution()` and `getBitrate()`
+
+### Threading (Decision B)
+- Worker attaches `.receive(on: DispatchQueue.main)` to all publishers
+- All callbacks guaranteed to fire on main thread
+- Eliminated scattered `DispatchQueue.main.async` blocks
+
+---
+
+## Request/Response Pattern → MVVM
+
+**Old Clean Swift (VIPER):**
+```
+View → ViewController → Interactor → Presenter → ViewController → View
+   (Router injection)  (Request/Response structs, Presenter protocol)
+```
+
+**New MVVM:**
+```
+View → ViewModel ⟷ Worker
+   (@ObservedObject)  (KVO setup)
+   
+ViewModel is the single source of truth:
+- Owns business logic
+- Manages state
+- Owns observers
+- No DTOs or routing protocols needed
 ```
 
 ---
 
-## Dependency Injection (Router)
+## Logging
 
-```swift
-class VideoPlayerRouter {
-    static func createModule(stream: VideoStream = .sample) -> VideoPlayerViewController {
-        // Create Components
-        let player = AVPlayer()
-        let playbackViewModel = PlaybackViewModel(player: player)
+Uses `os.Logger` for structured logging:
+- Subsystem: `amonrit.steam`
+- Category: `playback`
+- Levels: `.info`, `.error`, `.debug`
+- Viewable in Xcode Console or Console.app
 
-        let presenter = VideoPlayerPresenter()
-        let worker = VideoPlayerWorker()
-        let interactor = VideoPlayerInteractor(player: player)
-
-        // Wire up dependencies
-        interactor.presenter = presenter
-        interactor.worker = worker
-
-        // Create ViewController with strong references to all components
-        let viewController = VideoPlayerViewController(
-            playbackViewModel: playbackViewModel,
-            interactor: interactor,
-            presenter: presenter,
-            worker: worker
-        )
-
-        // Set presenter's viewController reference
-        presenter.viewController = viewController
-
-        // Load initial stream
-        interactor.loadStream(stream)
-
-        return viewController
-    }
-}
+Example:
+```
+logger.info("📥 Loading stream: MyStream")
+logger.error("❌ Invalid URL")
+logger.debug("   URL: https://...")
 ```
 
 ---
 
-## Key Benefits
+## Key Benefits of MVVM
 
-✅ **Separation of Concerns** - Each class has single responsibility  
-✅ **Testability** - Easy to mock dependencies  
-✅ **Reusability** - Workers can be shared across modules  
-✅ **Scalability** - Clear structure for adding features  
-✅ **Maintainability** - Data flow is predictable & traceable
+✅ **Simplicity** — Single ViewModel owns all logic (vs. I-P-C split)  
+✅ **Testability** — ViewModel can be tested independently  
+✅ **State Management** — Combine `@Published` is SwiftUI-native  
+✅ **No Routing Complexity** — No protocols, DTOs, or dependency injection boilerplate  
+✅ **Direct Data Binding** — Views directly observe ViewModel (vs. manual copy)  
+✅ **Less Code** — Removed 400+ lines of VIPER scaffolding  
+✅ **Memory Safety** — `@StateObject` prevents AVPlayer leaks on re-render  
 
 ---
 
-**Architecture**: Clean Swift (VIP)  
+**Architecture**: MVVM  
 **Platform**: iOS (SwiftUI)  
-**Last Updated**: 2024
+**Last Updated**: August 2026  
+**Status**: Migrated from Clean Swift (VIP) on 2026-08-10
