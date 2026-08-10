@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # Steam — iOS Video Streaming App
 
 [![GitHub](https://img.shields.io/badge/GitHub-amonrit/VideoStreamingApp-blue?logo=github)](https://github.com/amonrit/VideoStreamingApp)
@@ -310,3 +312,6 @@ For questions or issues:
 5. View app logs in Xcode Console
 
 **Ready to stream!** 🎬
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit

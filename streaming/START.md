@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # 🎬 MediaMTX Live Streaming Server
 
 Personal live streaming server setup using Docker and MediaMTX.
@@ -217,3 +219,6 @@ docker-compose logs mediamtx
 ---
 
 **Ready to stream!** 🎥 Start with `docker-compose up -d` in this directory.
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit

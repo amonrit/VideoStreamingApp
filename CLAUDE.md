@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -260,6 +262,39 @@ See **FEATURES_ROADMAP.md** for detailed feature proposals. Priority features:
 
 ---
 
+---
+
+## Documentation Standards
+
+### Markdown File Headers (REQUIRED)
+
+All `.md` files MUST start with a modification header:
+
+```
+Last Modified: MM/DD/YYYY (UNIX_TIMESTAMP) by USERNAME
+
+[Rest of document content...]
+```
+
+**Example:**
+```
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
+# Document Title
+```
+
+**Details:**
+- Date format: `MM/DD/YYYY` (e.g., `08/10/2026`)
+- Unix timestamp: Current epoch seconds
+- Username: Git user who made the edit
+- Always on line 1, followed by blank line
+
+**Update whenever you edit a .md file** — change date, timestamp, and your username.
+
+For full details, see: `.claude/markdown-header-rule.md`
+
+---
+
 ## Questions?
 
 Refer to:
@@ -267,3 +302,6 @@ Refer to:
 - **DEPLOYMENT_GUIDE.md** — Multi-machine setup
 - **README_SETUP.md** — Quick start reference
 - **FEATURES_ROADMAP.md** — Feature priorities & estimates
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit

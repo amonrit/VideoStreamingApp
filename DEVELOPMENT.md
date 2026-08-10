@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # Development Guide
 
 This guide explains how to develop, debug, and work on the Steam project locally.
@@ -509,3 +511,6 @@ ifconfig | grep "inet "
 | Fresh start | `make clean && make dev-all` | 10 min |
 
 **Pro Tip:** Keep `make server-logs` running in a terminal window while developing. You'll spot issues immediately!
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit

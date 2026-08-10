@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # Antigravity + Claude Code Integration Guide
 
 This guide explains how to use GitHub's Antigravity tools with Claude Code for this Steam project.
@@ -463,3 +465,6 @@ To optimize for your workflow, edit `.claude/settings.json`:
 ---
 
 **Happy coding with Antigravity!** 🚀
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit

@@ -1,3 +1,5 @@
+Last Modified: 08/10/2026 (1786502400) by amonrit
+
 # 🚀 MediaMTX Streaming Server - Deployment Guide
 
 ## ✅ What's Ready
@@ -338,3 +340,6 @@ docker-compose up -d
 6. ✅ Publish stream and verify playback
 
 **You're ready to stream across your network! 🚀**
+
+---
+**Last Updated:** 2026-08-10 (1786357473) by amonrit
