@@ -22,13 +22,11 @@ class VideoPlayerRouter {
         let playbackViewModel = PlaybackViewModel(player: player)
 
         let presenter = VideoPlayerPresenter()
-
         let worker = VideoPlayerWorker()
-
         let interactor = VideoPlayerInteractor(player: player)
 
-        // Wire up dependencies
-        presenter.viewController = nil  // Will be set below
+        // Wire up dependencies (legacy VIPER wiring, now orphaned)
+        presenter.viewController = nil
         interactor.presenter = presenter
         interactor.worker = worker
 
@@ -43,8 +41,8 @@ class VideoPlayerRouter {
         // Set presenter's viewController
         presenter.viewController = viewController
 
-        // Load initial stream
-        interactor.loadStream(stream)
+        // Load initial stream via ViewModel
+        playbackViewModel.loadStream(stream)
 
         return Module(viewController: viewController, playbackViewModel: playbackViewModel)
     }
