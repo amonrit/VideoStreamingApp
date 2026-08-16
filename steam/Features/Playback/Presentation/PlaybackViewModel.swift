@@ -12,6 +12,9 @@ import os
 private let logger = Logger(subsystem: "amonrit.steam", category: "playback")
 
 class PlaybackViewModel: ObservableObject {
+    // MARK: - @Published Properties (Bridge to StateActor)
+    /// ✅ Phase 7: These are now synchronized from PlaybackStateActor
+    /// Kept for backward compatibility with existing SwiftUI views
     @Published var isLoading: Bool = false
     @Published var isPlaying: Bool = false
     @Published var errorMessage: String?
@@ -21,10 +24,15 @@ class PlaybackViewModel: ObservableObject {
     @Published var retryAttempt: Int = 0
     @Published var viewerCount: Int?
 
+    // MARK: - Core Properties
     let player: AVPlayer
     private let worker: VideoPlayerWorker
     private var playbackState: PlaybackState = .idle
     private var cancellables = Set<AnyCancellable>()
+
+    // ✅ Phase 7: State actor for structured concurrency
+    private let stateActor: DefaultPlaybackStateActor
+    private var stateObserverTask: Task<Void, Never>?
 
     // ✅ Phase 4: Centralized retry orchestration
     private var retryOrchestrator: RetryOrchestrator?
@@ -47,15 +55,53 @@ class PlaybackViewModel: ObservableObject {
     // ✅ Phase 4: Track stream loading state
     private var streamLoadingContinuation: CheckedContinuation<Void, Error>?
 
-    /// Initializes PlaybackViewModel with optional custom API client provider
-    /// - Parameter apiClientProvider: Custom provider for API clients (defaults to DefaultAPIClientProvider)
-    init(player: AVPlayer = AVPlayer(), apiClientProvider: APIClientProvider = DefaultAPIClientProvider()) {
+    /// Initializes PlaybackViewModel with optional custom API client provider and state actor
+    /// - Parameters:
+    ///   - player: AVPlayer instance for playback (defaults to new instance)
+    ///   - apiClientProvider: Custom provider for API clients (defaults to DefaultAPIClientProvider)
+    ///   - stateActor: Custom state actor for testing (defaults to DefaultPlaybackStateActor)
+    init(
+        player: AVPlayer = AVPlayer(),
+        apiClientProvider: APIClientProvider = DefaultAPIClientProvider(),
+        stateActor: DefaultPlaybackStateActor = DefaultPlaybackStateActor()
+    ) {
         self.player = player
         self.apiClientProvider = apiClientProvider
+        self.stateActor = stateActor
         self.worker = VideoPlayerWorker()
 
-        // MARK: - Native AVPlayer Settings
+        // MARK: - Setup
         setupPlayerSettings()
+
+        // ✅ Phase 7: Observe state updates from actor and sync to @Published properties
+        startStateObserver()
+    }
+
+    // MARK: - Phase 7: State Observation
+    /// Starts observing state changes from the actor and syncing to @Published properties
+    /// This bridges structured concurrency (actor) with Combine (@Published) for backward compatibility
+    private func startStateObserver() {
+        stateObserverTask = Task {
+            for await state in stateActor.stateUpdates {
+                // Sync all state changes to @Published properties on main thread
+                await MainActor.run { [weak self] in
+                    self?.syncPublishedProperties(from: state)
+                }
+            }
+        }
+    }
+
+    /// Synchronizes @Published properties from actor state
+    /// Called whenever the state actor updates
+    private func syncPublishedProperties(from state: PlaybackStateSnapshot) {
+        self.isLoading = state.isLoading
+        self.isPlaying = state.isPlaying
+        self.errorMessage = state.errorMessage
+        self.bufferingCount = state.bufferingCount
+        self.currentStream = state.currentStream
+        self.connectionStatus = state.connectionStatus
+        self.retryAttempt = state.retryAttempt
+        self.viewerCount = state.viewerCount
     }
 
     private func setupPlayerSettings() {
@@ -72,15 +118,6 @@ class PlaybackViewModel: ObservableObject {
         player.rate = 1.0
 
         logger.info("✅ AVPlayer configured for HLS streaming with auto-retry strategy")
-    }
-
-    // MARK: - Connection Status Enum
-    enum ConnectionStatus {
-        case disconnected
-        case connecting
-        case connected
-        case buffering
-        case failed(String)
     }
 
     // MARK: - Stream Loading (Phase 4 Refactored)
@@ -220,9 +257,10 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
+    // ✅ Phase 7: Update StateActor and let observation sync @Published properties
     private func updateConnectionStatus(_ status: ConnectionStatus) {
-        DispatchQueue.main.async {
-            self.connectionStatus = status
+        Task {
+            await stateActor.updateConnectionStatus(status)
         }
     }
 
@@ -286,7 +324,14 @@ class PlaybackViewModel: ObservableObject {
 
             playbackState.isLoading = false
             playbackState.errorMessage = nil
-            updateConnectionStatus(.connected)
+
+            // ✅ Phase 7: Update StateActor
+            Task {
+                await stateActor.updateLoading(false)
+                await stateActor.updateError(nil)
+                await stateActor.updateConnectionStatus(.connected)
+            }
+
             updatePlaybackViewModel()
             logger.info("✅ Stream ready to play")
 
@@ -301,7 +346,12 @@ class PlaybackViewModel: ObservableObject {
             } else {
                 // If not loading, just update error state
                 playbackState.errorMessage = "Failed to load: \(errorDesc)"
-                updateConnectionStatus(.failed(errorDesc))
+
+                // ✅ Phase 7: Update StateActor
+                Task {
+                    await stateActor.updateConnectionStatus(.failed(errorDesc))
+                    await stateActor.updateError("Failed to load: \(errorDesc)")
+                }
             }
 
             updatePlaybackViewModel()
@@ -309,7 +359,13 @@ class PlaybackViewModel: ObservableObject {
 
         case .unknown:
             playbackState.isLoading = true
-            updateConnectionStatus(.buffering)
+
+            // ✅ Phase 7: Update StateActor
+            Task {
+                await stateActor.updateLoading(true)
+                await stateActor.updateConnectionStatus(.buffering)
+            }
+
             updatePlaybackViewModel()
             logger.info("⏳ Loading stream...")
 
@@ -320,16 +376,24 @@ class PlaybackViewModel: ObservableObject {
 
     private func handleBuffering(_ isBuffering: Bool) {
         playbackState.isLoading = isBuffering
-        if isBuffering {
-            playbackState.bufferingCount += 1
-            updateConnectionStatus(.buffering)
-            logger.info("📦 Buffering... (count: \(self.playbackState.bufferingCount))")
-        } else {
-            if playbackState.isPlaying {
-                updateConnectionStatus(.connected)
+
+        // ✅ Phase 7: Update StateActor
+        Task {
+            await stateActor.updateLoading(isBuffering)
+
+            if isBuffering {
+                playbackState.bufferingCount += 1
+                await stateActor.updateBufferingCount(self.playbackState.bufferingCount)
+                await stateActor.updateConnectionStatus(.buffering)
+                logger.info("📦 Buffering... (count: \(self.playbackState.bufferingCount))")
+            } else {
+                if playbackState.isPlaying {
+                    await stateActor.updateConnectionStatus(.connected)
+                }
+                logger.info("✅ Buffering complete")
             }
-            logger.info("✅ Buffering complete")
         }
+
         updatePlaybackViewModel()
     }
 
@@ -350,10 +414,12 @@ class PlaybackViewModel: ObservableObject {
         logger.error("❌ Failed to play to end: \(errorMessage, privacy: .public)")
     }
 
+    // ✅ Phase 7: Update StateActor for errors
     private func presentError(_ message: String) {
-        playbackState.isLoading = false
-        playbackState.errorMessage = message
-        updatePlaybackViewModel()
+        Task {
+            await stateActor.updateLoading(false)
+            await stateActor.updateError(message)
+        }
     }
 
     // MARK: - Update Published Properties
@@ -435,11 +501,16 @@ class PlaybackViewModel: ObservableObject {
     }
 
     deinit {
+        // ✅ Phase 7: Cancel state observer task
+        stateObserverTask?.cancel()
+
         cancellables.removeAll()
+
         // ✅ Phase 5: Stop polling service on dealloc
         Task {
             await viewerCountPollingService?.stopPolling()
         }
+
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
     }
