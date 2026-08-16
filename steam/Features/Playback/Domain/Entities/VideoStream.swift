@@ -5,25 +5,31 @@
 
 import Foundation
 
-struct VideoStream: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let urlString: String
-    let thumbnailURLString: String
-    
-    var url: URL? {
+public struct VideoStream: Identifiable, Hashable, Sendable {
+    public let id = UUID()
+    public let title: String
+    public let urlString: String
+    public let thumbnailURLString: String
+
+    public var url: URL? {
         URL(string: urlString)
     }
-    
-    var thumbnailURL: URL? {
+
+    public var thumbnailURL: URL? {
         URL(string: thumbnailURLString)
     }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
+
+    public init(title: String, urlString: String, thumbnailURLString: String) {
+        self.title = title
+        self.urlString = urlString
+        self.thumbnailURLString = thumbnailURLString
     }
     
-    static func == (lhs: VideoStream, rhs: VideoStream) -> Bool {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    public static func == (lhs: VideoStream, rhs: VideoStream) -> Bool {
         lhs.id == rhs.id
     }
 }
