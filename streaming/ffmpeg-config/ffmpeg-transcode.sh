@@ -36,13 +36,13 @@ ffmpeg -hide_banner -loglevel warning \
   \
   -map "[v1out]" -map "0:a" \
   -c:v libx264 -preset veryfast \
-  -b:v 2000k -r 30 \
+  -b:v 2000k -r 30 -g 6 -keyint_min 6 \
   -c:a aac -b:a 128k -ar 44100 \
   -f flv "rtmp://mediamtx:1935/live-480p" \
   \
   -map "[v2out]" -map "0:a" \
   -c:v libx264 -preset veryfast \
-  -b:v 800k -r 30 \
+  -b:v 800k -r 30 -g 6 -keyint_min 6 \
   -c:a aac -b:a 128k -ar 44100 \
   -f flv "rtmp://mediamtx:1935/live-360p" \
   2>> "$LOG_FILE"

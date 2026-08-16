@@ -37,6 +37,7 @@ paths:
   # Phase 2: Re-encoded output paths (fixed names)
   # FFmpeg publishes to these paths after transcoding
   # MediaMTX automatically serves as HLS when requested
+  # Note: Part duration is controlled by FFmpeg -g 6 keyframe setting (200ms at 30fps)
   live-480p:
     source: publisher
 
