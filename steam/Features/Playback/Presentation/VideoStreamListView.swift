@@ -193,13 +193,15 @@ struct VideoStreamListView: View {
                 FullScreenPlayerView(viewModel: playbackViewModel, isPresented: $isFullScreen)
             }
             .sheet(isPresented: $showAddStream) {
+                // ✅ Phase 9: Pass ViewModel to sheet
                 AddStreamSheet(
                     isPresented: $showAddStream,
                     customTitle: $customTitle,
                     customURL: $customURL,
                     onAdd: { title, url in
                         addCustomStream(title: title, url: url)
-                    }
+                    },
+                    playbackViewModel: playbackViewModel
                 )
             }
 #endif
@@ -211,11 +213,8 @@ struct VideoStreamListView: View {
     }
 
     private func addCustomStream(title: String, url: String) {
-        let newStream = VideoStream(
-            title: title.isEmpty ? "Custom Stream" : title,
-            urlString: url,
-            thumbnailURLString: "https://via.placeholder.com/120x68/333/666?text=Live"
-        )
+        // ✅ Phase 9: Use ViewModel to create stream
+        let newStream = playbackViewModel.createCustomStream(title: title, url: url)
 
         // Log the custom URL with timestamp
         urlLogger.logCustomURL(url, title: title)
@@ -287,28 +286,18 @@ struct AddStreamSheet: View {
     @Binding var customURL: String
     var onAdd: (String, String) -> Void
 
-    private let urlValidator = URLValidator()
+    @ObservedObject var playbackViewModel: PlaybackViewModel
+
     @State private var showHTTPSWarning = false
 
+    // ✅ Phase 9: Use ViewModel validation
     var isValidURL: Bool {
-        guard !customURL.isEmpty else { return false }
-        let isValidProtocol = customURL.starts(with: "http://") ||
-                             customURL.starts(with: "https://") ||
-                             customURL.starts(with: "rtmp://")
-
-        if !isValidProtocol { return false }
-
-        // For HLS, must end with .m3u8
-        if customURL.contains("http") {
-            return customURL.hasSuffix(".m3u8")
-        }
-
-        // Validate against whitelist
-        return urlValidator.isValidStreamURL(customURL)
+        playbackViewModel.isValidStreamURL(customURL)
     }
 
+    // ✅ Phase 9: Use ViewModel HTTPS check
     var isHTTPSURL: Bool {
-        urlValidator.isHTTPS(customURL)
+        playbackViewModel.isHTTPSURL(customURL)
     }
 
     var body: some View {

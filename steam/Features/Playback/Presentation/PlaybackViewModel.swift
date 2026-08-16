@@ -628,6 +628,50 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Phase 9: Stream Management (from VideoStreamListView)
+
+    /// Adds a custom stream to the playlist
+    /// - Phase 9: Moved from VideoStreamListView.addCustomStream()
+    /// - Parameters:
+    ///   - title: Stream title
+    ///   - url: Stream URL (HLS or RTMP)
+    /// - Returns: Created VideoStream instance
+    func createCustomStream(title: String, url: String) -> VideoStream {
+        VideoStream(
+            title: title.isEmpty ? "Custom Stream" : title,
+            urlString: url,
+            thumbnailURLString: "https://via.placeholder.com/120x68/333/666?text=Live"
+        )
+    }
+
+    /// Validates a stream URL
+    /// - Phase 9: Moved from VideoStreamListView.AddStreamSheet.isValidURL
+    /// - Parameter url: URL string to validate
+    /// - Returns: True if URL is valid for streaming
+    func isValidStreamURL(_ url: String) -> Bool {
+        guard !url.isEmpty else { return false }
+        let isValidProtocol = url.starts(with: "http://") ||
+                             url.starts(with: "https://") ||
+                             url.starts(with: "rtmp://")
+
+        if !isValidProtocol { return false }
+
+        // For HLS, must end with .m3u8
+        if url.contains("http") {
+            return url.hasSuffix(".m3u8")
+        }
+
+        return true
+    }
+
+    /// Checks if URL uses HTTPS protocol
+    /// - Phase 9: Moved from VideoStreamListView.AddStreamSheet.isHTTPSURL
+    /// - Parameter url: URL string to check
+    /// - Returns: True if URL uses HTTPS
+    func isHTTPSURL(_ url: String) -> Bool {
+        url.starts(with: "https://")
+    }
+
     deinit {
         // ✅ Phase 7: Cancel state observer task
         stateObserverTask?.cancel()
