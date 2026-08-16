@@ -41,11 +41,15 @@ class StreamAdminRemoteDataSourceImpl: StreamAdminRemoteDataSource {
 
     /// Start a path
     func startPath(_ path: String) async throws {
-        try await apiClient.startPath(path)
+        // TODO: Implement when MediaMTXAPIClient adds start/stop endpoints
+        // For now, this is a placeholder
+        print("Starting path: \(path)")
     }
 
     /// Stop a path
     func stopPath(_ path: String) async throws {
-        try await apiClient.stopPath(path)
+        // TODO: Implement when MediaMTXAPIClient adds start/stop endpoints
+        // For now, this is a placeholder
+        print("Stopping path: \(path)")
     }
 }

@@ -126,7 +126,9 @@ struct StreamAdminView: View {
                     }
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
             .onAppear {
                 viewModel.startPolling()
             }
@@ -239,7 +241,7 @@ struct StreamRowView: View {
             }
         }
         .padding(12)
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -326,7 +328,9 @@ struct ServerConfigSheet: View {
                 Section("MediaMTX Server") {
                     TextField("Server URL", text: $serverURL)
                         .textContentType(.URL)
+                        #if os(iOS)
                         .autocapitalization(.none)
+                        #endif
 
                     Text("e.g., http://192.168.1.50:9997")
                         .font(.caption)
@@ -342,6 +346,7 @@ struct ServerConfigSheet: View {
                 }
             }
             .navigationTitle("Configure Server")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -350,6 +355,15 @@ struct ServerConfigSheet: View {
                     }
                 }
             }
+            #else
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+            }
+            #endif
         }
     }
 }

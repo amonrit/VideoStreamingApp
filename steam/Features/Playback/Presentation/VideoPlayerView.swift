@@ -22,8 +22,8 @@ struct VideoPlayerView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Video Player without native controls
-            CustomVideoPlayerController(player: viewModel.player)
+            // Video Player - iOS 16+ native VideoPlayer
+            VideoPlayer(player: viewModel.player)
                 .background(Color.black)
                 .clipped()
                 .onTapGesture {
@@ -373,23 +373,6 @@ struct VideoPlayerView: View {
         }
     }
 
-}
-
-// MARK: - Custom Video Player Controller (ไม่มี native controls)
-struct CustomVideoPlayerController: UIViewControllerRepresentable {
-    let player: AVPlayer
-
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.player = player
-        controller.showsPlaybackControls = false  // ❌ ปิด native controls
-        controller.allowsPictureInPicturePlayback = true  // ✅ อนุญาต PiP
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        uiViewController.player = player
-    }
 }
 
 // MARK: - Progress Bar Component

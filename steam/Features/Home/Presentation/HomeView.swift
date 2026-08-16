@@ -128,7 +128,9 @@ struct HomeView: View {
                         .padding(.bottom, 12)
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
         }
     }
 }
@@ -167,7 +169,7 @@ struct MenuCardView: View {
                 .foregroundColor(.secondary)
         }
         .padding(16)
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

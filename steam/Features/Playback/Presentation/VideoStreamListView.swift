@@ -139,7 +139,7 @@ struct VideoStreamListView: View {
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
+                    .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)
                     .padding(.horizontal, 16)
                 }
@@ -360,8 +360,10 @@ struct AddStreamSheet: View {
 
                             TextField("http://...", text: $customURL)
                                 .textFieldStyle(.roundedBorder)
+                                #if os(iOS)
                                 .keyboardType(.URL)
                                 .autocapitalization(.none)
+                                #endif
                                 .padding(.horizontal, 4)
                                 .onChange(of: customURL) { newURL in
                                     // Show warning if URL is entered and not HTTPS
@@ -395,7 +397,7 @@ struct AddStreamSheet: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
+                    .background(Color.gray.opacity(0.1))
                     .cornerRadius(12)
 
                     // Protocol Info
@@ -515,7 +517,7 @@ struct AddStreamSheet: View {
                                 .font(.system(.subheadline, design: .default))
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
-                                .background(Color(.systemGray6))
+                                .background(Color.gray.opacity(0.1))
                                 .cornerRadius(10)
                         }
 
@@ -541,7 +543,9 @@ struct AddStreamSheet: View {
                 }
                 .padding(.vertical, 16)
             }
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
     }
 }

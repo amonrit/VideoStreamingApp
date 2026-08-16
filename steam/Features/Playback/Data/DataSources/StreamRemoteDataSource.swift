@@ -30,9 +30,8 @@ class StreamRemoteDataSourceImpl: StreamRemoteDataSource {
 
     /// Fetch viewer count from MediaMTX API
     func fetchViewerCount(streamId: String) async throws -> Int {
-        // This would call the MediaMTX API to get viewer metrics
-        // Implement based on MediaMTXAPIClient capabilities
-        let response = try await apiClient.getStreamStats(pathName: streamId)
-        return response.viewerCount ?? 0
+        // Get path stats which includes viewer count
+        let path = try await apiClient.fetchPath(named: streamId)
+        return path.viewerCount  // Calculated from readers array
     }
 }

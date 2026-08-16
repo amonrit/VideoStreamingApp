@@ -82,7 +82,7 @@ struct SettingsView: View {
                             }
                             .padding(16)
                         }
-                        .background(Color(.systemGray6))
+                        .background(Color.gray.opacity(0.1))
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
                     }
@@ -92,7 +92,9 @@ struct SettingsView: View {
                 .padding(.vertical, 16)
             }
         }
+        #if os(iOS)
         .navigationBarHidden(true)
+        #endif
     }
 
     func themeIcon(for theme: AppTheme) -> String {
