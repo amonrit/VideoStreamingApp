@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/17/2026 (1786922418) by amonrit
 
 # Steam - Video Streaming App Architecture
 
@@ -12,6 +12,19 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 - **Architecture**: MVVM (Model-View-ViewModel)
 - **Playback**: AVFoundation (AVPlayer)
 - **Reactive**: Combine + KVO
+
+## Architecture Evolution Timeline
+
+| Phase | Focus | Key Additions |
+|-------|-------|----------------|
+| **1-3** | Foundation | MVVM, AVPlayer, Views |
+| **4** | Resilience | RetryOrchestrator, error handling |
+| **5** | Testability | APIClientProvider, dependency injection |
+| **6** | Observability | Polling services, metrics |
+| **7** | Concurrency | StateActor, structured concurrency |
+| **8** | Performance | Optimization, debouncing |
+| **9** | Cleanup | View refactoring, logic consolidation |
+| **11** | Handoff | Documentation, migration guides |
 
 ---
 
@@ -138,6 +151,249 @@ steam/
 
 ---
 
-**Architecture**: MVVM  
-**Platform**: iOS (SwiftUI)  
-**Last Updated**: August 2026
+## Modern Architectural Patterns (Phase 7+)
+
+### 1. StateActor: Thread-Safe State Management
+
+**Problem Solved:** ObservableObject + @Published was not thread-safe at compile time
+
+**Solution:** Generic `StateActor` using Swift's structured concurrency
+
+```swift
+@MainActor
+actor PlaybackStateActor: GenericStateActor<PlaybackStateActor.State> {
+    struct State: Sendable {
+        var isPlaying = false
+        var currentTime: Double = 0
+        var errorMessage: String?
+    }
+    
+    func play() {
+        updateState { $0.isPlaying = true }
+    }
+}
+```
+
+**Benefits:**
+- Compile-time thread safety
+- AsyncStream for reactive updates
+- Automatic task cancellation
+- Sendable constraint prevents data races
+
+**When to Use:** Any long-lived state that needs thread-safe mutations
+
+**See Also:** [ADR-001: Structured Concurrency](./adr/ADR-001-structured-concurrency.md)
+
+### 2. RetryOrchestrator: Centralized Retry Logic
+
+**Problem Solved:** Retry logic scattered across ViewModels, inconsistent strategies
+
+**Solution:** Centralized service with exponential backoff and state tracking
+
+```swift
+let orchestrator = RetryOrchestrator(configuration: .production)
+
+let stream = try await orchestrator.attemptWithRetry {
+    try await client.getStream(url)
+} onError: { error, attempt in
+    logger.error("Attempt \(attempt) failed: \(error)")
+}
+```
+
+**Features:**
+- Exponential backoff with jitter
+- Configurable retry counts and delays
+- Status callbacks for logging
+- Error tracking and classification
+
+**Strategies:**
+- `production`: 3 attempts, 1-30s backoff
+- `testing`: 1 attempt, no delays
+- `aggressive`: 5 attempts for critical operations
+
+**See Also:** [ADR-002: Retry Orchestrator](./adr/ADR-002-retry-orchestrator.md)
+
+### 3. APIClientProvider: Dependency Injection
+
+**Problem Solved:** Hard-coded API clients, difficult testing, no flexibility
+
+**Solution:** Protocol-based factory for client creation
+
+```swift
+protocol APIClientProvider {
+    func createAPIClient(baseURL: URL) -> MediaMTXAPIClient
+    func getDefaultClient() -> MediaMTXAPIClient?
+}
+
+class StreamAdminService {
+    init(clientProvider: APIClientProvider = DefaultAPIClientProvider()) {
+        self.clientProvider = clientProvider
+    }
+}
+```
+
+**Implementations:**
+- `DefaultAPIClientProvider` — Production with real API
+- `MockAPIClientProvider` — Testing with mock responses
+
+**Benefits:**
+- Easy testing without network calls
+- Swappable implementations
+- Centralized configuration
+- 100x faster test execution
+
+**See Also:** [ADR-003: Dependency Injection](./adr/ADR-003-dependency-injection.md)
+
+### 4. Polling Services: Structured Concurrency
+
+**Problem Solved:** Manual timer management, difficult cancellation, memory leaks
+
+**Solution:** Task-based polling with automatic cleanup
+
+```swift
+func startPolling() async {
+    while !Task.isCancelled {
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        let status = try await client.getStatus()
+        // Handle status
+    }
+}
+
+// Automatic cleanup on task cancellation
+```
+
+**Features:**
+- AsyncStream for state updates
+- Automatic cancellation on scope exit
+- No manual timer management
+- Memory safe by default
+
+---
+
+## Complete Architecture Diagram
+
+```
+┌─────────────────────────────────────────────┐
+│             SwiftUI Views                   │
+│  ┌──────────────┬──────────────┐           │
+│  │ HomeView     │ VideoPlayer  │           │
+│  │ StreamList   │ FullScreen   │           │
+│  └──────────────┴──────────────┘           │
+└────────────────┬────────────────────────────┘
+                 │ observes AsyncStream
+                 ▼
+      ┌──────────────────────────┐
+      │   StateActors            │
+      │  ┌────────────────────┐  │
+      │  │PlaybackStateActor  │  │
+      │  │StreamAdminStateAct │  │
+      │  └────────────────────┘  │
+      └────────┬─────────────────┘
+               │ calls methods
+               ▼
+    ┌──────────────────────────────────┐
+    │   ViewModels & Services          │
+    │  ┌──────────────────────────┐   │
+    │  │PlaybackViewModel         │   │
+    │  │StreamAdminViewModel      │   │
+    │  └──────────────────────────┘   │
+    │  ┌──────────────────────────┐   │
+    │  │RetryOrchestrator         │   │
+    │  │Polling Services          │   │
+    │  └──────────────────────────┘   │
+    └────────┬────────────────────────┘
+             │
+    ┌────────▼──────────────────────┐
+    │  APIClientProvider (DI)       │
+    │  ├─ DefaultAPIClientProvider │
+    │  └─ MockAPIClientProvider    │
+    └────────┬──────────────────────┘
+             │
+             ▼
+    ┌────────────────────────────┐
+    │  MediaMTXAPIClient         │
+    │  └─ Network Calls (HTTP)   │
+    └────────┬───────────────────┘
+             │
+             ▼
+    ┌────────────────────────────┐
+    │  MediaMTX Server           │
+    │  ├─ RTMP Publishing        │
+    │  ├─ HLS Playback           │
+    │  └─ Stream Management      │
+    └────────────────────────────┘
+```
+
+---
+
+## Data Flow: Complete Path
+
+### User Plays a Stream
+
+1. **View Action** → User taps "Play Stream"
+2. **StateActor** → PlaybackStateActor.play() called
+3. **ViewModel** → PlaybackViewModel delegates to RetryOrchestrator
+4. **Retry** → RetryOrchestrator.attemptWithRetry() starts
+5. **DI** → APIClientProvider creates MediaMTXAPIClient
+6. **Network** → Client makes HTTP request to server
+7. **Server** → MediaMTX returns stream URL
+8. **State Update** → StateActor broadcasts new state
+9. **AsyncStream** → Views observe state update
+10. **UI** → SwiftUI re-renders with new stream playing
+
+### Error Handling Path
+
+1. Network call fails → RetryOrchestrator catches error
+2. Checks if error is recoverable (timeouts, server errors)
+3. If recoverable → Exponential backoff sleep + retry
+4. If not recoverable → Error bubbles to ViewModel
+5. ViewModel updates state with error message
+6. StateActor broadcasts error state
+7. View observes error and shows alert
+
+---
+
+## Testing Architecture
+
+### Unit Tests
+
+Test in isolation with mocks:
+- StateActors ← Test state mutations
+- ViewModels ← Test logic without network
+- RetryOrchestrator ← Test backoff and state
+- Services ← Test with MockAPIClientProvider
+
+### Integration Tests
+
+Test components together:
+- StateActor + ViewModel
+- ViewModel + Network (mock)
+- Full flow with mocks
+
+### Performance Tests
+
+Measure performance:
+- StateActor update throughput
+- Memory usage during polling
+- Task cancellation overhead
+
+---
+
+**Architecture**: MVVM + Actors + DI  
+**Concurrency Model**: Structured Concurrency (async/await)  
+**State Management**: StateActor + AsyncStream  
+**Resilience**: RetryOrchestrator  
+**Testing**: Dependency Injection via APIClientProvider  
+**Platform**: iOS (SwiftUI) + MediaMTX Server  
+**Last Updated**: August 2026  
+
+---
+
+## Quick References
+
+- **[REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md)** — How to modernize code
+- **[adr/ADR-001-structured-concurrency.md](./adr/ADR-001-structured-concurrency.md)** — StateActor decisions
+- **[adr/ADR-002-retry-orchestrator.md](./adr/ADR-002-retry-orchestrator.md)** — Retry decisions
+- **[adr/ADR-003-dependency-injection.md](./adr/ADR-003-dependency-injection.md)** — DI decisions
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** — Development workflow
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Production deployment

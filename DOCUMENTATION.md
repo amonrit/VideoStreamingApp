@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786903935) by amonrit
+Last Modified: 08/17/2026 (1786922418) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -40,9 +40,55 @@ All docs are in the `docs/` folder:
 - MVVM pattern explained with code
 - Data flow (user interaction → playback)
 - Component responsibilities
-- State management strategy
+- **NEW (Phase 11):** Modern patterns (StateActor, RetryOrchestrator, APIClientProvider)
+- Complete architecture diagram
+- Testing strategy
 
-**When to use:** Understanding "why" before changing code
+**When to use:** Understanding "why" before changing code, learning new patterns
+
+---
+
+### 2b. **[docs/REFACTORING_GUIDE.md](./docs/REFACTORING_GUIDE.md)** — Modernizing Code with New Patterns
+**For:** Refactoring legacy code, learning how to use StateActor, RetryOrchestrator, APIClientProvider  
+**Contains:**
+- Pattern 1: StateActor for thread-safe state
+- Pattern 2: RetryOrchestrator for resilience
+- Pattern 3: APIClientProvider for dependency injection
+- Pattern 4: Structured concurrency with tasks
+- Common refactoring scenarios with before/after examples
+- Testing patterns
+- Rollback strategy
+
+**When to use:** Refactoring code, adding new features, code review
+
+---
+
+### 2c. **[docs/MIGRATION_GUIDE.md](./docs/MIGRATION_GUIDE.md)** — Adopting Modern Patterns
+**For:** Migrating existing code to use modern patterns, planning refactoring work  
+**Contains:**
+- Quick decision tree for choosing patterns
+- Migration checklist for each pattern
+- Common patterns to replace (with grep commands)
+- Complete service modernization example
+- View refactoring example
+- Testing patterns
+- Rollout strategy
+- Common pitfalls
+- Success metrics
+
+**When to use:** Planning refactoring, migrating a service, onboarding new developers
+
+---
+
+### 2d. **[docs/adr/](./docs/adr/)** — Architecture Decision Records
+**For:** Understanding design decisions, learning rationale, future reference  
+**Contains:**
+- **ADR-001: Structured Concurrency** — Why StateActor instead of @Published
+- **ADR-002: Retry Orchestrator** — Why centralized retry logic
+- **ADR-003: Dependency Injection** — Why APIClientProvider for testability
+- Status, context, decision, consequences, alternatives for each
+
+**When to use:** Understanding "why" decisions were made, code review discussions, architecture reviews
 
 ---
 
@@ -259,6 +305,15 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 "I don't understand how X works"
   → docs/ARCHITECTURE.md (deep dive)
 
+"I want to refactor code using new patterns"
+  → docs/REFACTORING_GUIDE.md (StateActor, RetryOrchestrator, APIClientProvider)
+
+"I need to migrate legacy code"
+  → docs/MIGRATION_GUIDE.md (step-by-step examples)
+
+"Why was decision X made?"
+  → docs/adr/ (ADRs explain rationale)
+
 "I need to debug something"
   → docs/DEVELOPMENT.md (debugging section) + docs/AI_WORKFLOW.md (use AI)
 
@@ -312,7 +367,13 @@ steam/
 │
 ├── docs/                         ← Main documentation
 │   ├── DEVELOPMENT.md            ← Local dev guide
-│   ├── ARCHITECTURE.md           ← Deep dive into MVVM
+│   ├── ARCHITECTURE.md           ← Deep dive into MVVM + modern patterns
+│   ├── REFACTORING_GUIDE.md      ← How to use new patterns (Phase 11)
+│   ├── MIGRATION_GUIDE.md        ← How to migrate code (Phase 11)
+│   ├── adr/                      ← Architecture Decision Records (Phase 11)
+│   │   ├── ADR-001-structured-concurrency.md
+│   │   ├── ADR-002-retry-orchestrator.md
+│   │   └── ADR-003-dependency-injection.md
 │   ├── DEPLOYMENT.md             ← Deploy to production
 │   ├── COMMIT_GUIDE.md           ← Commit message format
 │   ├── COMMIT_WORKFLOW.md        ← Commit workflow
