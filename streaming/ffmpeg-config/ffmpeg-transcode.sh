@@ -38,13 +38,13 @@ ffmpeg -hide_banner -loglevel warning \
   -c:v libx264 -preset veryfast \
   -b:v 2000k -r 30 \
   -c:a aac -b:a 128k -ar 44100 \
-  -f flv "rtmp://mediamtx:1935/live/${STREAM_NAME}-480p" \
+  -f flv "rtmp://mediamtx:1935/live-480p" \
   \
   -map "[v2out]" -map "0:a" \
   -c:v libx264 -preset veryfast \
   -b:v 800k -r 30 \
   -c:a aac -b:a 128k -ar 44100 \
-  -f flv "rtmp://mediamtx:1935/live/${STREAM_NAME}-360p" \
+  -f flv "rtmp://mediamtx:1935/live-360p" \
   2>> "$LOG_FILE"
 
 echo "✅ Transcoding completed for: $STREAM_NAME" | tee -a "$LOG_FILE"
