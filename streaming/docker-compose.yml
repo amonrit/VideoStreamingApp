@@ -19,6 +19,35 @@ services:
     networks:
       - mediamtx_network
 
+  # FFmpeg Real-Time Transcoder (Phase 1)
+  ffmpeg-transcoder:
+    image: jrottenberg/ffmpeg:latest
+    container_name: ffmpeg-transcoder
+    restart: unless-stopped
+    depends_on:
+      - mediamtx
+    volumes:
+      - ./ffmpeg-config:/ffmpeg-config:ro
+      - ./logs:/logs
+      - ./hls_output:/hls_output
+    environment:
+      - MEDIAMTX_HOST=mediamtx
+      - MEDIAMTX_RTMP_PORT=1935
+    networks:
+      - mediamtx_network
+    # FFmpeg will be controlled via shell script and manager
+    entrypoint: /bin/bash
+    command: -c "while true; do sleep 1; done"  # Keep alive for manual control
+    # Resource limits to prevent runaway CPU usage
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
 networks:
   mediamtx_network:
     driver: bridge
