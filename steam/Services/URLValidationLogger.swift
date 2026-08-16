@@ -4,10 +4,11 @@
 //
 
 import Foundation
+import Combine
 
 /// Service for logging custom stream URLs added by users.
 /// Provides audit trail with timestamps for security monitoring.
-class URLValidationLogger {
+class URLValidationLogger: ObservableObject {
 
     private let logFilePath: String
     private let fileManager = FileManager.default
