@@ -167,8 +167,15 @@ public final actor DefaultStreamAdminStateActor {
         broadcast()
     }
 
-    /// Updates last update time and broadcasts change
+    /// Updates last update time with 1-second debouncing
+    /// Only broadcasts if timestamp changed by more than 1 second
+    /// This reduces broadcast frequency during frequent polling updates
     public func updateLastUpdateTime(_ time: Date) {
+        let timeDelta = abs(_state.lastUpdateTime.timeIntervalSince(time))
+
+        // Only broadcast if changed by > 1 second to reduce noise
+        guard timeDelta >= 1.0 else { return }
+
         _state.lastUpdateTime = time
         broadcast()
     }
@@ -283,6 +290,8 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
 
     public func updateLastUpdateTime(_ time: Date) async {
         stateQueue.sync {
+            let timeDelta = abs(_state.lastUpdateTime.timeIntervalSince(time))
+            guard timeDelta >= 1.0 else { return }
             _state.lastUpdateTime = time
             stateSubject.continuation.yield(_state)
         }

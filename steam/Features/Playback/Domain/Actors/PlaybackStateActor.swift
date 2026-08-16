@@ -108,6 +108,11 @@ public final actor DefaultPlaybackStateActor {
         continuation: AsyncStream<PlaybackStateSnapshot>.Continuation
     )
 
+    /// Threshold for viewer count changes before broadcasting
+    /// Only broadcasts if viewer count changes by this amount or more
+    /// This reduces AsyncStream yield frequency during polling updates
+    private let viewerCountChangeThreshold = 5
+
     public var currentState: PlaybackStateSnapshot { _state }
 
     nonisolated public var stateUpdates: AsyncStream<PlaybackStateSnapshot> { stateSubject.stream }
@@ -156,8 +161,29 @@ public final actor DefaultPlaybackStateActor {
         broadcast()
     }
 
-    /// Updates viewer count and broadcasts change
+    /// Updates viewer count with threshold-based filtering
+    /// Only broadcasts if viewer count changes by viewerCountChangeThreshold or more
+    /// This reduces AsyncStream yield frequency during polling updates
     public func updateViewerCount(_ count: Int?) {
+        // Handle nil case
+        if count == nil {
+            guard _state.viewerCount != nil else { return }
+            _state.viewerCount = nil
+            broadcast()
+            return
+        }
+
+        // Check if change is significant enough to broadcast
+        if let current = _state.viewerCount, let new = count {
+            // Only broadcast if changed by viewerCountChangeThreshold or more viewers
+            if abs(current - new) < viewerCountChangeThreshold {
+                // Update state silently (no broadcast)
+                _state.viewerCount = new
+                return
+            }
+        }
+
+        // Broadcast if value actually changed
         guard _state.viewerCount != count else { return }
         _state.viewerCount = count
         broadcast()
@@ -233,6 +259,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
 
     private let stateQueue = DispatchQueue(label: "mock.playback.state")
     private var _state: PlaybackStateSnapshot
+    private let viewerCountChangeThreshold = 5
 
     public nonisolated var currentState: PlaybackStateSnapshot {
         stateQueue.sync { _state }
@@ -285,6 +312,22 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
 
     public func updateViewerCount(_ count: Int?) async {
         stateQueue.sync {
+            // Handle nil case
+            if count == nil {
+                guard _state.viewerCount != nil else { return }
+                _state.viewerCount = nil
+                stateSubject.continuation.yield(_state)
+                return
+            }
+
+            // Check if change is significant enough to broadcast
+            if let current = _state.viewerCount, let new = count {
+                if abs(current - new) < viewerCountChangeThreshold {
+                    _state.viewerCount = new
+                    return
+                }
+            }
+
             guard _state.viewerCount != count else { return }
             _state.viewerCount = count
             stateSubject.continuation.yield(_state)
