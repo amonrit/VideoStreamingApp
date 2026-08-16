@@ -36,13 +36,12 @@ paths:
 
   # Phase 2: Re-encoded output paths (fixed names)
   # FFmpeg publishes to these paths after transcoding
+  # MediaMTX automatically serves as HLS when requested
   live-480p:
     source: publisher
-    hlsDisable: false
 
   live-360p:
     source: publisher
-    hlsDisable: false
 
 # Note: Protocol listeners (RTSP, RTMP, HLS, WebRTC, SRT) are configured
 # via the container's default settings and exposed via docker-compose.yml
