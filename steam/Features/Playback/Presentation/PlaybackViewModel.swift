@@ -25,12 +25,10 @@ class PlaybackViewModel: ObservableObject {
     private let worker: VideoPlayerWorker
     private var playbackState: PlaybackState = .idle
     private var cancellables = Set<AnyCancellable>()
-    private var retryCount: Int = 0
-    private let maxRetries: Int = 2  // max 5s total: 2-3 + 1-2s backoff
-    private var retryTimer: Timer?
-    private var timeoutTimer: Timer?
-    private var isAutoRetrying: Bool = false
-    private var totalRetryTime: TimeInterval = 0
+
+    // ✅ Phase 4: Centralized retry orchestration
+    private var retryOrchestrator: RetryOrchestrator?
+    private let playbackConfiguration: PlaybackConfiguration = .production
 
     // Viewer count polling
     private var viewerCountTimer: Timer?
@@ -40,9 +38,12 @@ class PlaybackViewModel: ObservableObject {
     private let viewerCountPollInterval: TimeInterval = 4.0
     private let maxViewerCountFailures: Int = 3
 
-    // Network timeout constants - FAST retry strategy
+    // Network timeout constant for stream loading attempts
     private let loadTimeout: TimeInterval = 3.0   // 3 seconds per attempt
     private let stallTimeout: TimeInterval = 2.0  // 2 seconds for stall recovery
+
+    // ✅ Phase 4: Track stream loading state
+    private var streamLoadingContinuation: CheckedContinuation<Void, Error>?
 
     init(player: AVPlayer = AVPlayer()) {
         self.player = player
@@ -77,17 +78,13 @@ class PlaybackViewModel: ObservableObject {
         case failed(String)
     }
 
-    // MARK: - Stream Loading
+    // MARK: - Stream Loading (Phase 4 Refactored)
 
     func loadStream(_ stream: VideoStream) {
-        // ยกเลิก timers เก่า
-        retryTimer?.invalidate()
-        timeoutTimer?.invalidate()
+        // Stop any previous stream loading/polling
         stopViewerCountPolling()
-
         player.pause()
         cancellables.removeAll()
-        retryCount = 0
         viewerCount = nil
         viewerCountFailureCount = 0
 
@@ -124,6 +121,54 @@ class PlaybackViewModel: ObservableObject {
         updateConnectionStatus(.connecting)
         updatePlaybackViewModel()
 
+        // ✅ Phase 4: Use RetryOrchestrator for automatic retry logic
+        Task {
+            await loadStreamWithRetry(stream, url: url)
+        }
+    }
+
+    /// Phase 4: Load stream with automatic retry orchestration
+    /// Uses RetryOrchestrator to manage retry attempts, delays, and status messages
+    private func loadStreamWithRetry(_ stream: VideoStream, url: URL) async {
+        // Initialize orchestrator with status callback for UI updates
+        retryOrchestrator = RetryOrchestrator(
+            configuration: playbackConfiguration,
+            onStatusChanged: { message in
+                logger.info("🔄 Retry: \(message)")
+                // Update UI with retry attempt count from message if needed
+            }
+        )
+
+        do {
+            _ = try await retryOrchestrator?.attemptWithRetry(
+                {
+                    try await self.setupStreamWithTimeout(stream, url: url)
+                },
+                onError: { [weak self] error, attempt in
+                    DispatchQueue.main.async {
+                        self?.retryAttempt = attempt
+                    }
+                    logger.warning("❌ Stream loading attempt \(attempt) failed: \(error.localizedDescription)")
+                }
+            )
+
+            logger.info("✅ Stream loaded successfully with RetryOrchestrator")
+        } catch {
+            // ✅ Phase 4: Final failure after all retry attempts exhausted
+            let errorMessage = "Stream connection failed.\nCheck:\n• Network connection\n• MediaMTX server"
+            logger.error("❌ \(errorMessage, privacy: .public)")
+            presentError(errorMessage)
+            updateConnectionStatus(.failed(errorMessage))
+
+            DispatchQueue.main.async {
+                self.retryAttempt = 0  // Reset on final error
+            }
+        }
+    }
+
+    /// ✅ Phase 4: Async stream setup with timeout
+    /// Bridges event-driven AVPlayer with async/await for RetryOrchestrator compatibility
+    private func setupStreamWithTimeout(_ stream: VideoStream, url: URL) async throws {
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
 
@@ -137,58 +182,34 @@ class PlaybackViewModel: ObservableObject {
             mediaMTXPathName = nil
         }
 
+        // Setup KVO observers for status changes
         setupObservers(for: item)
-        startLoadingTimeout(for: stream)
         logger.info("✅ Player item created and observers setup")
-    }
 
-    // MARK: - Timeout Management
-
-    private func startLoadingTimeout(for stream: VideoStream) {
-        timeoutTimer?.invalidate()
-        timeoutTimer = Timer.scheduledTimer(withTimeInterval: loadTimeout, repeats: false) { [weak self] _ in
-            self?.handleLoadingTimeout(for: stream)
-        }
-    }
-
-    private func handleLoadingTimeout(for stream: VideoStream) {
-        logger.warning("⏱️ Loading timeout after \(self.loadTimeout)s (attempt \(self.retryCount + 1)/\(self.maxRetries))")
-
-        if retryCount < maxRetries {
-            retryCount += 1
-
-            // FAST backoff for 5s limit: 0.5s, 1s (total ~5-6s)
-            let backoffTime: TimeInterval = retryCount == 1 ? 0.5 : 1.0
-            totalRetryTime += loadTimeout + backoffTime
-
-            logger.info("🔄 Quick-retry \(self.retryCount)/\(self.maxRetries) in \(backoffTime)s (total: \(String(format: "%.1f", self.totalRetryTime))s)...")
-
-            // Keep loading spinner visible (don't show error)
-            playbackState.isLoading = true
-            playbackState.errorMessage = nil
-            updateConnectionStatus(.buffering)
-
-            DispatchQueue.main.async {
-                self.retryAttempt = self.retryCount  // Update retry count UI
+        // ✅ Phase 4: Wait for stream to be ready with timeout
+        return try await withCheckedThrowingContinuation { [weak self] continuation in
+            guard let self = self else {
+                continuation.resume(throwing: PlaybackError.viewModelDeallocated)
+                return
             }
-            updatePlaybackViewModel()
 
-            // Retry with SHORT backoff
-            isAutoRetrying = true
-            retryTimer?.invalidate()
-            retryTimer = Timer.scheduledTimer(withTimeInterval: backoffTime, repeats: false) { [weak self] _ in
-                self?.isAutoRetrying = false
-                self?.loadStream(stream)
+            self.streamLoadingContinuation = continuation
+
+            // Set timeout for stream loading
+            let timeoutTask = Task {
+                try await Task.sleep(nanoseconds: UInt64(self.loadTimeout * 1_000_000_000))
+
+                if self.streamLoadingContinuation != nil {
+                    self.streamLoadingContinuation?.resume(throwing: PlaybackError.streamLoadTimeout)
+                    self.streamLoadingContinuation = nil
+                }
             }
-        } else {
-            // ถ้า retry หมดแล้ว ถึงขึ้น error
-            let error = "Stream connection failed.\nRetried \(maxRetries) times in ~5 seconds.\nCheck:\n• Network connection\n• MediaMTX server"
-            logger.error("❌ \(error, privacy: .public)")
-            presentError(error)
-            updateConnectionStatus(.failed(error))
 
-            DispatchQueue.main.async {
-                self.retryAttempt = 0  // Reset on final error
+            // Observe player status once to check for immediate readiness
+            if item.status == .readyToPlay {
+                timeoutTask.cancel()
+                continuation.resume()
+                self.streamLoadingContinuation = nil
             }
         }
     }
@@ -221,7 +242,7 @@ class PlaybackViewModel: ObservableObject {
 
     func retry() {
         guard let stream = playbackState.currentStream else { return }
-        retryCount = 0  // Reset retry count
+        // ✅ Phase 4: RetryOrchestrator will be reset and re-initialized in loadStream
         loadStream(stream)
     }
 
@@ -251,7 +272,12 @@ class PlaybackViewModel: ObservableObject {
     private func handleStatusChange(_ status: AVPlayerItem.Status) {
         switch status {
         case .readyToPlay:
-            timeoutTimer?.invalidate()  // ยกเลิก timeout เมื่อพร้อมเล่น
+            // ✅ Phase 4: Resume the loading continuation on success
+            if let continuation = streamLoadingContinuation {
+                continuation.resume()
+                streamLoadingContinuation = nil
+            }
+
             playbackState.isLoading = false
             playbackState.errorMessage = nil
             updateConnectionStatus(.connected)
@@ -262,12 +288,12 @@ class PlaybackViewModel: ObservableObject {
             playbackState.isLoading = false
             let errorDesc = player.currentItem?.error?.localizedDescription ?? "Unknown error"
 
-            // ถ้า auto-retry อยู่ ให้ยังคงแสดง loading spinner
-            if isAutoRetrying {
-                playbackState.isLoading = true
-                playbackState.errorMessage = nil
-                updateConnectionStatus(.buffering)
+            // ✅ Phase 4: Resume continuation with error if loading
+            if let continuation = streamLoadingContinuation {
+                continuation.resume(throwing: PlaybackError.playerFailed(errorDesc))
+                streamLoadingContinuation = nil
             } else {
+                // If not loading, just update error state
                 playbackState.errorMessage = "Failed to load: \(errorDesc)"
                 updateConnectionStatus(.failed(errorDesc))
             }
@@ -333,7 +359,7 @@ class PlaybackViewModel: ObservableObject {
             self.errorMessage = self.playbackState.errorMessage
             self.bufferingCount = self.playbackState.bufferingCount
             self.currentStream = self.playbackState.currentStream
-            // retryAttempt is updated separately in handleLoadingTimeout
+            // ✅ Phase 4: retryAttempt is updated from RetryOrchestrator callbacks
         }
     }
 
@@ -389,10 +415,28 @@ class PlaybackViewModel: ObservableObject {
 
     deinit {
         cancellables.removeAll()
-        retryTimer?.invalidate()
-        timeoutTimer?.invalidate()
         viewerCountTimer?.invalidate()
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
+    }
+}
+
+// MARK: - PlaybackError (Phase 4)
+
+/// ✅ Phase 4: Custom errors for stream loading with RetryOrchestrator
+enum PlaybackError: LocalizedError {
+    case streamLoadTimeout
+    case playerFailed(String)
+    case viewModelDeallocated
+
+    var errorDescription: String? {
+        switch self {
+        case .streamLoadTimeout:
+            return "Stream loading timed out"
+        case .playerFailed(let message):
+            return "Player failed: \(message)"
+        case .viewModelDeallocated:
+            return "ViewModel was deallocated during stream loading"
+        }
     }
 }
