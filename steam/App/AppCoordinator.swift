@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Manages app-level navigation and coordination
 class AppCoordinator: ObservableObject {
