@@ -27,6 +27,14 @@ services:
     restart: unless-stopped
 
     # ====================================================================
+    # Environment Configuration
+    # ====================================================================
+    # Load sensitive credentials and configuration from .env.local
+    # See streaming/.env.example for all available variables
+    env_file:
+      - ./streaming/.env.local
+
+    # ====================================================================
     # Port Mappings
     # ====================================================================
     ports:
@@ -59,14 +67,11 @@ services:
       - ./streaming/recordings:/recordings
 
     # ====================================================================
-    # Environment Variables
+    # Additional Environment Variables (overrides .env.local if needed)
     # ====================================================================
     environment:
-      # Log level: debug, info, warn, error
-      - MEDIAMTX_LOGLEVEL=info
-
-      # Optional: Load from .env file if present
-      # - MEDIAMTX_RTMPAUTHINTERNAL=false
+      # Log level can be overridden here, or set in .env.local
+      - MEDIAMTX_LOGLEVEL=${MEDIAMTX_LOGLEVEL:-info}
 
     # ====================================================================
     # Networking

@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/17/2026 (1786901984) by amonrit
 
 # 🚀 Getting Started — 5 Minutes
 
@@ -21,7 +21,31 @@ brew install docker-compose
 
 ---
 
-## 📍 Step 1: Start the Streaming Server (2 minutes)
+## 🔐 Step 1: Setup Environment Configuration (1 minute)
+
+The streaming server needs credentials for authentication. Copy the configuration template:
+
+```bash
+# Navigate to streaming folder
+cd steam/streaming
+
+# Copy configuration from example
+cp .env.example .env.local
+
+# Optional: Edit credentials if you want custom values
+# nano .env.local  (or use your preferred editor)
+```
+
+**What's in `.env.local`?**
+- `API_VIEWER_PASS` — Password for accessing stream metrics (default: `changeme123`)
+- `PUBLISH_PASS` — Password for publishing streams (default: `streampass123`)
+- Other server settings (ports, timeouts, recording options)
+
+**Important:** `.env.local` is in `.gitignore` — your credentials won't be committed to git.
+
+---
+
+## 📍 Step 2: Start the Streaming Server (2 minutes)
 
 The server publishes and plays streams via multiple protocols (RTMP, RTSP, HLS, WebRTC, SRT).
 
@@ -45,7 +69,7 @@ You should see `mediamtx` with status **"Up"**.
 
 ---
 
-## 🎬 Step 2: Open iOS App in Xcode (1 minute)
+## 🎬 Step 3: Open iOS App in Xcode (1 minute)
 
 ```bash
 # From project root
@@ -65,7 +89,7 @@ open steam.xcodeproj
 
 ---
 
-## 📤 Step 3: Publish a Test Stream (1 minute)
+## 📤 Step 4: Publish a Test Stream (1 minute)
 
 From a **separate terminal**, publish a video or screen:
 
@@ -85,7 +109,7 @@ ffmpeg -f avfoundation -i "1" -c:v libx264 -c:a aac \
 
 ---
 
-## ▶️ Step 4: Play Stream on iOS App (1 minute)
+## ▶️ Step 5: Play Stream on iOS App (1 minute)
 
 In iOS app:
 1. Tap the stream from the list (or enter URL manually)
