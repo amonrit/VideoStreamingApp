@@ -70,6 +70,12 @@ class PlaybackViewModel: ObservableObject {
         self.stateActor = stateActor
         self.worker = VideoPlayerWorker()
 
+        // ✅ Phase 9: Initialize view state properties
+        self._volume = Published(initialValue: Double(player.volume))
+        self._playbackRate = Published(initialValue: player.rate)
+        self._showVolumeSlider = Published(initialValue: false)
+        self._showControls = Published(initialValue: true)
+
         // MARK: - Setup
         setupPlayerSettings()
 
@@ -500,9 +506,134 @@ class PlaybackViewModel: ObservableObject {
         worker.getBitrate(from: player)
     }
 
+    // MARK: - Phase 9: View Layer Refactoring
+    // ✅ Moved business logic from VideoPlayerView to ViewModel
+
+    /// Formats seconds to HH:MM:SS or MM:SS format
+    /// - Phase 9: Moved from VideoPlayerView.timeString()
+    func formatTime(_ seconds: Double) -> String {
+        guard !seconds.isNaN, seconds.isFinite else { return "00:00" }
+        let totalSeconds = Int(seconds)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%02d:%02d", minutes, secs)
+        }
+    }
+
+    /// Color for connection status indicator
+    /// - Phase 9: Moved from VideoPlayerView.statusColor
+    var statusIndicatorColor: Color {
+        switch connectionStatus {
+        case .disconnected:
+            return Color.gray
+        case .connecting:
+            return Color.yellow
+        case .connected:
+            return Color.green
+        case .buffering:
+            return Color.orange
+        case .failed:
+            return Color.red
+        }
+    }
+
+    /// Text describing connection status
+    /// - Phase 9: Moved from VideoPlayerView.statusText
+    var statusIndicatorText: String {
+        switch connectionStatus {
+        case .disconnected:
+            return "Disconnected"
+        case .connecting:
+            return "Connecting..."
+        case .connected:
+            return "Connected"
+        case .buffering:
+            return "Buffering..."
+        case .failed(let reason):
+            return "Failed: \(reason.prefix(20))..."
+        }
+    }
+
+    /// Seeks backward in the stream
+    /// - Phase 9: Moved from VideoPlayerView (was direct player.seek())
+    /// - Parameter seconds: Number of seconds to seek backward
+    func seekBackward(_ seconds: Double = 10) {
+        let currentSeconds = player.currentTime().seconds
+        let newSeconds = max(0, currentSeconds - seconds)
+        player.seek(to: CMTime(seconds: newSeconds, preferredTimescale: 1))
+    }
+
+    /// Seeks forward in the stream
+    /// - Phase 9: Moved from VideoPlayerView (was direct player.seek())
+    /// - Parameter seconds: Number of seconds to seek forward
+    func seekForward(_ seconds: Double = 10) {
+        let currentSeconds = player.currentTime().seconds
+        let newSeconds = currentSeconds + seconds
+        player.seek(to: CMTime(seconds: newSeconds, preferredTimescale: 1))
+    }
+
+    /// Current playback duration
+    /// - Phase 9: Moved from VideoPlayerView (was accessing player.currentItem?.duration)
+    var currentDuration: Double {
+        player.currentItem?.duration.seconds ?? 0
+    }
+
+    /// Tracks whether volume slider should be visible
+    @Published var showVolumeSlider: Bool = false
+
+    /// Current playback volume (0.0 to 1.0)
+    /// - Phase 9: Moved state from VideoPlayerView
+    @Published var volume: Double {
+        didSet {
+            player.volume = Float(volume)
+        }
+    }
+
+    /// Current playback rate (0.5x to 2.0x)
+    /// - Phase 9: Moved state from VideoPlayerView
+    @Published var playbackRate: Float {
+        didSet {
+            player.rate = playbackRate
+        }
+    }
+
+    /// Tracks whether player controls should be visible
+    @Published var showControls: Bool = true
+
+    /// Timer task for auto-hiding controls
+    /// - Phase 9: Moved timer management from VideoPlayerView to use structured concurrency
+    private var hideControlsTask: Task<Void, Never>?
+
+    /// Resets the hide controls timer
+    /// - Phase 9: Moved from VideoPlayerView.resetHideControlsTimer()
+    func resetControlsVisibilityTimer() {
+        hideControlsTask?.cancel()
+
+        hideControlsTask = Task {
+            // Wait 5 seconds
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+
+            // Auto-hide controls
+            await MainActor.run {
+                withAnimation {
+                    self.showControls = false
+                    self.showVolumeSlider = false
+                }
+            }
+        }
+    }
+
     deinit {
         // ✅ Phase 7: Cancel state observer task
         stateObserverTask?.cancel()
+
+        // ✅ Phase 9: Cancel hide controls timer task
+        hideControlsTask?.cancel()
 
         cancellables.removeAll()
 

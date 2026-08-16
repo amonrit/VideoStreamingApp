@@ -11,14 +11,12 @@ import Combine
 struct VideoPlayerView: View {
     @ObservedObject var viewModel: PlaybackViewModel
     @Binding var isFullScreen: Bool
-    @State private var showControls = true
-    @State private var hideControlsTimer: Timer?
-    @State private var volume: Double = 1.0
-    @State private var previousVolume: Double = 1.0
-    @State private var playbackRate: Float = 1.0
     @State private var currentTime: Double = 0.0
     @State private var updateTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
-    @State private var showVolumeSlider = false
+    @State private var previousVolume: Double = 1.0
+
+    // ✅ Phase 9: Use ViewModel state instead of local @State
+    // showControls, showVolumeSlider, volume, playbackRate now come from ViewModel
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -28,16 +26,18 @@ struct VideoPlayerView: View {
                 .clipped()
                 .onTapGesture {
                     withAnimation {
-                        showControls.toggle()
+                        viewModel.showControls.toggle()
                     }
-                    resetHideControlsTimer()
+                    // ✅ Phase 9: Use ViewModel timer management
+                    viewModel.resetControlsVisibilityTimer()
                 }
                 .onReceive(updateTimer) { _ in
                     currentTime = viewModel.player.currentTime().seconds
                 }
 
             // Custom Controls (show/hide on tap)
-            if showControls {
+            // ✅ Phase 9: Use ViewModel state
+            if viewModel.showControls {
                 VStack(spacing: 0) {
                     // Top Bar
                     HStack {
@@ -63,7 +63,8 @@ struct VideoPlayerView: View {
                     // Bottom Controls Bar
                     VStack(spacing: 8) {
                         // Progress Bar
-                        ProgressBarView(player: viewModel.player, currentTime: currentTime)
+                        // ✅ Phase 9: Pass ViewModel to ProgressBarView
+                        ProgressBarView(viewModel: viewModel, currentTime: currentTime)
 
                         // Control Buttons
                         HStack(spacing: 12) {
@@ -76,7 +77,8 @@ struct VideoPlayerView: View {
                             }
 
                             Button {
-                                viewModel.player.seek(to: CMTime(seconds: max(0, viewModel.player.currentTime().seconds - 10), preferredTimescale: 1))
+                                // ✅ Phase 9: Use ViewModel seek method
+                                viewModel.seekBackward(10)
                             } label: {
                                 Image(systemName: "gobackward.10")
                                     .font(.system(size: 20))
@@ -84,7 +86,8 @@ struct VideoPlayerView: View {
                             }
 
                             Button {
-                                viewModel.player.seek(to: CMTime(seconds: viewModel.player.currentTime().seconds + 10, preferredTimescale: 1))
+                                // ✅ Phase 9: Use ViewModel seek method
+                                viewModel.seekForward(10)
                             } label: {
                                 Image(systemName: "goforward.10")
                                     .font(.system(size: 20))
@@ -93,14 +96,16 @@ struct VideoPlayerView: View {
 
                             Spacer()
 
-                            Text(timeString(currentTime))
+                            // ✅ Phase 9: Use ViewModel time formatting
+                            Text(viewModel.formatTime(currentTime))
                                 .font(.caption)
                                 .foregroundColor(.white)
 
                             Text("/")
                                 .foregroundColor(.white.opacity(0.7))
 
-                            Text(timeString(viewModel.player.currentItem?.duration.seconds ?? 0))
+                            // ✅ Phase 9: Use ViewModel duration property
+                            Text(viewModel.formatTime(viewModel.currentDuration))
                                 .font(.caption)
                                 .foregroundColor(.white)
 
@@ -108,12 +113,12 @@ struct VideoPlayerView: View {
                             Menu {
                                 ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { speed in
                                     Button {
-                                        playbackRate = Float(speed)
-                                        viewModel.player.rate = Float(speed)
+                                        // ✅ Phase 9: Use ViewModel playback rate property
+                                        viewModel.playbackRate = Float(speed)
                                     } label: {
                                         HStack {
                                             Text("\(speed, specifier: "%.2f")x")
-                                            if abs(playbackRate - Float(speed)) < 0.01 {
+                                            if abs(viewModel.playbackRate - Float(speed)) < 0.01 {
                                                 Image(systemName: "checkmark")
                                             }
                                         }
@@ -123,7 +128,7 @@ struct VideoPlayerView: View {
                                 VStack(spacing: 2) {
                                     Image(systemName: "speedometer")
                                         .font(.system(size: 16))
-                                    Text("\(playbackRate, specifier: "%.2f")x")
+                                    Text("\(viewModel.playbackRate, specifier: "%.2f")x")
                                         .font(.caption2)
                                 }
                                 .foregroundColor(.white)
@@ -133,13 +138,15 @@ struct VideoPlayerView: View {
                             // Volume Button
                             Button {
                                 withAnimation {
-                                    showVolumeSlider.toggle()
+                                    // ✅ Phase 9: Use ViewModel volume slider state
+                                    viewModel.showVolumeSlider.toggle()
                                 }
                             } label: {
                                 VStack(spacing: 2) {
-                                    Image(systemName: volume > 0.5 ? "speaker.wave.2" : (volume > 0 ? "speaker.wave.1" : "speaker.slash"))
+                                    // ✅ Phase 9: Use ViewModel volume property
+                                    Image(systemName: viewModel.volume > 0.5 ? "speaker.wave.2" : (viewModel.volume > 0 ? "speaker.wave.1" : "speaker.slash"))
                                         .font(.system(size: 16))
-                                    Text("\(Int(volume * 100))%")
+                                    Text("\(Int(viewModel.volume * 100))%")
                                         .font(.caption2)
                                 }
                                 .foregroundColor(.white)
@@ -147,18 +154,19 @@ struct VideoPlayerView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 // Volume Slider (ลอยทับ - ไม่ดันอย่างอื่น)
-                                if showVolumeSlider {
+                                // ✅ Phase 9: Use ViewModel showVolumeSlider state
+                                if viewModel.showVolumeSlider {
                                     VStack(spacing: 4) {
                                         // High Volume
                                         Image(systemName: "speaker.wave.2")
                                             .font(.system(size: 10))
                                             .foregroundColor(.red)
 
-                                        Slider(value: $volume, in: 0...1, step: 0.05)
-                                            .onChange(of: volume) {
-                                                viewModel.player.volume = Float(volume)
-                                                if volume > 0 {
-                                                    previousVolume = volume
+                                        // ✅ Phase 9: Bind to ViewModel volume property
+                                        Slider(value: $viewModel.volume, in: 0...1, step: 0.05)
+                                            .onChange(of: viewModel.volume) {
+                                                if viewModel.volume > 0 {
+                                                    previousVolume = viewModel.volume
                                                 }
                                             }
                                             .rotationEffect(.degrees(-90))
@@ -227,11 +235,13 @@ struct VideoPlayerView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(statusColor)
+                            // ✅ Phase 9: Use ViewModel status color
+                            .fill(viewModel.statusIndicatorColor)
                             .frame(width: 8, height: 8)
-                        Text(statusText)
+                        // ✅ Phase 9: Use ViewModel status text
+                        Text(viewModel.statusIndicatorText)
                             .font(.caption2)
-                            .foregroundColor(statusColor)
+                            .foregroundColor(viewModel.statusIndicatorColor)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -319,65 +329,18 @@ struct VideoPlayerView: View {
         }
     }
 
-    private func resetHideControlsTimer() {
-        hideControlsTimer?.invalidate()
-        hideControlsTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-            withAnimation {
-                showControls = false
-                showVolumeSlider = false
-            }
-        }
-    }
-
-    private func timeString(_ seconds: Double) -> String {
-        guard !seconds.isNaN, seconds.isFinite else { return "00:00" }
-        let totalSeconds = Int(seconds)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let secs = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        } else {
-            return String(format: "%02d:%02d", minutes, secs)
-        }
-    }
-
-    private var statusColor: Color {
-        switch viewModel.connectionStatus {
-        case .disconnected:
-            return Color.gray
-        case .connecting:
-            return Color.yellow
-        case .connected:
-            return Color.green
-        case .buffering:
-            return Color.orange
-        case .failed:
-            return Color.red
-        }
-    }
-
-    private var statusText: String {
-        switch viewModel.connectionStatus {
-        case .disconnected:
-            return "Disconnected"
-        case .connecting:
-            return "Connecting..."
-        case .connected:
-            return "Connected"
-        case .buffering:
-            return "Buffering..."
-        case .failed(let reason):
-            return "Failed: \(reason.prefix(20))..."
-        }
-    }
+    // ✅ Phase 9: Helper functions moved to PlaybackViewModel
+    // - timeString() → formatTime()
+    // - statusColor → statusIndicatorColor
+    // - statusText → statusIndicatorText
+    // - resetHideControlsTimer() → resetControlsVisibilityTimer()
 
 }
 
 // MARK: - Progress Bar Component
+// ✅ Phase 9: Updated to accept ViewModel instead of direct player access
 struct ProgressBarView: View {
-    let player: AVPlayer
+    @ObservedObject var viewModel: PlaybackViewModel
     let currentTime: Double
     @State private var isDragging = false
     @State private var dragValue: Double = 0
@@ -431,23 +394,24 @@ struct ProgressBarView: View {
     }
 
     private var currentProgress: Double {
-        let duration = player.currentItem?.duration.seconds ?? 0
+        // ✅ Phase 9: Use ViewModel duration property
+        let duration = viewModel.currentDuration
         return duration > 0 ? currentTime / duration : 0
     }
 
     private var bufferedProgress: Double {
-        guard let range = player.currentItem?.loadedTimeRanges.first?.timeRangeValue else {
+        guard let range = viewModel.player.currentItem?.loadedTimeRanges.first?.timeRangeValue else {
             return 0
         }
         let bufferedDuration = CMTimeRangeGetEnd(range).seconds
-        let totalDuration = player.currentItem?.duration.seconds ?? 0
+        let totalDuration = viewModel.currentDuration
         return totalDuration > 0 ? bufferedDuration / totalDuration : 0
     }
 
     private func seek(to progress: Double) {
-        guard let duration = player.currentItem?.duration.seconds, duration.isFinite else { return }
+        guard let duration = viewModel.player.currentItem?.duration.seconds, duration.isFinite else { return }
         let newTime = CMTime(seconds: progress * duration, preferredTimescale: 600)
-        player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        viewModel.player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
     }
 }
 
