@@ -16,6 +16,8 @@ struct VideoStreamListView: View {
     @State private var showAddStream = false
     @State private var customURL = ""
     @State private var customTitle = ""
+    @StateObject private var urlLogger = URLValidationLogger()
+    private let urlValidator = URLValidator()
 
     var body: some View {
         NavigationView {
@@ -214,6 +216,10 @@ struct VideoStreamListView: View {
             urlString: url,
             thumbnailURLString: "https://via.placeholder.com/120x68/333/666?text=Live"
         )
+
+        // Log the custom URL with timestamp
+        urlLogger.logCustomURL(url, title: title)
+
         streams.insert(newStream, at: 0)
         select(stream: newStream)
         showAddStream = false
@@ -281,6 +287,9 @@ struct AddStreamSheet: View {
     @Binding var customURL: String
     var onAdd: (String, String) -> Void
 
+    private let urlValidator = URLValidator()
+    @State private var showHTTPSWarning = false
+
     var isValidURL: Bool {
         guard !customURL.isEmpty else { return false }
         let isValidProtocol = customURL.starts(with: "http://") ||
@@ -294,7 +303,12 @@ struct AddStreamSheet: View {
             return customURL.hasSuffix(".m3u8")
         }
 
-        return true
+        // Validate against whitelist
+        return urlValidator.isValidStreamURL(customURL)
+    }
+
+    var isHTTPSURL: Bool {
+        urlValidator.isHTTPS(customURL)
     }
 
     var body: some View {
@@ -349,6 +363,34 @@ struct AddStreamSheet: View {
                                 .keyboardType(.URL)
                                 .autocapitalization(.none)
                                 .padding(.horizontal, 4)
+                                .onChange(of: customURL) { newURL in
+                                    // Show warning if URL is entered and not HTTPS
+                                    showHTTPSWarning = !newURL.isEmpty && !isHTTPSURL && newURL.contains("http://")
+                                }
+
+                            // HTTPS Security Warning
+                            if showHTTPSWarning && customURL.contains("http://") {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.system(size: 14))
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("HTTP is insecure")
+                                            .font(.caption.bold())
+                                            .foregroundColor(.orange)
+                                        Text("Use HTTPS for better security")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding(8)
+                                .background(Color.orange.opacity(0.1))
+                                .cornerRadius(6)
+                                .padding(.horizontal, 4)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)

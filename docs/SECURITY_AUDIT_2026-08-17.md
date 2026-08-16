@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786900870) by amonrit
+Last Modified: 08/17/2026 (1786903337) by amonrit
 
 # Steam Project - Security Audit Findings
 
@@ -376,13 +376,14 @@ Basic authentication encodes (but does not encrypt) credentials. The credentials
 
 ---
 
-### 9. NO INPUT VALIDATION ON CUSTOM STREAM URLS
+### 9. NO INPUT VALIDATION ON CUSTOM STREAM URLS ✅ FIXED
 **File:** `/steam/Views/VideoStreamListView.swift`  
 **Severity:** MEDIUM  
 **Category:** Weak Input Validation  
 **Confidence:** 6/10  
+**Status:** RESOLVED (Issue #14)
 
-**Vulnerability:**
+**Original Vulnerability:**
 ```swift
 // Lines 284-298
 var isValidURL: Bool {
@@ -403,30 +404,54 @@ var isValidURL: Bool {
 ```
 
 **Description:**
-The validation only checks for protocol prefix and file extension, but doesn't validate:
+The original validation only checked for protocol prefix and file extension, but didn't validate:
 - Hostname/IP legitimacy
 - URL encoding attacks
 - Malicious URL parameters
 - Redirects to untrusted servers
 
-**Exploit Scenario:**
-1. Attacker creates malicious HLS file hosted on attacker's server
-2. Provides URL: `http://attacker.com:8888/evil/video.m3u8`
-3. Passes validation (starts with http://, ends with .m3u8)
-4. AVPlayer follows playlist and loads content from attacker's server
-5. Attacker can:
-   - Inject malicious HLS content
-   - Perform DNS-based attacks
-   - Collect IP addresses and user information
-   - Serve high-bitrate content to consume bandwidth
+**Fix Implementation (Issue #14):**
 
-**Recommendation:**
-- Validate against whitelist of known servers
-- Implement URL domain validation
-- Check for suspicious query parameters
-- Log all custom URLs added by users
-- Implement user warnings for non-HTTPS URLs
-- Add server certificate validation
+Created comprehensive URL validation system with three components:
+
+1. **URLValidator Service** (`steam/Services/URLValidator.swift`)
+   - Domain whitelist validation against trusted sources:
+     - `devstreaming-cdn.apple.com` (official Apple test streams)
+     - `localhost` and `127.0.0.1` (local development)
+   - HTTPS enforcement for HTTP(S) URLs
+   - RTMP support only from whitelisted domains
+   - User-friendly error messages
+
+2. **URLValidationLogger Service** (`steam/Services/URLValidationLogger.swift`)
+   - Logs all custom URLs with ISO 8601 timestamps
+   - Thread-safe concurrent logging
+   - Maintains audit trail in `url-validation-logs.txt`
+   - Supports log retrieval and clearing
+
+3. **Enhanced AddStreamSheet UI** (`steam/Views/VideoStreamListView.swift`)
+   - Integrated URLValidator for strict whitelist checking
+   - Real-time HTTPS warning when users enter HTTP URLs
+   - Visual warning indicator (orange banner)
+   - Prevents adding non-whitelisted URLs
+
+**Testing:**
+- `steamTests/Services/URLValidatorTests.swift` — 20+ test cases
+- `steamTests/Services/URLValidationLoggerTests.swift` — 10+ test cases
+- `steamTests/Integration/URLWhitelistIntegrationTests.swift` — End-to-end tests
+
+**Example Valid URLs (Whitelisted):**
+```
+✅ https://devstreaming-cdn.apple.com/videos/example.m3u8
+✅ https://localhost:8888/live/stream.m3u8
+✅ https://127.0.0.1:8888/live/stream.m3u8
+```
+
+**Example Invalid URLs (Rejected):**
+```
+❌ https://malicious.com/stream.m3u8 (domain not whitelisted)
+❌ http://localhost:8888/stream.m3u8 (HTTP instead of HTTPS)
+❌ rtmp://attacker.com/live/stream (domain not whitelisted)
+```
 
 ---
 
