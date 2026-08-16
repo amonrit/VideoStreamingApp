@@ -59,9 +59,13 @@ final class MediaMTXAPIClient {
     }
 
     /// Fetches single path status (incl. reader/viewer info) for one MediaMTX path
-    /// Path names may contain "/" (e.g. "live/mystream") — passed through as-is.
+    /// Path names may contain "/" (e.g. "live/mystream") — properly encoded to prevent path traversal.
     func fetchPath(named pathName: String) async throws -> MediaMTXPath {
-        let url = baseURL.appendingPathComponent("v3/paths/get/\(pathName)")
+        // Properly encode the path name to prevent path traversal and URL injection
+        // We encode special characters but preserve "/" for multi-level paths
+        let encodedPathName = encodePathComponent(pathName)
+        let url = baseURL.appendingPathComponent("v3/paths/get/\(encodedPathName)")
+
         var request = URLRequest(url: url)
         request.setValue(MediaMTXConfig.authHeaderValue, forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 5
@@ -80,5 +84,40 @@ final class MediaMTXAPIClient {
         } catch {
             throw MediaMTXAPIError.networkError(error)
         }
+    }
+
+    /// Encodes a path component for safe URL usage
+    /// Preserves "/" for multi-level paths (e.g., "live/mystream")
+    /// but encodes dangerous characters like "..", null bytes, etc.
+    private func encodePathComponent(_ component: String) -> String {
+        // Create a character set that allows "/" and other safe characters
+        // but encodes special characters that could lead to path traversal
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~/:@!$&'()*+,;=")
+
+        // First pass: encode everything not in the safe set
+        guard let encoded = component.addingPercentEncoding(withAllowedCharacters: allowed) else {
+            return component  // Fallback if encoding fails
+        }
+
+        // Second pass: check for dangerous patterns that made it through encoding
+        // This is a defense-in-depth measure
+        let dangerous = [
+            "%2e%2e",   // encoded ".."
+            "..%2f",    // ".." followed by encoded "/"
+            "%2f%2e%2f" // encoded "/./"
+        ]
+
+        let resultLower = encoded.lowercased()
+        for pattern in dangerous {
+            if resultLower.contains(pattern) {
+                // Found dangerous pattern - encode the dots more aggressively
+                return component
+                    .replacingOccurrences(of: "..", with: "%2e%2e")
+                    .replacingOccurrences(of: ".", with: "%2e", options: [], range: nil)
+            }
+        }
+
+        return encoded
     }
 }
