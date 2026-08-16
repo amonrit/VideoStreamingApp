@@ -17,17 +17,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-RTMP_URL="rtmp://publish:streampass123@localhost:1935/live/mystream"
-HLS_URL="http://localhost:8888/live/mystream/index.m3u8"
-RTSP_URL="rtsp://publish:streampass123@localhost:8554/live/mystream"
-WEBRTC_URL="http://localhost:8889/live/mystream"
-TEST_STREAM_FILE="test_pattern.mp4"
-TEST_DURATION=10
-
-echo -e "${BLUE}[INFO]${NC} Testing MediaMTX Server Setup"
-echo ""
-
 # Function to print status
 status() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -44,6 +33,34 @@ error() {
 warning() {
     echo -e "${YELLOW}[!]${NC} $1"
 }
+
+# Load environment variables from .env.local
+if [ -f "$(dirname "$0")/.env.local" ]; then
+    set -a
+    source "$(dirname "$0")/.env.local"
+    set +a
+else
+    error ".env.local file not found!"
+    error "Please copy streaming/.env.example to streaming/.env.local and configure it"
+    exit 1
+fi
+
+# Validate required credentials are loaded
+if [ -z "$PUBLISH_USER" ] || [ -z "$PUBLISH_PASS" ]; then
+    error "PUBLISH_USER and PUBLISH_PASS not set in .env.local"
+    exit 1
+fi
+
+# Configuration - Use environment variables for sensitive data
+RTMP_URL="rtmp://${PUBLISH_USER}:${PUBLISH_PASS}@localhost:${RTMP_PORT:-1935}/live/mystream"
+HLS_URL="http://localhost:${HLS_PORT:-8888}/live/mystream/index.m3u8"
+RTSP_URL="rtsp://${PUBLISH_USER}:${PUBLISH_PASS}@localhost:${RTSP_PORT:-8554}/live/mystream"
+WEBRTC_URL="http://localhost:${WEBRTC_PORT:-8889}/live/mystream"
+TEST_STREAM_FILE="test_pattern.mp4"
+TEST_DURATION=10
+
+echo -e "${BLUE}[INFO]${NC} Testing MediaMTX Server Setup"
+echo ""
 
 # Check if Docker is running
 status "Checking Docker..."
@@ -179,42 +196,50 @@ echo ""
 echo "✓ Setup Complete!"
 echo ""
 echo "📍 Server Configuration:"
-echo "   - RTMP:   rtmp://publish:streampass123@localhost:1935/live/{stream_name}"
-echo "   - RTSP:   rtsp://publish:streampass123@localhost:8554/live/{stream_name}"
-echo "   - HLS:    http://localhost:8888/live/{stream_name}/index.m3u8"
-echo "   - WebRTC: http://localhost:8889/live/{stream_name}"
+echo "   - RTMP:   rtmp://\${PUBLISH_USER}:\${PUBLISH_PASS}@localhost:${RTMP_PORT:-1935}/live/{stream_name}"
+echo "   - RTSP:   rtsp://\${PUBLISH_USER}:\${PUBLISH_PASS}@localhost:${RTSP_PORT:-8554}/live/{stream_name}"
+echo "   - HLS:    http://localhost:${HLS_PORT:-8888}/live/{stream_name}/index.m3u8"
+echo "   - WebRTC: http://localhost:${WEBRTC_PORT:-8889}/live/{stream_name}"
+echo ""
+echo "🔐 Credentials (loaded from .env.local):"
+echo "   - Username: \${PUBLISH_USER}"
+echo "   - Password: [configured in .env.local]"
 echo ""
 echo "📤 To Publish a Stream:"
 echo ""
-echo "   1. Using FFmpeg:"
+echo "   1. Using FFmpeg (with env variables):"
+echo "      source streaming/.env.local"
 echo "      ffmpeg -i your_video.mp4 -c copy -f flv \\"
-echo "      rtmp://publish:streampass123@localhost:1935/live/mystream"
+echo "      rtmp://\${PUBLISH_USER}:\${PUBLISH_PASS}@localhost:${RTMP_PORT:-1935}/live/mystream"
 echo ""
 echo "   2. Using OBS Studio:"
 echo "      - Settings → Stream"
 echo "      - Service: Custom"
-echo "      - Server: rtmp://localhost:1935/live"
+echo "      - Server: rtmp://localhost:${RTMP_PORT:-1935}/live"
 echo "      - Stream Key: mystream"
-echo "      - (Optional) Set Auth in advanced settings"
+echo "      - (Optional) Set Auth with credentials from .env.local"
 echo ""
 echo "   3. Using Screen Capture (FFmpeg):"
+echo "      source streaming/.env.local"
 echo "      ffmpeg -f avfoundation -i \"1:\" -c:v libx264 -c:a aac \\"
-echo "      -f flv rtmp://publish:streampass123@localhost:1935/live/mystream"
+echo "      -f flv rtmp://\${PUBLISH_USER}:\${PUBLISH_PASS}@localhost:${RTMP_PORT:-1935}/live/mystream"
 echo ""
 echo "📺 To Watch a Stream:"
 echo ""
 echo "   1. VLC Media Player:"
-echo "      Media → Open Network Stream → http://localhost:8888/live/mystream/index.m3u8"
+echo "      Media → Open Network Stream → http://localhost:${HLS_PORT:-8888}/live/mystream/index.m3u8"
 echo ""
 echo "   2. FFplay:"
-echo "      ffplay 'http://localhost:8888/live/mystream/index.m3u8'"
+echo "      ffplay 'http://localhost:${HLS_PORT:-8888}/live/mystream/index.m3u8'"
 echo ""
 echo "   3. Browser (HLS):"
-echo "      http://localhost:8888/live/mystream/index.m3u8"
+echo "      http://localhost:${HLS_PORT:-8888}/live/mystream/index.m3u8"
 echo ""
-echo "🔐 Credentials:"
-echo "   - Username: publish"
-echo "   - Password: streampass123"
+echo "⚠️  Important Security Notes:"
+echo "   - Credentials are loaded from .env.local (never commit this file!)"
+echo "   - Keep .env.local out of version control (already in .gitignore)"
+echo "   - Update credentials regularly for security"
+echo "   - See docs/CREDENTIAL_MANAGEMENT.md for best practices"
 echo ""
 echo "⚙️  Configuration File:"
 echo "   - mediamtx.yml (mount as read-only in docker-compose.yml)"

@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786900870) by amonrit
+Last Modified: 08/17/2026 (1786902544) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -107,6 +107,49 @@ All docs are in the `docs/` folder:
 - Compliance notes (OWASP, CWE, SANS)
 
 **When to use:** Before deploying to production, when fixing security issues, compliance reviews
+
+---
+
+### **[docs/CREDENTIAL_MANAGEMENT.md](./docs/CREDENTIAL_MANAGEMENT.md)** — Credential Lifecycle Strategy
+**For:** Understanding how credentials flow from generation to storage (environment → Keychain)  
+**Contains:**
+- 4-phase credential lifecycle (generation → environment → storage)
+- Environment vs. Keychain storage strategy
+- Classification of credentials (what must be environment-loaded)
+- Implementation guidelines for server & iOS
+- .env.example validation checklist
+- Pre-commit security validation
+
+**When to use:** Setting up credentials, code review for security, implementing Keychain storage
+
+---
+
+### **[docs/CREDENTIAL_ROTATION.md](./docs/CREDENTIAL_ROTATION.md)** — Credential Rotation Guide
+**For:** Rotating credentials safely in development and production  
+**Contains:**
+- Quick reference table (who rotates what, frequency)
+- Local development rotation steps
+- Production rotation procedures
+- Emergency credential revocation process
+- iOS app re-authentication flow
+- Rotation audit trail & logging
+- Troubleshooting common issues
+- Best practices & anti-patterns
+
+**When to use:** Rotating credentials quarterly or after compromise, or following deployment changes
+
+---
+
+### **[docs/CREDENTIAL_SETUP.md](./docs/CREDENTIAL_SETUP.md)** — Credential Setup (Quick Start)
+**For:** Setting up .env.local on first run as a developer  
+**Contains:**
+- 5-minute first-time setup
+- How to generate strong passwords
+- Security rules (DO's and DON'Ts)
+- Troubleshooting common issues
+- Links to detailed docs
+
+**When to use:** First time cloning the project, or setting up on a new machine
 
 ---
 
@@ -224,6 +267,15 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 
 "I need to fix security issues"
   → docs/SECURITY_AUDIT_2026-08-17.md (priority actions + recommendations)
+
+"I'm setting up credentials for the first time"
+  → docs/CREDENTIAL_SETUP.md (5-minute setup)
+
+"I need to understand the credential strategy"
+  → docs/CREDENTIAL_MANAGEMENT.md (lifecycle & storage)
+
+"I need to rotate credentials"
+  → docs/CREDENTIAL_ROTATION.md (procedures & best practices)
 ```
 
 ---
