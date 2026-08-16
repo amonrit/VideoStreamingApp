@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/17/2026 (1786900870) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -91,6 +91,22 @@ All docs are in the `docs/` folder:
 - Debugging with AI assistance
 
 **When to use:** Want AI to help with code, reviews, debugging
+
+---
+
+## 🔒 **Security**
+
+### **[docs/SECURITY_AUDIT_2026-08-17.md](./docs/SECURITY_AUDIT_2026-08-17.md)** — Security Audit Report
+**For:** Understanding security vulnerabilities, compliance, remediation  
+**Contains:**
+- 4 CRITICAL vulnerabilities (hardcoded credentials, unauthenticated publishing, CORS misconfiguration)
+- 6 HIGH/MEDIUM severity findings
+- Detailed exploit scenarios for each issue
+- Recommendations and remediation steps
+- Priority 1, 2, 3 action items
+- Compliance notes (OWASP, CWE, SANS)
+
+**When to use:** Before deploying to production, when fixing security issues, compliance reviews
 
 ---
 
@@ -202,6 +218,12 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 
 "I need to write Swift code"
   → .claude/instructions/swift-style.md + docs/ARCHITECTURE.md
+
+"I need to understand security vulnerabilities"
+  → docs/SECURITY_AUDIT_2026-08-17.md (findings + remediation)
+
+"I need to fix security issues"
+  → docs/SECURITY_AUDIT_2026-08-17.md (priority actions + recommendations)
 ```
 
 ---
