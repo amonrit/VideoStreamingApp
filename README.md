@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786365804) by amonrit
+Last Modified: 08/17/2026 (1786899911) by amonrit
 
 # Steam — iOS Video Streaming App
 
@@ -47,7 +47,6 @@ Or jump directly to:
 - **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** — Local development
 - **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — Deep dive into MVVM
 - **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — Production setup
-- **[FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md)** — Planned features
 
 ---
 
@@ -226,7 +225,7 @@ Deploy the streaming server to:
 - ✅ **Linux VPS** — Cloud streaming
 - ✅ **Docker Swarm** — Scale to multiple machines
 
-See **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** for step-by-step instructions.
+See **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** for step-by-step instructions.
 
 ---
 
@@ -256,8 +255,6 @@ Start with **[DOCUMENTATION.md](./DOCUMENTATION.md)** to find what you need.
 3. **Picture-in-Picture** — Multitask while watching (1 day)
 4. **Subtitles** — VTT/SRT support (2–3 days)
 5. **Offline Download** — Cache for offline viewing (3–4 days)
-
-See **[FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md)** for full list and priorities.
 
 ---
 

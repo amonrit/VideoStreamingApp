@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786359417) by amonrit
+Last Modified: 08/17/2026 (1786899911) by amonrit
 
 # GitHub Copilot Instructions - Steam iOS Streaming App
 
@@ -151,7 +151,7 @@ Use conventional commits:
 ```
 feat: add playback controls
 fix: resolve memory leak in ViewModel
-docs: update DEPLOYMENT_GUIDE.md
+docs: update docs/DEPLOYMENT.md
 chore: update dependencies
 refactor: simplify VideoPlayerWorker
 test: add tests for retry logic
@@ -168,10 +168,9 @@ test: add tests for retry logic
 |------|---------|
 | `README.md` | Project overview & quick start |
 | `CLAUDE.md` | AI assistant guide |
-| `ARCHITECTURE.md` | Deep dive into MVVM |
-| `DEPLOYMENT_GUIDE.md` | Server deployment |
-| `FEATURES_ROADMAP.md` | Planned features |
-| `Makefile` | Development shortcuts |
+| `docs/ARCHITECTURE.md` | Deep dive into MVVM |
+| `docs/DEPLOYMENT.md` | Server deployment |
+| `DOCUMENTATION.md` | Master index for all docs |
 
 ## Common Mistakes to Avoid
 

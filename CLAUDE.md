@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786366014) by amonrit
+Last Modified: 08/17/2026 (1786899911) by amonrit
 
 # CLAUDE.md
 
@@ -75,7 +75,6 @@ Models (Data Entities)
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local dev workflows |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Deep MVVM dive |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production setup |
-| [FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md) | Future features |
 
 ---
 

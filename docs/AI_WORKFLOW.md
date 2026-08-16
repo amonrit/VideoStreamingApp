@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786365804) by amonrit
+Last Modified: 08/17/2026 (1786899911) by amonrit
 
 # AI Workflow Guide
 
@@ -180,8 +180,8 @@ AI will:
 
 1. **Understand effort:**
    ```
-   "Based on FEATURES_ROADMAP.md, what's the effort for
-   Quality Selection feature? Where would it fit in PlaybackViewModel?"
+   "What's the effort to implement Quality Selection feature?
+   Where would it fit in PlaybackViewModel?"
    ```
 
 2. **Design the addition:**

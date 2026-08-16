@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/17/2026 (1786899911) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -103,18 +103,9 @@ All docs are in the `docs/` folder:
 - Quick publish examples (FFmpeg, OBS)
 - Quick view examples (VLC, FFplay)
 - All protocol URLs (RTMP, RTSP, HLS, WebRTC, SRT)
+- FFmpeg publish examples
 
-**When to use:** Need a command, forgot the syntax
-
-### **[streaming/PUBLISH_EXAMPLES.md](./streaming/PUBLISH_EXAMPLES.md)** — How to Publish Streams
-**For:** Different ways to publish streams  
-**Contains:**
-- FFmpeg from video file
-- FFmpeg screen capture
-- OBS Studio setup
-- iPhone app publishing
-
-**When to use:** Want to publish a stream to test
+**When to use:** Need a command, forgot the syntax, or want to publish a stream
 
 ---
 
@@ -176,10 +167,6 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 - Features, badges, quick links
 - Not a guide, just a landing page
 
-### **[FEATURES_ROADMAP.md](./FEATURES_ROADMAP.md)** — What's Next
-- Planned features, priorities, effort estimates
-- Use when deciding what to build
-
 ### **[.github/copilot-instructions.md](./.github/copilot-instructions.md)** — GitHub Copilot Config
 - Copilot-specific instructions
 - Only relevant if using Copilot
@@ -202,7 +189,7 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
   → docs/DEVELOPMENT.md (debugging section) + docs/AI_WORKFLOW.md (use AI)
 
 "I need to publish a stream"
-  → streaming/QUICK_REFERENCE.md (commands) or streaming/PUBLISH_EXAMPLES.md (details)
+  → streaming/QUICK_REFERENCE.md (commands + examples)
 
 "I need to deploy to a new machine"
   → docs/DEPLOYMENT.md
@@ -226,7 +213,6 @@ steam/
 ├── DOCUMENTATION.md              ← YOU ARE HERE (master index)
 ├── GETTING_STARTED.md            ← Start here for new people
 ├── README.md                     ← Project overview
-├── FEATURES_ROADMAP.md           ← Planned features
 ├── CLAUDE.md                     ← AI context
 │
 ├── docs/                         ← Main documentation
@@ -238,8 +224,10 @@ steam/
 │   └── AI_WORKFLOW.md            ← Working with AI tools
 │
 ├── streaming/
-│   ├── QUICK_REFERENCE.md        ← MediaMTX commands
-│   └── PUBLISH_EXAMPLES.md       ← Publish stream examples
+│   ├── FFMPEG_SETUP.md           ← FFmpeg transcoding setup
+│   ├── QUICK_REFERENCE.md        ← MediaMTX commands & examples
+│   ├── START.md                  ← Quick server start
+│   └── TESTING_FFMPEG_TRANSCODING.md ← Test the transcoding
 │
 ├── .claude/                      ← AI-specific docs
 │   ├── SETUP.md                  ← Antigravity setup
