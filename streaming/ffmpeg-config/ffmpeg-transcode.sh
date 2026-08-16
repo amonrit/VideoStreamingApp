@@ -30,20 +30,22 @@ echo "---" | tee -a "$LOG_FILE"
 # Outputs back to MediaMTX via RTMP for HLS serving
 ffmpeg -hide_banner -loglevel warning \
   -i "$RTMP_URL" \
-  -filter_complex "[0:v]split=2[v1][v2]; \
+  -filter_complex "[0:v]fps=30,split=2[v1][v2]; \
     [v1]scale=854:480[v1out]; \
     [v2]scale=640:360[v2out]" \
   \
   -map "[v1out]" -map "0:a" \
-  -c:v libx264 -preset veryfast \
-  -b:v 2000k -r 30 -g 6 -keyint_min 6 \
-  -c:a aac -b:a 128k -ar 44100 \
+  -c:v libx264 -preset veryfast -tune zerolatency \
+  -b:v 2000k -r 30 \
+  -g 6 -keyint_min 6 -sc_threshold 0 \
+  -c:a aac -b:a 128k -ar 44100 -async 1 \
   -f flv "rtmp://mediamtx:1935/live-480p" \
   \
   -map "[v2out]" -map "0:a" \
-  -c:v libx264 -preset veryfast \
-  -b:v 800k -r 30 -g 6 -keyint_min 6 \
-  -c:a aac -b:a 128k -ar 44100 \
+  -c:v libx264 -preset veryfast -tune zerolatency \
+  -b:v 800k -r 30 \
+  -g 6 -keyint_min 6 -sc_threshold 0 \
+  -c:a aac -b:a 128k -ar 44100 -async 1 \
   -f flv "rtmp://mediamtx:1935/live-360p" \
   2>> "$LOG_FILE"
 
