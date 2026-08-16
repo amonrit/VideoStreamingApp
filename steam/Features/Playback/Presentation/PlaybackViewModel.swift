@@ -32,6 +32,9 @@ class PlaybackViewModel: ObservableObject {
 
     // ✅ Phase 5: Centralized viewer count polling via service
     private var viewerCountPollingService: ViewerCountPollingService?
+
+    // ✅ Phase 6: Dependency injection for API client
+    private let apiClientProvider: APIClientProvider
     private var mediaMTXClient: MediaMTXAPIClient?
     private var mediaMTXPathName: String?
     private var viewerCountFailureCount: Int = 0
@@ -44,8 +47,11 @@ class PlaybackViewModel: ObservableObject {
     // ✅ Phase 4: Track stream loading state
     private var streamLoadingContinuation: CheckedContinuation<Void, Error>?
 
-    init(player: AVPlayer = AVPlayer()) {
+    /// Initializes PlaybackViewModel with optional custom API client provider
+    /// - Parameter apiClientProvider: Custom provider for API clients (defaults to DefaultAPIClientProvider)
+    init(player: AVPlayer = AVPlayer(), apiClientProvider: APIClientProvider = DefaultAPIClientProvider()) {
         self.player = player
+        self.apiClientProvider = apiClientProvider
         self.worker = VideoPlayerWorker()
 
         // MARK: - Native AVPlayer Settings
@@ -173,7 +179,8 @@ class PlaybackViewModel: ObservableObject {
 
         // Setup viewer count polling if this is a MediaMTX stream
         if let (baseURL, pathName) = MediaMTXConfig.mediaMTXTarget(for: url) {
-            mediaMTXClient = MediaMTXAPIClient(baseURL: baseURL)
+            // ✅ Phase 6: Use dependency-injected API client provider
+            mediaMTXClient = apiClientProvider.createAPIClient(baseURL: baseURL)
             mediaMTXPathName = pathName
             logger.info("👁️  MediaMTX viewer count available for path: \(pathName, privacy: .public)")
         } else {

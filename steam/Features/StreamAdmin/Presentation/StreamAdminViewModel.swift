@@ -17,15 +17,16 @@ class StreamAdminViewModel: ObservableObject {
 
     // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
     private var streamAdminPollingService: StreamAdminPollingService?
-    private let apiClient: MediaMTXAPIClient?
+
+    // ✅ Phase 6: Dependency injection for API client provider
+    private let apiClientProvider: APIClientProvider
     private var failureCount: Int = 0
     private let maxFailures: Int = 3
 
-    init() {
-        // Try to initialize API client — if no valid server is found, it will be nil
-        // and the view will show a "configure server" message
-        self.apiClient = nil  // Will be set lazily if needed
-
+    /// Initializes StreamAdminViewModel with optional custom API client provider
+    /// - Parameter apiClientProvider: Custom provider for API clients (defaults to DefaultAPIClientProvider)
+    init(apiClientProvider: APIClientProvider = DefaultAPIClientProvider()) {
+        self.apiClientProvider = apiClientProvider
         logger.info("📊 StreamAdminViewModel initialized")
     }
 
@@ -34,7 +35,8 @@ class StreamAdminViewModel: ObservableObject {
         stopPolling()
 
         let targetBaseURL = baseURL ?? URL(string: "http://localhost:9997") ?? URL(fileURLWithPath: "")
-        let client = MediaMTXAPIClient(baseURL: targetBaseURL)
+        // ✅ Phase 6: Use dependency-injected API client provider
+        let client = apiClientProvider.createAPIClient(baseURL: targetBaseURL)
 
         // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
         streamAdminPollingService = StreamAdminPollingService(
