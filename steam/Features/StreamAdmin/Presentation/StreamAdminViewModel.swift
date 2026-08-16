@@ -15,9 +15,9 @@ class StreamAdminViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastUpdated: Date?
 
-    private var refreshTimer: Timer?
+    // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
+    private var streamAdminPollingService: StreamAdminPollingService?
     private let apiClient: MediaMTXAPIClient?
-    private let refreshInterval: TimeInterval = 4.0
     private var failureCount: Int = 0
     private let maxFailures: Int = 3
 
@@ -36,55 +36,46 @@ class StreamAdminViewModel: ObservableObject {
         let targetBaseURL = baseURL ?? URL(string: "http://localhost:9997") ?? URL(fileURLWithPath: "")
         let client = MediaMTXAPIClient(baseURL: targetBaseURL)
 
-        refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
-            self?.refresh(client: client)
-        }
+        // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
+        streamAdminPollingService = StreamAdminPollingService(
+            fetchStreams: { [weak self] in
+                guard let self = self else { throw PollingError.cancelled }
+                // Fetch actual streams
+                let pathList = try await client.fetchPathList()
+                // Update UI with paths
+                await MainActor.run {
+                    self.paths = pathList.items
+                    self.lastUpdated = Date()
+                    self.errorMessage = nil
+                    self.failureCount = 0
+                    self.isLoading = false
+                    logger.info("✅ Fetched \(pathList.items.count) streams")
+                }
+                return pathList.items.count
+            }
+        )
 
-        // Fetch immediately
-        refresh(client: client)
-        logger.info("📊 Started polling at \(self.refreshInterval)s intervals")
+        Task {
+            await streamAdminPollingService?.startPolling()
+            logger.info("📊 Started polling with StreamAdminPollingService")
+        }
     }
 
     /// Stop polling for updates
     func stopPolling() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        // ✅ Phase 5: Stop service instead of invalidating Timer
+        Task {
+            await streamAdminPollingService?.stopPolling()
+            streamAdminPollingService = nil
+        }
         logger.info("⏹️  Stopped polling")
     }
 
-    /// Manually refresh stream list
-    private func refresh(client: MediaMTXAPIClient) {
-        Task { [weak self] in
-            do {
-                let pathList = try await client.fetchPathList()
-                await MainActor.run {
-                    self?.paths = pathList.items
-                    self?.lastUpdated = Date()
-                    self?.errorMessage = nil
-                    self?.failureCount = 0
-                    self?.isLoading = false
-                    logger.info("✅ Fetched \(pathList.items.count) streams")
-                }
-            } catch {
-                await MainActor.run {
-                    self?.failureCount += 1
-                    let errorMsg = "Failed to fetch streams: \(error.localizedDescription)"
-                    logger.warning("⚠️  \(errorMsg, privacy: .public)")
-
-                    // Keep showing old data on transient failure
-                    if self?.failureCount ?? 0 >= self?.maxFailures ?? 3 {
-                        self?.errorMessage = errorMsg
-                        self?.paths = []
-                    }
-                    self?.isLoading = false
-                }
-            }
-        }
-    }
-
     deinit {
-        stopPolling()
+        // ✅ Phase 5: Stop polling service on dealloc
+        Task {
+            await streamAdminPollingService?.stopPolling()
+        }
         logger.info("🔴 StreamAdminViewModel deinitialized")
     }
 }

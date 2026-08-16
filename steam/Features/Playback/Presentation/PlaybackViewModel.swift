@@ -30,12 +30,11 @@ class PlaybackViewModel: ObservableObject {
     private var retryOrchestrator: RetryOrchestrator?
     private let playbackConfiguration: PlaybackConfiguration = .production
 
-    // Viewer count polling
-    private var viewerCountTimer: Timer?
+    // ✅ Phase 5: Centralized viewer count polling via service
+    private var viewerCountPollingService: ViewerCountPollingService?
     private var mediaMTXClient: MediaMTXAPIClient?
     private var mediaMTXPathName: String?
     private var viewerCountFailureCount: Int = 0
-    private let viewerCountPollInterval: TimeInterval = 4.0
     private let maxViewerCountFailures: Int = 3
 
     // Network timeout constant for stream loading attempts
@@ -363,43 +362,58 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Viewer Count Polling
+    // MARK: - Viewer Count Polling (Phase 5: Service-Based)
 
     private func startViewerCountPolling() {
         guard let client = mediaMTXClient, let pathName = mediaMTXPathName else { return }
-        viewerCountTimer?.invalidate()
-        viewerCountTimer = Timer.scheduledTimer(withTimeInterval: viewerCountPollInterval, repeats: true) { [weak self] _ in
-            self?.pollViewerCount(client: client, pathName: pathName)
+
+        // ✅ Phase 5: Use ViewerCountPollingService instead of Timer
+        viewerCountPollingService = ViewerCountPollingService(
+            configuration: playbackConfiguration,
+            fetchCount: { [weak self] in
+                guard let self = self else { throw PollingError.cancelled }
+                let path = try await client.fetchPath(named: pathName)
+                return path.viewerCount
+            }
+        )
+
+        // Start polling and handle results
+        Task {
+            await viewerCountPollingService?.startPolling()
+
+            // Monitor polling results via task loop
+            while let service = viewerCountPollingService {
+                let count = service.getLastCount()
+                let error = service.getLastError()
+
+                await MainActor.run {
+                    if let count = count {
+                        self.viewerCount = count
+                        self.viewerCountFailureCount = 0
+                    }
+
+                    if error != nil {
+                        self.viewerCountFailureCount += 1
+                        logger.warning("👁️  Viewer count poll failed")
+
+                        // Hide stale count after 3 consecutive failures
+                        if self.viewerCountFailureCount >= self.maxViewerCountFailures {
+                            self.viewerCount = nil
+                        }
+                    }
+                }
+
+                // Check every 0.5 seconds for updates
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
         }
-        // Fire immediately
-        viewerCountTimer?.fire()
     }
 
     private func stopViewerCountPolling() {
-        viewerCountTimer?.invalidate()
-        viewerCountTimer = nil
-    }
-
-    private func pollViewerCount(client: MediaMTXAPIClient, pathName: String) {
-        Task { [weak self] in
-            do {
-                let path = try await client.fetchPath(named: pathName)
-                await MainActor.run {
-                    self?.viewerCount = path.viewerCount
-                    self?.viewerCountFailureCount = 0
-                }
-            } catch {
-                await MainActor.run {
-                    guard let self else { return }
-                    self.viewerCountFailureCount += 1
-                    logger.warning("👁️  Viewer count poll failed: \(error.localizedDescription, privacy: .public)")
-
-                    // Hide stale count after 3 consecutive failures
-                    if self.viewerCountFailureCount >= self.maxViewerCountFailures {
-                        self.viewerCount = nil
-                    }
-                }
-            }
+        // ✅ Phase 5: Stop service instead of invalidating Timer
+        Task {
+            await viewerCountPollingService?.stopPolling()
+            viewerCountPollingService = nil
         }
     }
 
@@ -415,7 +429,10 @@ class PlaybackViewModel: ObservableObject {
 
     deinit {
         cancellables.removeAll()
-        viewerCountTimer?.invalidate()
+        // ✅ Phase 5: Stop polling service on dealloc
+        Task {
+            await viewerCountPollingService?.stopPolling()
+        }
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
     }
