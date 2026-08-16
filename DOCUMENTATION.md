@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786902829) by amonrit
+Last Modified: 08/17/2026 (1786903935) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -153,6 +153,21 @@ All docs are in the `docs/` folder:
 
 ---
 
+### **[docs/KEYCHAIN_SETUP.md](./docs/KEYCHAIN_SETUP.md)** — Keychain Setup & iOS Simulator
+**For:** Using Keychain for credential storage, testing on iOS Simulator  
+**Contains:**
+- Keychain overview & storage hierarchy
+- iOS Simulator Keychain support
+- Entitlements configuration
+- Setting up credentials (environment variables vs. Keychain)
+- Testing Keychain operations
+- Troubleshooting (Keychain errors, persistence issues)
+- Security notes & credential rotation
+
+**When to use:** Setting up app for first run, configuring Keychain for development, running tests on simulator
+
+---
+
 ## 🌐 **Streaming Server**
 
 ### **[streaming/QUICK_REFERENCE.md](./streaming/QUICK_REFERENCE.md)** — MediaMTX Cheatsheet
@@ -276,6 +291,12 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 
 "I need to rotate credentials"
   → docs/CREDENTIAL_ROTATION.md (procedures & best practices)
+
+"I'm setting up the iOS app with Keychain"
+  → docs/KEYCHAIN_SETUP.md (iOS Simulator, entitlements, testing)
+
+"Keychain isn't working in the simulator"
+  → docs/KEYCHAIN_SETUP.md (Troubleshooting section)
 ```
 
 ---
@@ -295,7 +316,12 @@ steam/
 │   ├── DEPLOYMENT.md             ← Deploy to production
 │   ├── COMMIT_GUIDE.md           ← Commit message format
 │   ├── COMMIT_WORKFLOW.md        ← Commit workflow
-│   └── AI_WORKFLOW.md            ← Working with AI tools
+│   ├── AI_WORKFLOW.md            ← Working with AI tools
+│   ├── CREDENTIAL_MANAGEMENT.md  ← Credential lifecycle strategy
+│   ├── CREDENTIAL_SETUP.md       ← First-time credential setup
+│   ├── CREDENTIAL_ROTATION.md    ← Rotate credentials safely
+│   ├── KEYCHAIN_SETUP.md         ← iOS Keychain & Simulator config
+│   └── SECURITY_AUDIT_2026-08-17.md ← Security findings & remediation
 │
 ├── streaming/
 │   ├── FFMPEG_SETUP.md           ← FFmpeg transcoding setup

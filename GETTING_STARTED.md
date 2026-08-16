@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786901984) by amonrit
+Last Modified: 08/17/2026 (1786903935) by amonrit
 
 # 🚀 Getting Started — 5 Minutes
 
@@ -42,6 +42,27 @@ cp .env.example .env.local
 - Other server settings (ports, timeouts, recording options)
 
 **Important:** `.env.local` is in `.gitignore` — your credentials won't be committed to git.
+
+---
+
+## 🔑 Step 1b: Setup iOS App Credentials with Keychain (Optional — for Simulator Testing)
+
+The iOS app securely stores MediaMTX API credentials in **Keychain**. For testing on the simulator, you can use environment variables as a fallback:
+
+```bash
+# Export API credentials for the app to use
+export API_VIEWER_USER="apiviewer"
+export API_VIEWER_PASS="changeme123"  # Use same value as streaming/.env.local
+
+# Now when you build the app, it will use these credentials
+```
+
+**What this does:**
+- The app reads `API_VIEWER_USER` and `API_VIEWER_PASS` from environment
+- These credentials are used to authenticate with the MediaMTX API
+- On real iOS devices, credentials are stored securely in Keychain
+
+**More details:** See [docs/KEYCHAIN_SETUP.md](./docs/KEYCHAIN_SETUP.md) for full setup guide, Simulator Keychain support, and production configuration.
 
 ---
 
@@ -166,6 +187,12 @@ docker-compose down && docker-compose up -d
 ### Stream publishing fails
 - Check RTMP port is open: `netstat -an | grep 1935`
 - See server logs: `cd streaming && docker-compose logs -f mediamtx`
+
+### iOS app can't authenticate with MediaMTX API
+- Verify environment variables are set: `echo $API_VIEWER_PASS`
+- Check they match your server credentials in `streaming/.env.local`
+- Reset the simulator to clear Keychain: `xcrun simctl erase all`
+- See [docs/KEYCHAIN_SETUP.md](./docs/KEYCHAIN_SETUP.md) → Troubleshooting
 
 **More help:** [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) → Debugging
 
