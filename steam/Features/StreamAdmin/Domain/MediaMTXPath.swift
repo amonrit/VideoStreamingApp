@@ -6,15 +6,15 @@
 import Foundation
 
 /// Response model for MediaMTX `GET /v3/paths/get/{name}` endpoint
-struct MediaMTXPath: Codable {
-    let name: String
-    let confName: String?
-    let available: Bool?
-    let online: Bool?
-    let source: MediaMTXSource?
-    let readers: [MediaMTXReader]
-    let inboundBytes: Int?
-    let outboundBytes: Int?
+public struct MediaMTXPath: Codable, Sendable {
+    public let name: String
+    public let confName: String?
+    public let available: Bool?
+    public let online: Bool?
+    public let source: MediaMTXSource?
+    public let readers: [MediaMTXReader]
+    public let inboundBytes: Int?
+    public let outboundBytes: Int?
 
     enum CodingKeys: String, CodingKey {
         case name
@@ -28,12 +28,12 @@ struct MediaMTXPath: Codable {
     }
 
     /// Visible viewer count — excludes MediaMTX's internal "hidden" reader type
-    var viewerCount: Int {
+    public var viewerCount: Int {
         readers.filter { $0.type != "hidden" }.count
     }
 
     /// Group readers by protocol type for display
-    var readersByType: [String: Int] {
+    public var readersByType: [String: Int] {
         var grouped: [String: Int] = [:]
         for reader in readers {
             guard reader.type != "hidden" else { continue }
@@ -43,7 +43,7 @@ struct MediaMTXPath: Codable {
     }
 
     /// Human-readable status
-    var status: String {
+    public var status: String {
         if online == true {
             return "🟢 Online"
         } else if available == true {
@@ -54,21 +54,21 @@ struct MediaMTXPath: Codable {
     }
 }
 
-struct MediaMTXSource: Codable {
-    let type: String
-    let id: String
+public struct MediaMTXSource: Codable, Sendable {
+    public let type: String
+    public let id: String
 }
 
-struct MediaMTXReader: Codable {
-    let type: String  // hlsSession, rtmpConn, rtspConn, webRTCSession, srtConn, moqSession, hidden, etc.
-    let id: String
+public struct MediaMTXReader: Codable, Sendable {
+    public let type: String  // hlsSession, rtmpConn, rtspConn, webRTCSession, srtConn, moqSession, hidden, etc.
+    public let id: String
 }
 
 /// Response model for MediaMTX `GET /v3/paths/list` endpoint
-struct MediaMTXPathList: Codable {
-    let itemCount: Int
-    let pageCount: Int
-    let items: [MediaMTXPath]
+public struct MediaMTXPathList: Codable, Sendable {
+    public let itemCount: Int
+    public let pageCount: Int
+    public let items: [MediaMTXPath]
 
     enum CodingKeys: String, CodingKey {
         case itemCount
