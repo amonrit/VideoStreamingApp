@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786925413) by amonrit
+Last Modified: 08/17/2026 (1786926346) by amonrit
 
 Last Modified: 08/17/2026 (1786926419) by amonrit
 
@@ -106,11 +106,13 @@ Core Services
 
 ## Markdown Header Rule
 
-**All `.md` files MUST start with:**
+**Documentation files (`.md` only) MUST start with:**
 ```
 Last Modified: MM/DD/YYYY (UNIX_TIMESTAMP) by USERNAME
 
 [Document content...]
 ```
 
-Update whenever you edit. See [.claude/markdown-header-rule.md](./.claude/markdown-header-rule.md) for details.
+**Note:** Swift (`.swift`) files do NOT require headers. This rule applies to Markdown documentation only.
+
+Update whenever you edit a `.md` file. See [.claude/markdown-header-rule.md](./.claude/markdown-header-rule.md) for details.
