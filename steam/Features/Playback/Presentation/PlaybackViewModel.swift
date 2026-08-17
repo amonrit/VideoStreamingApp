@@ -12,9 +12,8 @@ import os
 private let logger = Logger(subsystem: "amonrit.steam", category: "playback")
 
 class PlaybackViewModel: ObservableObject {
-    // MARK: - @Published Properties (Bridge to StateActor)
-    /// ✅ Phase 7: These are now synchronized from PlaybackStateActor
-    /// Kept for backward compatibility with existing SwiftUI views
+    // MARK: - @Published Properties
+    /// Synchronized from PlaybackStateActor for backward compatibility with SwiftUI views
     @Published var isLoading: Bool = false
     @Published var isPlaying: Bool = false
     @Published var errorMessage: String?
@@ -29,30 +28,18 @@ class PlaybackViewModel: ObservableObject {
     private let worker: VideoPlayerWorker
     private var playbackState: PlaybackState = .idle
     private var cancellables = Set<AnyCancellable>()
-
-    // ✅ Phase 7: State actor for structured concurrency
     private let stateActor: DefaultPlaybackStateActor
     private var stateObserverTask: Task<Void, Never>?
-
-    // ✅ Phase 4: Centralized retry orchestration
     private var retryOrchestrator: RetryOrchestrator?
     private let playbackConfiguration: PlaybackConfiguration = .production
-
-    // ✅ Phase 5: Centralized viewer count polling via service
     private var viewerCountPollingService: ViewerCountPollingService?
-
-    // ✅ Phase 6: Dependency injection for API client
     private let apiClientProvider: APIClientProvider
     private var mediaMTXClient: MediaMTXAPIClient?
     private var mediaMTXPathName: String?
     private var viewerCountFailureCount: Int = 0
     private let maxViewerCountFailures: Int = 3
-
-    // Network timeout constant for stream loading attempts
-    private let loadTimeout: TimeInterval = 3.0   // 3 seconds per attempt
-    private let stallTimeout: TimeInterval = 2.0  // 2 seconds for stall recovery
-
-    // ✅ Phase 4: Track stream loading state
+    private let loadTimeout: TimeInterval = 3.0
+    private let stallTimeout: TimeInterval = 2.0
     private var streamLoadingContinuation: CheckedContinuation<Void, Error>?
 
     /// Initializes PlaybackViewModel with optional custom API client provider and state actor
@@ -69,27 +56,18 @@ class PlaybackViewModel: ObservableObject {
         self.apiClientProvider = apiClientProvider
         self.stateActor = stateActor
         self.worker = VideoPlayerWorker()
-
-        // ✅ Phase 9: Initialize view state properties
         self._volume = Published(initialValue: Double(player.volume))
         self._playbackRate = Published(initialValue: player.rate)
         self._showVolumeSlider = Published(initialValue: false)
         self._showControls = Published(initialValue: true)
-
-        // MARK: - Setup
         setupPlayerSettings()
-
-        // ✅ Phase 7: Observe state updates from actor and sync to @Published properties
         startStateObserver()
     }
 
-    // MARK: - Phase 7: State Observation
-    /// Starts observing state changes from the actor and syncing to @Published properties
-    /// This bridges structured concurrency (actor) with Combine (@Published) for backward compatibility
+    /// Observes state changes from actor and syncs to @Published properties for backward compatibility
     private func startStateObserver() {
         stateObserverTask = Task {
             for await state in stateActor.stateUpdates {
-                // Sync all state changes to @Published properties on main thread
                 await MainActor.run { [weak self] in
                     self?.syncPublishedProperties(from: state)
                 }
@@ -111,31 +89,21 @@ class PlaybackViewModel: ObservableObject {
     }
 
     private func setupPlayerSettings() {
-        // ✅ อนุญาตการแคสต์ (AirPlay, HDMI)
         player.allowsExternalPlayback = true
-
-        // ✅ สำหรับ HLS: เปิด automaticallyWaitsToMinimizeStalling เพื่อให้ buffer ค่อย ๆ
         player.automaticallyWaitsToMinimizeStalling = true
-
-        // ✅ ตั้งค่าเสียงเริ่มต้น
         player.volume = 1.0
-
-        // ✅ ตั้ง rate สำหรับการเล่น
         player.rate = 1.0
-
         logger.info("✅ AVPlayer configured for HLS streaming with auto-retry strategy")
     }
 
-    // MARK: - Stream Loading (Phase 4 Refactored)
+    // MARK: - Stream Loading
 
     func loadStream(_ stream: VideoStream) {
-        // Stop any previous stream loading/polling
         stopViewerCountPolling()
         player.pause()
         cancellables.removeAll()
         viewerCount = nil
         viewerCountFailureCount = 0
-
         logger.info("🛑 Stopped playback of previous stream")
 
         guard var url = stream.url else {
@@ -145,11 +113,8 @@ class PlaybackViewModel: ObservableObject {
             return
         }
 
-        // ✅ FIX: Clean URL for MediaMTX HLS compatibility
         let urlString = url.absoluteString
         let cleanURLString: String
-
-        // Remove session parameter and anything after ?
         if let questionMarkIndex = urlString.firstIndex(of: "?") {
             cleanURLString = String(urlString[..<questionMarkIndex])
         } else {
@@ -169,21 +134,17 @@ class PlaybackViewModel: ObservableObject {
         updateConnectionStatus(.connecting)
         updatePlaybackViewModel()
 
-        // ✅ Phase 4: Use RetryOrchestrator for automatic retry logic
         Task {
             await loadStreamWithRetry(stream, url: url)
         }
     }
 
-    /// Phase 4: Load stream with automatic retry orchestration
-    /// Uses RetryOrchestrator to manage retry attempts, delays, and status messages
+    /// Load stream with automatic retry orchestration
     private func loadStreamWithRetry(_ stream: VideoStream, url: URL) async {
-        // Initialize orchestrator with status callback for UI updates
         retryOrchestrator = RetryOrchestrator(
             configuration: playbackConfiguration,
             onStatusChanged: { message in
                 logger.info("🔄 Retry: \(message)")
-                // Update UI with retry attempt count from message if needed
             }
         )
 
@@ -202,7 +163,6 @@ class PlaybackViewModel: ObservableObject {
 
             logger.info("✅ Stream loaded successfully with RetryOrchestrator")
         } catch {
-            // ✅ Phase 4: Final failure after all retry attempts exhausted
             let errorMessage = "Stream connection failed.\nCheck:\n• Network connection\n• MediaMTX server"
             logger.error("❌ \(errorMessage, privacy: .public)")
             presentError(errorMessage)
@@ -214,15 +174,12 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    /// ✅ Phase 4: Async stream setup with timeout
-    /// Bridges event-driven AVPlayer with async/await for RetryOrchestrator compatibility
+    /// Async stream setup with timeout
     private func setupStreamWithTimeout(_ stream: VideoStream, url: URL) async throws {
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
 
-        // Setup viewer count polling if this is a MediaMTX stream
         if let (baseURL, pathName) = MediaMTXConfig.mediaMTXTarget(for: url) {
-            // ✅ Phase 6: Use dependency-injected API client provider
             mediaMTXClient = apiClientProvider.createAPIClient(baseURL: baseURL)
             mediaMTXPathName = pathName
             logger.info("👁️  MediaMTX viewer count available for path: \(pathName, privacy: .public)")
@@ -231,11 +188,8 @@ class PlaybackViewModel: ObservableObject {
             mediaMTXPathName = nil
         }
 
-        // Setup KVO observers for status changes
         setupObservers(for: item)
         logger.info("✅ Player item created and observers setup")
-
-        // ✅ Phase 4: Wait for stream to be ready with timeout
         return try await withCheckedThrowingContinuation { [weak self] continuation in
             guard let self = self else {
                 continuation.resume(throwing: PlaybackError.viewModelDeallocated)
@@ -243,8 +197,6 @@ class PlaybackViewModel: ObservableObject {
             }
 
             self.streamLoadingContinuation = continuation
-
-            // Set timeout for stream loading
             let timeoutTask = Task {
                 try await Task.sleep(nanoseconds: UInt64(self.loadTimeout * 1_000_000_000))
 
@@ -253,8 +205,6 @@ class PlaybackViewModel: ObservableObject {
                     self.streamLoadingContinuation = nil
                 }
             }
-
-            // Observe player status once to check for immediate readiness
             if item.status == .readyToPlay {
                 timeoutTask.cancel()
                 continuation.resume()
@@ -263,7 +213,6 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    // ✅ Phase 7: Update StateActor and let observation sync @Published properties
     private func updateConnectionStatus(_ status: ConnectionStatus) {
         Task {
             await stateActor.updateConnectionStatus(status)
@@ -292,7 +241,6 @@ class PlaybackViewModel: ObservableObject {
 
     func retry() {
         guard let stream = playbackState.currentStream else { return }
-        // ✅ Phase 4: RetryOrchestrator will be reset and re-initialized in loadStream
         loadStream(stream)
     }
 
@@ -322,7 +270,6 @@ class PlaybackViewModel: ObservableObject {
     private func handleStatusChange(_ status: AVPlayerItem.Status) {
         switch status {
         case .readyToPlay:
-            // ✅ Phase 4: Resume the loading continuation on success
             if let continuation = streamLoadingContinuation {
                 continuation.resume()
                 streamLoadingContinuation = nil
@@ -330,8 +277,6 @@ class PlaybackViewModel: ObservableObject {
 
             playbackState.isLoading = false
             playbackState.errorMessage = nil
-
-            // ✅ Phase 7: Update StateActor
             Task {
                 await stateActor.updateLoading(false)
                 await stateActor.updateError(nil)
@@ -344,16 +289,11 @@ class PlaybackViewModel: ObservableObject {
         case .failed:
             playbackState.isLoading = false
             let errorDesc = player.currentItem?.error?.localizedDescription ?? "Unknown error"
-
-            // ✅ Phase 4: Resume continuation with error if loading
             if let continuation = streamLoadingContinuation {
                 continuation.resume(throwing: PlaybackError.playerFailed(errorDesc))
                 streamLoadingContinuation = nil
             } else {
-                // If not loading, just update error state
                 playbackState.errorMessage = "Failed to load: \(errorDesc)"
-
-                // ✅ Phase 7: Update StateActor
                 Task {
                     await stateActor.updateConnectionStatus(.failed(errorDesc))
                     await stateActor.updateError("Failed to load: \(errorDesc)")
@@ -365,8 +305,6 @@ class PlaybackViewModel: ObservableObject {
 
         case .unknown:
             playbackState.isLoading = true
-
-            // ✅ Phase 7: Update StateActor
             Task {
                 await stateActor.updateLoading(true)
                 await stateActor.updateConnectionStatus(.buffering)
@@ -382,8 +320,6 @@ class PlaybackViewModel: ObservableObject {
 
     private func handleBuffering(_ isBuffering: Bool) {
         playbackState.isLoading = isBuffering
-
-        // ✅ Phase 7: Update StateActor
         Task {
             await stateActor.updateLoading(isBuffering)
 
@@ -420,7 +356,6 @@ class PlaybackViewModel: ObservableObject {
         logger.error("❌ Failed to play to end: \(errorMessage, privacy: .public)")
     }
 
-    // ✅ Phase 7: Update StateActor for errors
     private func presentError(_ message: String) {
         Task {
             await stateActor.updateLoading(false)
@@ -437,16 +372,13 @@ class PlaybackViewModel: ObservableObject {
             self.errorMessage = self.playbackState.errorMessage
             self.bufferingCount = self.playbackState.bufferingCount
             self.currentStream = self.playbackState.currentStream
-            // ✅ Phase 4: retryAttempt is updated from RetryOrchestrator callbacks
         }
     }
 
-    // MARK: - Viewer Count Polling (Phase 5: Service-Based)
+    // MARK: - Viewer Count Polling
 
     private func startViewerCountPolling() {
         guard let client = mediaMTXClient, let pathName = mediaMTXPathName else { return }
-
-        // ✅ Phase 5: Use ViewerCountPollingService instead of Timer
         viewerCountPollingService = ViewerCountPollingService(
             configuration: playbackConfiguration,
             fetchCount: { [weak self] in
@@ -456,11 +388,8 @@ class PlaybackViewModel: ObservableObject {
             }
         )
 
-        // Start polling and handle results
         Task {
             await viewerCountPollingService?.startPolling()
-
-            // Monitor polling results via task loop
             while let service = viewerCountPollingService {
                 let count = service.getLastCount()
                 let error = service.getLastError()
@@ -481,15 +410,12 @@ class PlaybackViewModel: ObservableObject {
                         }
                     }
                 }
-
-                // Check every 0.5 seconds for updates
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }
         }
     }
 
     private func stopViewerCountPolling() {
-        // ✅ Phase 5: Stop service instead of invalidating Timer
         Task {
             await viewerCountPollingService?.stopPolling()
             viewerCountPollingService = nil
@@ -506,11 +432,9 @@ class PlaybackViewModel: ObservableObject {
         worker.getBitrate(from: player)
     }
 
-    // MARK: - Phase 9: View Layer Refactoring
-    // ✅ Moved business logic from VideoPlayerView to ViewModel
+    // MARK: - Time & Status Formatting
 
     /// Formats seconds to HH:MM:SS or MM:SS format
-    /// - Phase 9: Moved from VideoPlayerView.timeString()
     func formatTime(_ seconds: Double) -> String {
         guard !seconds.isNaN, seconds.isFinite else { return "00:00" }
         let totalSeconds = Int(seconds)
@@ -526,7 +450,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Color for connection status indicator
-    /// - Phase 9: Moved from VideoPlayerView.statusColor
     var statusIndicatorColor: Color {
         switch connectionStatus {
         case .disconnected:
@@ -543,7 +466,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Text describing connection status
-    /// - Phase 9: Moved from VideoPlayerView.statusText
     var statusIndicatorText: String {
         switch connectionStatus {
         case .disconnected:
@@ -560,8 +482,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Seeks backward in the stream
-    /// - Phase 9: Moved from VideoPlayerView (was direct player.seek())
-    /// - Parameter seconds: Number of seconds to seek backward
     func seekBackward(_ seconds: Double = 10) {
         let currentSeconds = player.currentTime().seconds
         let newSeconds = max(0, currentSeconds - seconds)
@@ -569,8 +489,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Seeks forward in the stream
-    /// - Phase 9: Moved from VideoPlayerView (was direct player.seek())
-    /// - Parameter seconds: Number of seconds to seek forward
     func seekForward(_ seconds: Double = 10) {
         let currentSeconds = player.currentTime().seconds
         let newSeconds = currentSeconds + seconds
@@ -578,7 +496,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Current playback duration
-    /// - Phase 9: Moved from VideoPlayerView (was accessing player.currentItem?.duration)
     var currentDuration: Double {
         player.currentItem?.duration.seconds ?? 0
     }
@@ -587,7 +504,6 @@ class PlaybackViewModel: ObservableObject {
     @Published var showVolumeSlider: Bool = false
 
     /// Current playback volume (0.0 to 1.0)
-    /// - Phase 9: Moved state from VideoPlayerView
     @Published var volume: Double {
         didSet {
             player.volume = Float(volume)
@@ -595,7 +511,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Current playback rate (0.5x to 2.0x)
-    /// - Phase 9: Moved state from VideoPlayerView
     @Published var playbackRate: Float {
         didSet {
             player.rate = playbackRate
@@ -606,19 +521,14 @@ class PlaybackViewModel: ObservableObject {
     @Published var showControls: Bool = true
 
     /// Timer task for auto-hiding controls
-    /// - Phase 9: Moved timer management from VideoPlayerView to use structured concurrency
     private var hideControlsTask: Task<Void, Never>?
 
     /// Resets the hide controls timer
-    /// - Phase 9: Moved from VideoPlayerView.resetHideControlsTimer()
     func resetControlsVisibilityTimer() {
         hideControlsTask?.cancel()
 
         hideControlsTask = Task {
-            // Wait 5 seconds
             try? await Task.sleep(nanoseconds: 5_000_000_000)
-
-            // Auto-hide controls
             await MainActor.run {
                 withAnimation {
                     self.showControls = false
@@ -628,14 +538,9 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Phase 9: Stream Management (from VideoStreamListView)
+    // MARK: - Stream Management
 
     /// Adds a custom stream to the playlist
-    /// - Phase 9: Moved from VideoStreamListView.addCustomStream()
-    /// - Parameters:
-    ///   - title: Stream title
-    ///   - url: Stream URL (HLS or RTMP)
-    /// - Returns: Created VideoStream instance
     func createCustomStream(title: String, url: String) -> VideoStream {
         VideoStream(
             title: title.isEmpty ? "Custom Stream" : title,
@@ -645,9 +550,6 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Validates a stream URL
-    /// - Phase 9: Moved from VideoStreamListView.AddStreamSheet.isValidURL
-    /// - Parameter url: URL string to validate
-    /// - Returns: True if URL is valid for streaming
     func isValidStreamURL(_ url: String) -> Bool {
         guard !url.isEmpty else { return false }
         let isValidProtocol = url.starts(with: "http://") ||
@@ -665,35 +567,25 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Checks if URL uses HTTPS protocol
-    /// - Phase 9: Moved from VideoStreamListView.AddStreamSheet.isHTTPSURL
-    /// - Parameter url: URL string to check
-    /// - Returns: True if URL uses HTTPS
     func isHTTPSURL(_ url: String) -> Bool {
         url.starts(with: "https://")
     }
 
     deinit {
-        // ✅ Phase 7: Cancel state observer task
         stateObserverTask?.cancel()
-
-        // ✅ Phase 9: Cancel hide controls timer task
         hideControlsTask?.cancel()
-
         cancellables.removeAll()
-
-        // ✅ Phase 5: Stop polling service on dealloc
         Task {
             await viewerCountPollingService?.stopPolling()
         }
-
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
     }
 }
 
-// MARK: - PlaybackError (Phase 4)
+// MARK: - PlaybackError
 
-/// ✅ Phase 4: Custom errors for stream loading with RetryOrchestrator
+/// Custom errors for stream loading
 enum PlaybackError: LocalizedError {
     case streamLoadTimeout
     case playerFailed(String)

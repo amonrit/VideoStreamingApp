@@ -193,7 +193,6 @@ struct VideoStreamListView: View {
                 FullScreenPlayerView(viewModel: playbackViewModel, isPresented: $isFullScreen)
             }
             .sheet(isPresented: $showAddStream) {
-                // ✅ Phase 9: Pass ViewModel to sheet
                 AddStreamSheet(
                     isPresented: $showAddStream,
                     customTitle: $customTitle,
@@ -213,7 +212,6 @@ struct VideoStreamListView: View {
     }
 
     private func addCustomStream(title: String, url: String) {
-        // ✅ Phase 9: Use ViewModel to create stream
         let newStream = playbackViewModel.createCustomStream(title: title, url: url)
 
         // Log the custom URL with timestamp
@@ -290,12 +288,10 @@ struct AddStreamSheet: View {
 
     @State private var showHTTPSWarning = false
 
-    // ✅ Phase 9: Use ViewModel validation
     var isValidURL: Bool {
         playbackViewModel.isValidStreamURL(customURL)
     }
 
-    // ✅ Phase 9: Use ViewModel HTTPS check
     var isHTTPSURL: Bool {
         playbackViewModel.isHTTPSURL(customURL)
     }

@@ -1,8 +1,16 @@
-Last Modified: 08/17/2026 (1786922418) by amonrit
+Last Modified: 08/17/2026 (1786925413) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
 This is your **master index** for all Steam documentation. Each section tells you which file to read for your specific task.
+
+---
+
+## 📊 **Project Status**
+
+**Current Phase:** Phase 9 (Clean View Layer) — IN PROGRESS  
+**Latest Summary:** [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md)  
+**Architecture:** Modern MVVM + Structured Concurrency (StateActor, RetryOrchestrator, APIClientProvider)
 
 ---
 

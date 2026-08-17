@@ -18,14 +18,11 @@ class StreamAdminViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastUpdated: Date?
 
-    // ✅ Phase 7: State actor for structured concurrency
     private let stateActor: DefaultStreamAdminStateActor
     private var stateObserverTask: Task<Void, Never>?
 
-    // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
     private var streamAdminPollingService: StreamAdminPollingService?
 
-    // ✅ Phase 6: Dependency injection for API client provider
     private let apiClientProvider: APIClientProvider
     private var failureCount: Int = 0
     private let maxFailures: Int = 3
@@ -42,7 +39,6 @@ class StreamAdminViewModel: ObservableObject {
         self.stateActor = stateActor
         logger.info("📊 StreamAdminViewModel initialized")
 
-        // ✅ Phase 7: Observe state updates from actor and sync to @Published properties
         startStateObserver()
     }
 
@@ -75,23 +71,19 @@ class StreamAdminViewModel: ObservableObject {
 
         let targetBaseURL = baseURL ?? URL(string: "http://localhost:9997") ?? URL(fileURLWithPath: "")
 
-        // ✅ Phase 7: Update StateActor with base URL
         Task {
             await stateActor.updateBaseURL(targetBaseURL)
             await stateActor.updateLoading(true)
         }
 
-        // ✅ Phase 6: Use dependency-injected API client provider
         let client = apiClientProvider.createAPIClient(baseURL: targetBaseURL)
 
-        // ✅ Phase 5: Use StreamAdminPollingService instead of Timer
         streamAdminPollingService = StreamAdminPollingService(
             fetchStreams: { [weak self] in
                 guard let self = self else { throw PollingError.cancelled }
                 // Fetch actual streams
                 let pathList = try await client.fetchPathList()
 
-                // ✅ Phase 7: Update StateActor instead of @Published directly
                 await self.stateActor.updatePaths(pathList.items)
                 await self.stateActor.updateLastUpdateTime(Date())
                 await self.stateActor.updateError(nil)
@@ -110,7 +102,6 @@ class StreamAdminViewModel: ObservableObject {
 
     /// Stop polling for updates
     func stopPolling() {
-        // ✅ Phase 5: Stop service instead of invalidating Timer
         Task {
             await streamAdminPollingService?.stopPolling()
             streamAdminPollingService = nil
@@ -119,10 +110,8 @@ class StreamAdminViewModel: ObservableObject {
     }
 
     deinit {
-        // ✅ Phase 7: Cancel state observer task
         stateObserverTask?.cancel()
 
-        // ✅ Phase 5: Stop polling service on dealloc
         Task {
             await streamAdminPollingService?.stopPolling()
         }

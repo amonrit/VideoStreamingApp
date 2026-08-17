@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/17/2026 (1786925413) by amonrit
 
 # Steam — iOS Video Streaming App
 
@@ -118,7 +118,9 @@ ffmpeg -re -i video.mp4 -c copy -f flv \
 
 ## 🏗️ Architecture Overview
 
-### iOS App (MVVM)
+### iOS App (Modern MVVM + Structured Concurrency)
+
+**Phase 11 Complete:** Modern patterns implemented — StateActor, RetryOrchestrator, APIClientProvider
 
 ```
 HomeView (Root UI - Navigation Hub)
@@ -128,26 +130,34 @@ HomeView (Root UI - Navigation Hub)
   └─ Help (Mock)
        
 VideoStreamListView (Playback Screen)
-  ├─ VideoPlayerView (Player + Controls)
+  ├─ VideoPlayerView (Player UI - Pure Presentation)
   ├─ Stream List (Add/Select streams)
   └─ Debug Panel (Metrics)
-       ↓ observe
+       ↓ observe via StateActor
 PlaybackViewModel
-  ├─ Loads streams
   ├─ Manages AVPlayer playback
-  ├─ Handles errors & retries
-  └─ Coordinates with Workers
+  ├─ Thread-safe state (StateActor)
+  ├─ Resilient retries (RetryOrchestrator)
+  └─ Coordinates with Domain Layer & Workers
        ↓ uses
-VideoPlayerWorker
-  ├─ KVO observers (status, buffering, errors)
-  └─ Format extraction (resolution, bitrate)
+Domain Layer (Framework-Independent)
+  ├─ Use Cases (LoadStream, RetryPlayback, GetViewerCount)
+  ├─ Repositories (protocol-based)
+  └─ Entities (VideoStream, PlaybackState)
+       ↓ implements
+Data Layer (Data Access)
+  ├─ Repository Implementations
+  ├─ Remote Data Sources (MediaMTX API)
+  └─ Models
 ```
 
-**Why MVVM?**
-- Single source of truth (ViewModel owns all state)
-- Testable business logic (no UI dependencies)
-- SwiftUI-native binding (`@Published` → `@ObservedObject`)
-- No scaffolding (cleaned up from previous VIPER architecture)
+**Key Patterns:**
+- **StateActor** — Thread-safe state management (replaces @Published)
+- **RetryOrchestrator** — Resilient error handling with exponential backoff
+- **APIClientProvider** — Dependency injection for testability
+- **Structured Concurrency** — Async/await + Task management
+
+See **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** for deep dive.
 
 ### Streaming Server
 

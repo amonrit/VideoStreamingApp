@@ -14,7 +14,6 @@ private let logger = Logger(subsystem: "amonrit.steam", category: "worker")
 
 class VideoPlayerWorker {
     private var cancellables = Set<AnyCancellable>()
-    private let stallTimeout: TimeInterval = 10.0
 
     func setupKVOObservers(
         for item: AVPlayerItem,
@@ -29,8 +28,8 @@ class VideoPlayerWorker {
         // Monitor AVPlayerItem Status
         item.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] status in
-                self?.logger.info("📊 Status changed: \(String(describing: status))")
+            .sink { status in
+                logger.info("📊 Status changed: \(String(describing: status))")
                 onStatusChange(status)
             }
             .store(in: &cancellables)
@@ -38,10 +37,10 @@ class VideoPlayerWorker {
         // Monitor Buffering (isPlaybackLikelyToKeepUp)
         item.publisher(for: \.isPlaybackLikelyToKeepUp)
             .receive(on: DispatchQueue.main)
-            .sink { [weak player, weak self] keepUp in
+            .sink { [weak player] keepUp in
                 guard let player = player else { return }
                 if player.rate > 0 {
-                    self?.logger.info("📦 Playback \(keepUp ? "keeping up" : "lagging") - buffering: \(!keepUp)")
+                    logger.info("📦 Playback \(keepUp ? "keeping up" : "lagging") - buffering: \(!keepUp)")
                     onBufferingChange(!keepUp)
                 }
             }
@@ -53,8 +52,8 @@ class VideoPlayerWorker {
             object: item
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.logger.warning("⚠️  Playback stalled - attempting recovery")
+        .sink { _ in
+            logger.warning("⚠️  Playback stalled - attempting recovery")
             onStall()
         }
         .store(in: &cancellables)
@@ -65,9 +64,9 @@ class VideoPlayerWorker {
             object: item
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] notification in
+        .sink { notification in
             let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
-            self?.logger.error("❌ Failed to play to end: \(error?.localizedDescription ?? "unknown", privacy: .public)")
+            logger.error("❌ Failed to play to end: \(error?.localizedDescription ?? "unknown", privacy: .public)")
             onFailedToPlayToEnd(error)
         }
         .store(in: &cancellables)
@@ -77,15 +76,10 @@ class VideoPlayerWorker {
             .receive(on: DispatchQueue.main)
             .filter { $0.width > 0 && $0.height > 0 }
             .first()
-            .sink { [weak self] size in
-                self?.logger.info("🎬 Video loaded: \(Int(size.width))x\(Int(size.height))")
+            .sink { size in
+                logger.info("🎬 Video loaded: \(Int(size.width))x\(Int(size.height))")
             }
             .store(in: &cancellables)
-    }
-
-    // MARK: - Logger Helper
-    private var logger: Logger {
-        Logger(subsystem: "amonrit.steam", category: "worker")
     }
 
     // MARK: - Debug Info Helpers
