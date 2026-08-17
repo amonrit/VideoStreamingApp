@@ -27,19 +27,6 @@ class DIContainer: ObservableObject {
         return StreamAdminRepositoryImpl(remoteDataSource: remoteDataSource)
     }()
 
-    // MARK: - Use Cases (Lazily Initialized)
-    private lazy var loadStreamUseCase: LoadStreamUseCase = {
-        LoadStreamUseCase(urlValidator: urlValidator)
-    }()
-
-    private lazy var retryPlaybackUseCase: RetryPlaybackUseCase = {
-        RetryPlaybackUseCase(maxRetries: 3)
-    }()
-
-    private lazy var getViewerCountUseCase: GetViewerCountUseCase = {
-        GetViewerCountUseCase(streamRepository: streamRepository)
-    }()
-
     private init() {
         // Initialize container
     }
@@ -49,21 +36,6 @@ class DIContainer: ObservableObject {
     /// Create PlaybackViewModel with all dependencies
     func makePlaybackViewModel(player: AVPlayer = AVPlayer()) -> PlaybackViewModel {
         PlaybackViewModel(player: player)
-    }
-
-    /// Get LoadStreamUseCase
-    func getLoadStreamUseCase() -> LoadStreamUseCase {
-        loadStreamUseCase
-    }
-
-    /// Get RetryPlaybackUseCase
-    func getRetryPlaybackUseCase() -> RetryPlaybackUseCase {
-        retryPlaybackUseCase
-    }
-
-    /// Get GetViewerCountUseCase
-    func getGetViewerCountUseCase() -> GetViewerCountUseCase {
-        getViewerCountUseCase
     }
 
     /// Get StreamRepository
