@@ -13,7 +13,7 @@ import AVFoundation
 
 /// State snapshot for video playback
 /// Conforms to Sendable for thread-safe passing across actors
-public struct PlaybackStateSnapshot: Sendable {
+public struct PlaybackStateSnapshot: @unchecked Sendable {
     public var isLoading: Bool
     public var isPlaying: Bool
     public var errorMessage: String?
@@ -102,11 +102,7 @@ public final actor DefaultPlaybackStateActor {
     // MARK: - Properties
 
     private var _state: PlaybackStateSnapshot
-
-    private nonisolated let stateSubject: (
-        stream: AsyncStream<PlaybackStateSnapshot>,
-        continuation: AsyncStream<PlaybackStateSnapshot>.Continuation
-    )
+    private nonisolated(unsafe) let _streamTuple: (stream: AsyncStream<PlaybackStateSnapshot>, continuation: AsyncStream<PlaybackStateSnapshot>.Continuation)
 
     /// Threshold for viewer count changes before broadcasting
     /// Only broadcasts if viewer count changes by this amount or more
@@ -115,47 +111,49 @@ public final actor DefaultPlaybackStateActor {
 
     public var currentState: PlaybackStateSnapshot { _state }
 
-    nonisolated public var stateUpdates: AsyncStream<PlaybackStateSnapshot> { stateSubject.stream }
+    public nonisolated var stateUpdates: AsyncStream<PlaybackStateSnapshot> {
+        _streamTuple.stream
+    }
 
     // MARK: - Initialization
 
-    public init(initialState: PlaybackStateSnapshot = .init()) {
+    public init(initialState: PlaybackStateSnapshot = PlaybackStateSnapshot()) {
         self._state = initialState
-        self.stateSubject = AsyncStream.makeStream()
+        self._streamTuple = AsyncStream<PlaybackStateSnapshot>.makeStream()
     }
 
     // MARK: - State Mutations
 
     /// Updates loading state and broadcasts change
-    public func updateLoading(_ value: Bool) {
+    public func updateLoading(_ value: Bool) async {
         guard _state.isLoading != value else { return }
         _state.isLoading = value
         broadcast()
     }
 
     /// Updates playing state and broadcasts change
-    public func updatePlaying(_ value: Bool) {
+    public func updatePlaying(_ value: Bool) async {
         guard _state.isPlaying != value else { return }
         _state.isPlaying = value
         broadcast()
     }
 
     /// Updates error message and broadcasts change
-    public func updateError(_ message: String?) {
+    public func updateError(_ message: String?) async {
         guard _state.errorMessage != message else { return }
         _state.errorMessage = message
         broadcast()
     }
 
     /// Updates connection status and broadcasts change
-    public func updateConnectionStatus(_ status: ConnectionStatus) {
+    public func updateConnectionStatus(_ status: ConnectionStatus) async {
         guard _state.connectionStatus != status else { return }
         _state.connectionStatus = status
         broadcast()
     }
 
     /// Updates retry attempt count and broadcasts change
-    public func updateRetryAttempt(_ count: Int) {
+    public func updateRetryAttempt(_ count: Int) async {
         guard _state.retryAttempt != count else { return }
         _state.retryAttempt = count
         broadcast()
@@ -164,7 +162,7 @@ public final actor DefaultPlaybackStateActor {
     /// Updates viewer count with threshold-based filtering
     /// Only broadcasts if viewer count changes by viewerCountChangeThreshold or more
     /// This reduces AsyncStream yield frequency during polling updates
-    public func updateViewerCount(_ count: Int?) {
+    public func updateViewerCount(_ count: Int?) async {
         // Handle nil case
         if count == nil {
             guard _state.viewerCount != nil else { return }
@@ -190,21 +188,21 @@ public final actor DefaultPlaybackStateActor {
     }
 
     /// Updates current stream and broadcasts change
-    public func updateCurrentStream(_ stream: VideoStream?) {
+    public func updateCurrentStream(_ stream: VideoStream?) async {
         guard _state.currentStream?.id != stream?.id else { return }
         _state.currentStream = stream
         broadcast()
     }
 
     /// Updates buffering count and broadcasts change
-    public func updateBufferingCount(_ count: Int) {
+    public func updateBufferingCount(_ count: Int) async {
         guard _state.bufferingCount != count else { return }
         _state.bufferingCount = count
         broadcast()
     }
 
     /// Updates current playback time and broadcasts change
-    public func updateCurrentTime(_ time: Double) {
+    public func updateCurrentTime(_ time: Double) async {
         // Don't guard for time updates - they change frequently
         let roundedTime = (time * 100).rounded() / 100 // Round to 2 decimal places
         guard abs(_state.currentTime - roundedTime) >= 0.01 else { return }
@@ -213,14 +211,14 @@ public final actor DefaultPlaybackStateActor {
     }
 
     /// Updates total duration and broadcasts change
-    public func updateDuration(_ duration: Double) {
+    public func updateDuration(_ duration: Double) async {
         guard _state.duration != duration else { return }
         _state.duration = duration
         broadcast()
     }
 
     /// Resets state to initial values and broadcasts change
-    public func reset() {
+    public func reset() async {
         _state = PlaybackStateSnapshot()
         broadcast()
     }
@@ -229,12 +227,12 @@ public final actor DefaultPlaybackStateActor {
 
     /// Broadcasts current state to all subscribers
     private func broadcast() {
-        stateSubject.continuation.yield(_state)
+        _streamTuple.continuation.yield(_state)
     }
 
     /// Terminates the state stream
-    nonisolated public func finish() {
-        stateSubject.continuation.finish()
+    public func finish() {
+        _streamTuple.continuation.finish()
     }
 
     // MARK: - Cleanup
@@ -248,18 +246,16 @@ public final actor DefaultPlaybackStateActor {
 
 /// Mock implementation for testing
 public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable {
-    private let stateSubject: (
-        stream: AsyncStream<PlaybackStateSnapshot>,
-        continuation: AsyncStream<PlaybackStateSnapshot>.Continuation
-    )
-
-    public nonisolated var stateUpdates: AsyncStream<PlaybackStateSnapshot> {
-        stateSubject.stream
-    }
-
     private let stateQueue = DispatchQueue(label: "mock.playback.state")
     private var _state: PlaybackStateSnapshot
+    private var stateContinuation: AsyncStream<PlaybackStateSnapshot>.Continuation?
+    private var stateStream: AsyncStream<PlaybackStateSnapshot>?
     private let viewerCountChangeThreshold = 5
+
+    public nonisolated var stateUpdates: AsyncStream<PlaybackStateSnapshot> {
+        let result = stateStream ?? AsyncStream { _ in }
+        return result
+    }
 
     public nonisolated var currentState: PlaybackStateSnapshot {
         stateQueue.sync { _state }
@@ -267,14 +263,16 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
 
     public init(initialState: PlaybackStateSnapshot = .init()) {
         self._state = initialState
-        self.stateSubject = AsyncStream.makeStream()
+        let (stream, continuation) = AsyncStream<PlaybackStateSnapshot>.makeStream()
+        self.stateStream = stream
+        self.stateContinuation = continuation
     }
 
     public func updateLoading(_ value: Bool) async {
         stateQueue.sync {
             guard _state.isLoading != value else { return }
             _state.isLoading = value
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -282,7 +280,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.isPlaying != value else { return }
             _state.isPlaying = value
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -290,7 +288,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.errorMessage != message else { return }
             _state.errorMessage = message
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -298,7 +296,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.connectionStatus != status else { return }
             _state.connectionStatus = status
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -306,7 +304,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.retryAttempt != count else { return }
             _state.retryAttempt = count
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -316,7 +314,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
             if count == nil {
                 guard _state.viewerCount != nil else { return }
                 _state.viewerCount = nil
-                stateSubject.continuation.yield(_state)
+                stateContinuation?.yield(_state)
                 return
             }
 
@@ -330,7 +328,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
 
             guard _state.viewerCount != count else { return }
             _state.viewerCount = count
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -338,7 +336,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.currentStream?.id != stream?.id else { return }
             _state.currentStream = stream
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -346,7 +344,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.bufferingCount != count else { return }
             _state.bufferingCount = count
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -355,7 +353,7 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
             let roundedTime = (time * 100).rounded() / 100
             guard abs(_state.currentTime - roundedTime) >= 0.01 else { return }
             _state.currentTime = roundedTime
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -363,18 +361,18 @@ public final class MockPlaybackStateActor: PlaybackStateActorProtocol, Sendable 
         stateQueue.sync {
             guard _state.duration != duration else { return }
             _state.duration = duration
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
     public func reset() async {
         stateQueue.sync {
             _state = PlaybackStateSnapshot()
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
     deinit {
-        stateSubject.continuation.finish()
+        stateContinuation?.finish()
     }
 }

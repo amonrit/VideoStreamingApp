@@ -12,7 +12,7 @@ import Foundation
 
 /// State snapshot for stream administration
 /// Conforms to Sendable for thread-safe passing across actors
-public struct StreamAdminStateSnapshot: Sendable {
+public struct StreamAdminStateSnapshot: @unchecked Sendable {
     public var isLoading: Bool
     public var errorMessage: String?
     public var paths: [MediaMTXPath]
@@ -94,41 +94,39 @@ public final actor DefaultStreamAdminStateActor {
     // MARK: - Properties
 
     private var _state: StreamAdminStateSnapshot
-
-    private nonisolated let stateSubject: (
-        stream: AsyncStream<StreamAdminStateSnapshot>,
-        continuation: AsyncStream<StreamAdminStateSnapshot>.Continuation
-    )
+    private nonisolated(unsafe) let _streamTuple: (stream: AsyncStream<StreamAdminStateSnapshot>, continuation: AsyncStream<StreamAdminStateSnapshot>.Continuation)
 
     public var currentState: StreamAdminStateSnapshot { _state }
 
-    nonisolated public var stateUpdates: AsyncStream<StreamAdminStateSnapshot> { stateSubject.stream }
+    public nonisolated var stateUpdates: AsyncStream<StreamAdminStateSnapshot> {
+        _streamTuple.stream
+    }
 
     // MARK: - Initialization
 
     public init(initialState: StreamAdminStateSnapshot = .init()) {
         self._state = initialState
-        self.stateSubject = AsyncStream.makeStream()
+        self._streamTuple = AsyncStream<StreamAdminStateSnapshot>.makeStream()
     }
 
     // MARK: - State Mutations
 
     /// Updates loading state and broadcasts change
-    public func updateLoading(_ value: Bool) {
+    public func updateLoading(_ value: Bool) async {
         guard _state.isLoading != value else { return }
         _state.isLoading = value
         broadcast()
     }
 
     /// Updates error message and broadcasts change
-    public func updateError(_ message: String?) {
+    public func updateError(_ message: String?) async {
         guard _state.errorMessage != message else { return }
         _state.errorMessage = message
         broadcast()
     }
 
     /// Updates paths list and broadcasts change
-    public func updatePaths(_ paths: [MediaMTXPath]) {
+    public func updatePaths(_ paths: [MediaMTXPath]) async {
         guard _state.paths.count != paths.count else { return }
         _state.paths = paths
 
@@ -140,28 +138,28 @@ public final actor DefaultStreamAdminStateActor {
     }
 
     /// Updates selected path and broadcasts change
-    public func updateSelectedPath(_ path: MediaMTXPath?) {
+    public func updateSelectedPath(_ path: MediaMTXPath?) async {
         guard _state.selectedPath?.name != path?.name else { return }
         _state.selectedPath = path
         broadcast()
     }
 
     /// Updates base URL and broadcasts change
-    public func updateBaseURL(_ url: URL?) {
+    public func updateBaseURL(_ url: URL?) async {
         guard _state.baseURL != url else { return }
         _state.baseURL = url
         broadcast()
     }
 
     /// Updates online status and broadcasts change
-    public func updateOnline(_ value: Bool) {
+    public func updateOnline(_ value: Bool) async {
         guard _state.isOnline != value else { return }
         _state.isOnline = value
         broadcast()
     }
 
     /// Updates total viewer count and broadcasts change
-    public func updateTotalViewers(_ count: Int) {
+    public func updateTotalViewers(_ count: Int) async {
         guard _state.totalViewers != count else { return }
         _state.totalViewers = count
         broadcast()
@@ -170,7 +168,7 @@ public final actor DefaultStreamAdminStateActor {
     /// Updates last update time with 1-second debouncing
     /// Only broadcasts if timestamp changed by more than 1 second
     /// This reduces broadcast frequency during frequent polling updates
-    public func updateLastUpdateTime(_ time: Date) {
+    public func updateLastUpdateTime(_ time: Date) async {
         let timeDelta = abs(_state.lastUpdateTime.timeIntervalSince(time))
 
         // Only broadcast if changed by > 1 second to reduce noise
@@ -181,7 +179,7 @@ public final actor DefaultStreamAdminStateActor {
     }
 
     /// Resets state to initial values and broadcasts change
-    public func reset() {
+    public func reset() async {
         _state = StreamAdminStateSnapshot()
         broadcast()
     }
@@ -190,12 +188,12 @@ public final actor DefaultStreamAdminStateActor {
 
     /// Broadcasts current state to all subscribers
     private func broadcast() {
-        stateSubject.continuation.yield(_state)
+        _streamTuple.continuation.yield(_state)
     }
 
     /// Terminates the state stream
-    nonisolated public func finish() {
-        stateSubject.continuation.finish()
+    public func finish() {
+        _streamTuple.continuation.finish()
     }
 
     // MARK: - Cleanup
@@ -209,17 +207,15 @@ public final actor DefaultStreamAdminStateActor {
 
 /// Mock implementation for testing
 public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sendable {
-    private let stateSubject: (
-        stream: AsyncStream<StreamAdminStateSnapshot>,
-        continuation: AsyncStream<StreamAdminStateSnapshot>.Continuation
-    )
-
-    public nonisolated var stateUpdates: AsyncStream<StreamAdminStateSnapshot> {
-        stateSubject.stream
-    }
-
     private let stateQueue = DispatchQueue(label: "mock.streamadmin.state")
     private var _state: StreamAdminStateSnapshot
+    private var stateContinuation: AsyncStream<StreamAdminStateSnapshot>.Continuation?
+    private var stateStream: AsyncStream<StreamAdminStateSnapshot>?
+
+    public nonisolated var stateUpdates: AsyncStream<StreamAdminStateSnapshot> {
+        let result = stateStream ?? AsyncStream { _ in }
+        return result
+    }
 
     public nonisolated var currentState: StreamAdminStateSnapshot {
         stateQueue.sync { _state }
@@ -227,14 +223,16 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
 
     public init(initialState: StreamAdminStateSnapshot = .init()) {
         self._state = initialState
-        self.stateSubject = AsyncStream.makeStream()
+        let (stream, continuation) = AsyncStream<StreamAdminStateSnapshot>.makeStream()
+        self.stateStream = stream
+        self.stateContinuation = continuation
     }
 
     public func updateLoading(_ value: Bool) async {
         stateQueue.sync {
             guard _state.isLoading != value else { return }
             _state.isLoading = value
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -242,7 +240,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
         stateQueue.sync {
             guard _state.errorMessage != message else { return }
             _state.errorMessage = message
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -252,7 +250,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
             _state.paths = paths
             let newTotalViewers = paths.reduce(0) { $0 + $1.viewerCount }
             _state.totalViewers = newTotalViewers
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -260,7 +258,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
         stateQueue.sync {
             guard _state.selectedPath?.name != path?.name else { return }
             _state.selectedPath = path
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -268,7 +266,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
         stateQueue.sync {
             guard _state.baseURL != url else { return }
             _state.baseURL = url
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -276,7 +274,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
         stateQueue.sync {
             guard _state.isOnline != value else { return }
             _state.isOnline = value
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -284,7 +282,7 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
         stateQueue.sync {
             guard _state.totalViewers != count else { return }
             _state.totalViewers = count
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
@@ -293,18 +291,18 @@ public final class MockStreamAdminStateActor: StreamAdminStateActorProtocol, Sen
             let timeDelta = abs(_state.lastUpdateTime.timeIntervalSince(time))
             guard timeDelta >= 1.0 else { return }
             _state.lastUpdateTime = time
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
     public func reset() async {
         stateQueue.sync {
             _state = StreamAdminStateSnapshot()
-            stateSubject.continuation.yield(_state)
+            stateContinuation?.yield(_state)
         }
     }
 
     deinit {
-        stateSubject.continuation.finish()
+        stateContinuation?.finish()
     }
 }

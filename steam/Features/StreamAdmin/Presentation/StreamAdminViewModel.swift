@@ -95,7 +95,7 @@ class StreamAdminViewModel: ObservableObject {
         )
 
         Task {
-            await streamAdminPollingService?.startPolling()
+            streamAdminPollingService?.startPolling()
             logger.info("📊 Started polling with StreamAdminPollingService")
         }
     }
@@ -103,7 +103,7 @@ class StreamAdminViewModel: ObservableObject {
     /// Stop polling for updates
     func stopPolling() {
         Task {
-            await streamAdminPollingService?.stopPolling()
+            streamAdminPollingService?.stopPolling()
             streamAdminPollingService = nil
         }
         logger.info("⏹️  Stopped polling")
@@ -112,8 +112,11 @@ class StreamAdminViewModel: ObservableObject {
     deinit {
         stateObserverTask?.cancel()
 
-        Task {
-            await streamAdminPollingService?.stopPolling()
+        let service = streamAdminPollingService
+        if service != nil {
+            Task { [weak self] in
+                await self?.streamAdminPollingService?.stopPolling()
+            }
         }
 
         logger.info("🔴 StreamAdminViewModel deinitialized")

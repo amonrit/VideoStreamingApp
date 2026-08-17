@@ -51,7 +51,8 @@ public final class StreamAdminPollingService: Sendable {
 
         pollingTask = Task {
             do {
-                for try await _ in service.startPolling() {
+                let sequence = await service.startPolling()
+                for try await _ in sequence {
                     self.lastUpdateTime = Date()
                     self.lastError = nil
                 }
@@ -64,9 +65,14 @@ public final class StreamAdminPollingService: Sendable {
     /// Stops polling for stream updates
     public func stopPolling() {
         isCurrentlyPolling = false
-        pollingService?.stopPolling()
         pollingTask?.cancel()
         pollingTask = nil
+
+        guard let service = pollingService else { return }
+
+        Task {
+            await service.stopPolling()
+        }
     }
 
     /// Gets the last update time

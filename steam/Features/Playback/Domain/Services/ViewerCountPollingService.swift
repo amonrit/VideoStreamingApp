@@ -51,7 +51,8 @@ public final class ViewerCountPollingService: Sendable {
 
         pollingTask = Task {
             do {
-                for try await count in service.startPolling() {
+                let sequence = await service.startPolling()
+                for try await count in sequence {
                     self.lastCount = count
                     self.lastError = nil
                 }
@@ -64,9 +65,14 @@ public final class ViewerCountPollingService: Sendable {
     /// Stops polling for viewer count updates
     public func stopPolling() {
         isCurrentlyPolling = false
-        pollingService?.stopPolling()
         pollingTask?.cancel()
         pollingTask = nil
+
+        guard let service = pollingService else { return }
+
+        Task {
+            await service.stopPolling()
+        }
     }
 
     /// Gets the last successfully polled viewer count

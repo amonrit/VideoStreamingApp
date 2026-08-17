@@ -18,7 +18,7 @@ public enum RetryStrategy {
     ///   - attempt: The retry attempt number (0-indexed)
     ///   - maxDelay: Maximum allowed delay across all strategies
     /// - Returns: Time interval to wait before this retry attempt
-    public func delay(forAttempt attempt: Int, maxDelay: TimeInterval? = nil) -> TimeInterval {
+    public nonisolated func delay(forAttempt attempt: Int, maxDelay: TimeInterval? = nil) -> TimeInterval {
         let attemptCount = Double(attempt + 1)
 
         switch self {
@@ -41,7 +41,7 @@ public enum RetryStrategy {
     ///   - attempts: Number of retry attempts
     ///   - maxDelay: Maximum allowed delay per retry
     /// - Returns: Total accumulated delay time
-    public func totalDelay(forAttempts attempts: Int, maxDelay: TimeInterval? = nil) -> TimeInterval {
+    public nonisolated func totalDelay(forAttempts attempts: Int, maxDelay: TimeInterval? = nil) -> TimeInterval {
         (0..<attempts).reduce(0) { total, attempt in
             total + delay(forAttempt: attempt, maxDelay: maxDelay)
         }
@@ -57,7 +57,7 @@ extension RetryStrategy {
     ///   - maxDelay: Maximum allowed delay
     ///   - jitterPercentage: Percentage of random jitter to add (0.0-1.0, default: 0.1 = 10%)
     /// - Returns: Calculated delay with random jitter applied
-    public func delayWithJitter(
+    public nonisolated func delayWithJitter(
         forAttempt attempt: Int,
         maxDelay: TimeInterval? = nil,
         jitterPercentage: Double = 0.1

@@ -374,7 +374,7 @@ class PlaybackViewModel: ObservableObject {
         )
 
         Task {
-            await viewerCountPollingService?.startPolling()
+            viewerCountPollingService?.startPolling()
             while let service = viewerCountPollingService {
                 let count = service.getLastCount()
                 let error = service.getLastError()
@@ -400,7 +400,7 @@ class PlaybackViewModel: ObservableObject {
 
     private func stopViewerCountPolling() {
         Task {
-            await viewerCountPollingService?.stopPolling()
+            viewerCountPollingService?.stopPolling()
             viewerCountPollingService = nil
         }
     }
@@ -558,8 +558,11 @@ class PlaybackViewModel: ObservableObject {
         stateObserverTask?.cancel()
         hideControlsTask?.cancel()
         cancellables.removeAll()
-        Task {
-            await viewerCountPollingService?.stopPolling()
+        let service = viewerCountPollingService
+        if service != nil {
+            Task { [weak self] in
+                await self?.viewerCountPollingService?.stopPolling()
+            }
         }
         player.replaceCurrentItem(with: nil)
         logger.info("🔴 PlaybackViewModel deinitialized")
