@@ -6,7 +6,69 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1176C14146E4585AA7168B82 /* URLWhitelistIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B7FF0B70984537750BF4D5 /* URLWhitelistIntegrationTests.swift */; };
+		1A87B615B531B7211CAC46F7 /* MediaMTXAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFF8A434EE5BD7547B42B41 /* MediaMTXAPIClientTests.swift */; };
+		1D52589373755212016323B6 /* PlaybackConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A552E00998D0EA09F431EDEC /* PlaybackConfigurationTests.swift */; };
+		21431E9F82E83F14FE6743CD /* ConnectionStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1657CD6A40A8FB60046D7E35 /* ConnectionStatusTests.swift */; };
+		24F9908A385D0812862478A2 /* URLValidationLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEAC07EDED9BC5AAA681DB7 /* URLValidationLoggerTests.swift */; };
+		263726695E766436D56D1652 /* PlaybackViewModelDITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E92AB0D15402CF8938EC8E9 /* PlaybackViewModelDITests.swift */; };
+		35729BCA534CD57CDBAC95E7 /* RetryOrchestratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58BE67DE63829051E0F1D828 /* RetryOrchestratorTests.swift */; };
+		357F65AA2D5D2E2E997E8D14 /* URLValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B22C9AF3F385E49168A812 /* URLValidatorTests.swift */; };
+		3E4F0A3D4EEFFE90D951ED80 /* PerformanceBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04B1E2ED9BD6AB814E950CF /* PerformanceBaseline.swift */; };
+		45DDA2C7154BD85849111B3C /* RetryStrategyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78C24B1EC25442EA34AFC6DE /* RetryStrategyTests.swift */; };
+		5D62552B120B66253D897E89 /* PlaybackStateActorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A4D446FC73799B12ED834F /* PlaybackStateActorTests.swift */; };
+		73FAFF631DF749DE6ABEA9E6 /* KeychainManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28AF4A2BB019159048F14EFE /* KeychainManagerTests.swift */; };
+		7A826934075C6F758EF70E00 /* ViewerCountPollingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6195510C88A1D53847850626 /* ViewerCountPollingServiceTests.swift */; };
+		90BA31EC31A5CC08FFF6AA2A /* CredentialSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B8CE4D8FF7FEC30FF983E87 /* CredentialSecurityTests.swift */; };
+		9E2F266867B7CF3B8D856C71 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9217315A7F436406CEB003B0 /* Foundation.framework */; };
+		AC35A0C69F59527A58B3B868 /* ViewerCountStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF767608CDD5DF73A148377 /* ViewerCountStateTests.swift */; };
+		B674BB9F609F105470480EF5 /* StreamAdminPollingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 183CC9C3666AC14605640E44 /* StreamAdminPollingServiceTests.swift */; };
+		D02031FC7384B92946B0096D /* MockAPIClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D292F453B5A009D1E245115E /* MockAPIClientProvider.swift */; };
+		D390303EFADE27BE72DFA686 /* StreamAdminStateActorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E807AB5DF8CF1DF6D053715C /* StreamAdminStateActorTests.swift */; };
+		DB315944A4962DC9022C08AD /* StateActorIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF60911F72F7E315B848E7A1 /* StateActorIntegrationTests.swift */; };
+		E3592B0E6F661625D4657E11 /* PollingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993315BF0E8362DCF5F09ABD /* PollingServiceTests.swift */; };
+		EB36AEFC38B756EAD8111A85 /* RetryStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 817C546129892C884CD78AB4 /* RetryStateTests.swift */; };
+		ECFADED7C923A803E54CBD43 /* MediaMTXConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F76474F14850611E7FF98AFC /* MediaMTXConfigTests.swift */; };
+		FB8315E627D1B5536AC735C3 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F94A408023D77FA3322E6A54 /* XCTest.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9A0EA45CFB8B70A32A4585B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA8C94F72FED6267004E66E7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FA8C94FE2FED6267004E66E7;
+			remoteInfo = steam;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		1657CD6A40A8FB60046D7E35 /* ConnectionStatusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ConnectionStatusTests.swift; path = steamTests/Features/Playback/Domain/ConnectionStatusTests.swift; sourceTree = "<group>"; };
+		183CC9C3666AC14605640E44 /* StreamAdminPollingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamAdminPollingServiceTests.swift; path = steamTests/Features/StreamAdmin/Domain/Services/StreamAdminPollingServiceTests.swift; sourceTree = "<group>"; };
+		28AF4A2BB019159048F14EFE /* KeychainManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KeychainManagerTests.swift; path = steamTests/Managers/KeychainManagerTests.swift; sourceTree = "<group>"; };
+		3B8CE4D8FF7FEC30FF983E87 /* CredentialSecurityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CredentialSecurityTests.swift; path = steamTests/Integration/CredentialSecurityTests.swift; sourceTree = "<group>"; };
+		3E92AB0D15402CF8938EC8E9 /* PlaybackViewModelDITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaybackViewModelDITests.swift; path = steamTests/Features/Playback/Presentation/PlaybackViewModelDITests.swift; sourceTree = "<group>"; };
+		58BE67DE63829051E0F1D828 /* RetryOrchestratorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RetryOrchestratorTests.swift; path = steamTests/Features/Playback/Domain/Services/RetryOrchestratorTests.swift; sourceTree = "<group>"; };
+		6195510C88A1D53847850626 /* ViewerCountPollingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ViewerCountPollingServiceTests.swift; path = steamTests/Features/Playback/Domain/Services/ViewerCountPollingServiceTests.swift; sourceTree = "<group>"; };
+		66B7FF0B70984537750BF4D5 /* URLWhitelistIntegrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = URLWhitelistIntegrationTests.swift; path = steamTests/Integration/URLWhitelistIntegrationTests.swift; sourceTree = "<group>"; };
+		78C24B1EC25442EA34AFC6DE /* RetryStrategyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RetryStrategyTests.swift; path = steamTests/Config/RetryStrategyTests.swift; sourceTree = "<group>"; };
+		817C546129892C884CD78AB4 /* RetryStateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RetryStateTests.swift; path = steamTests/Features/Playback/Domain/RetryStateTests.swift; sourceTree = "<group>"; };
+		9217315A7F436406CEB003B0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		993315BF0E8362DCF5F09ABD /* PollingServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PollingServiceTests.swift; path = steamTests/Services/PollingServiceTests.swift; sourceTree = "<group>"; };
+		9DEAC07EDED9BC5AAA681DB7 /* URLValidationLoggerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = URLValidationLoggerTests.swift; path = steamTests/Services/URLValidationLoggerTests.swift; sourceTree = "<group>"; };
+		A04B1E2ED9BD6AB814E950CF /* PerformanceBaseline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PerformanceBaseline.swift; path = steamTests/Performance/PerformanceBaseline.swift; sourceTree = "<group>"; };
+		A552E00998D0EA09F431EDEC /* PlaybackConfigurationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaybackConfigurationTests.swift; path = steamTests/Config/PlaybackConfigurationTests.swift; sourceTree = "<group>"; };
+		AAF767608CDD5DF73A148377 /* ViewerCountStateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ViewerCountStateTests.swift; path = steamTests/Features/Playback/Domain/ViewerCountStateTests.swift; sourceTree = "<group>"; };
+		AF60911F72F7E315B848E7A1 /* StateActorIntegrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StateActorIntegrationTests.swift; path = steamTests/Integration/StateActorIntegrationTests.swift; sourceTree = "<group>"; };
+		CDFF8A434EE5BD7547B42B41 /* MediaMTXAPIClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MediaMTXAPIClientTests.swift; path = steamTests/Services/MediaMTXAPIClientTests.swift; sourceTree = "<group>"; };
+		D1268A9F63A5F15CCB7EB4F8 /* steamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = steamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D292F453B5A009D1E245115E /* MockAPIClientProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MockAPIClientProvider.swift; path = steamTests/Mocks/MockAPIClientProvider.swift; sourceTree = "<group>"; };
+		D8A4D446FC73799B12ED834F /* PlaybackStateActorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaybackStateActorTests.swift; path = steamTests/Actors/PlaybackStateActorTests.swift; sourceTree = "<group>"; };
+		E4B22C9AF3F385E49168A812 /* URLValidatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = URLValidatorTests.swift; path = steamTests/Services/URLValidatorTests.swift; sourceTree = "<group>"; };
+		E807AB5DF8CF1DF6D053715C /* StreamAdminStateActorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StreamAdminStateActorTests.swift; path = steamTests/Actors/StreamAdminStateActorTests.swift; sourceTree = "<group>"; };
+		F76474F14850611E7FF98AFC /* MediaMTXConfigTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MediaMTXConfigTests.swift; path = steamTests/Config/MediaMTXConfigTests.swift; sourceTree = "<group>"; };
+		F94A408023D77FA3322E6A54 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		FA8C94FF2FED6268004E66E7 /* steam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = steam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +94,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7CEC26CA5576F947DC49154A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E2F266867B7CF3B8D856C71 /* Foundation.framework in Frameworks */,
+				FB8315E627D1B5536AC735C3 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA8C94FC2FED6267004E66E7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -42,11 +113,171 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		06A7A98C8668743181CA5A70 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				13DBFF06CF4D0E4252931B26 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		13DBFF06CF4D0E4252931B26 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				9217315A7F436406CEB003B0 /* Foundation.framework */,
+				F94A408023D77FA3322E6A54 /* XCTest.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		2BB2CEC3A7BDAA912DD3284B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				6195510C88A1D53847850626 /* ViewerCountPollingServiceTests.swift */,
+				58BE67DE63829051E0F1D828 /* RetryOrchestratorTests.swift */,
+			);
+			name = Services;
+			sourceTree = "<group>";
+		};
+		37FE784E034E5F9760E24737 /* Integration */ = {
+			isa = PBXGroup;
+			children = (
+				3B8CE4D8FF7FEC30FF983E87 /* CredentialSecurityTests.swift */,
+				66B7FF0B70984537750BF4D5 /* URLWhitelistIntegrationTests.swift */,
+				AF60911F72F7E315B848E7A1 /* StateActorIntegrationTests.swift */,
+			);
+			name = Integration;
+			sourceTree = "<group>";
+		};
+		4D0947CC710C5D5160136DEC /* Mocks */ = {
+			isa = PBXGroup;
+			children = (
+				D292F453B5A009D1E245115E /* MockAPIClientProvider.swift */,
+			);
+			name = Mocks;
+			sourceTree = "<group>";
+		};
+		51B3A63E1D3F57125CFD0AC6 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				3E92AB0D15402CF8938EC8E9 /* PlaybackViewModelDITests.swift */,
+			);
+			name = Presentation;
+			sourceTree = "<group>";
+		};
+		65A10030C82F087E9F195A17 /* Actors */ = {
+			isa = PBXGroup;
+			children = (
+				E807AB5DF8CF1DF6D053715C /* StreamAdminStateActorTests.swift */,
+				D8A4D446FC73799B12ED834F /* PlaybackStateActorTests.swift */,
+			);
+			name = Actors;
+			sourceTree = "<group>";
+		};
+		713D5909E1410E1000266C7E /* steamTests */ = {
+			isa = PBXGroup;
+			children = (
+				4D0947CC710C5D5160136DEC /* Mocks */,
+				EC81AD13BD9FA2B4A09E77C6 /* Config */,
+				37FE784E034E5F9760E24737 /* Integration */,
+				FCFB2F3B6656BE28972F1906 /* Managers */,
+				F1E8FEFF965BDCA6EC8B53BE /* Features */,
+				65A10030C82F087E9F195A17 /* Actors */,
+				B3E2B36CFAF6FB9368D1B9DA /* Performance */,
+				B545D7CCE8361AAE4356A457 /* Services */,
+			);
+			name = steamTests;
+			sourceTree = "<group>";
+		};
+		ACE50251EE0AB0584D4E0FC1 /* Playback */ = {
+			isa = PBXGroup;
+			children = (
+				B4A4CBBF77A75E5FDA8A0EE0 /* Domain */,
+				51B3A63E1D3F57125CFD0AC6 /* Presentation */,
+			);
+			name = Playback;
+			sourceTree = "<group>";
+		};
+		B3E2B36CFAF6FB9368D1B9DA /* Performance */ = {
+			isa = PBXGroup;
+			children = (
+				A04B1E2ED9BD6AB814E950CF /* PerformanceBaseline.swift */,
+			);
+			name = Performance;
+			sourceTree = "<group>";
+		};
+		B4A4CBBF77A75E5FDA8A0EE0 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				1657CD6A40A8FB60046D7E35 /* ConnectionStatusTests.swift */,
+				AAF767608CDD5DF73A148377 /* ViewerCountStateTests.swift */,
+				817C546129892C884CD78AB4 /* RetryStateTests.swift */,
+				2BB2CEC3A7BDAA912DD3284B /* Services */,
+			);
+			name = Domain;
+			sourceTree = "<group>";
+		};
+		B545D7CCE8361AAE4356A457 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				CDFF8A434EE5BD7547B42B41 /* MediaMTXAPIClientTests.swift */,
+				E4B22C9AF3F385E49168A812 /* URLValidatorTests.swift */,
+				9DEAC07EDED9BC5AAA681DB7 /* URLValidationLoggerTests.swift */,
+				993315BF0E8362DCF5F09ABD /* PollingServiceTests.swift */,
+			);
+			name = Services;
+			sourceTree = "<group>";
+		};
+		B769B9FCD8198DCF13E6CA6A /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				F0A9F1BEAAF3FF65233EE650 /* Services */,
+			);
+			name = Domain;
+			sourceTree = "<group>";
+		};
+		DE3B387D85F5FF9AA94E24F3 /* StreamAdmin */ = {
+			isa = PBXGroup;
+			children = (
+				B769B9FCD8198DCF13E6CA6A /* Domain */,
+			);
+			name = StreamAdmin;
+			sourceTree = "<group>";
+		};
+		EC81AD13BD9FA2B4A09E77C6 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A552E00998D0EA09F431EDEC /* PlaybackConfigurationTests.swift */,
+				78C24B1EC25442EA34AFC6DE /* RetryStrategyTests.swift */,
+				F76474F14850611E7FF98AFC /* MediaMTXConfigTests.swift */,
+			);
+			name = Config;
+			sourceTree = "<group>";
+		};
+		F0A9F1BEAAF3FF65233EE650 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				183CC9C3666AC14605640E44 /* StreamAdminPollingServiceTests.swift */,
+			);
+			name = Services;
+			sourceTree = "<group>";
+		};
+		F1E8FEFF965BDCA6EC8B53BE /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				ACE50251EE0AB0584D4E0FC1 /* Playback */,
+				DE3B387D85F5FF9AA94E24F3 /* StreamAdmin */,
+			);
+			name = Features;
+			sourceTree = "<group>";
+		};
 		FA8C94F62FED6267004E66E7 = {
 			isa = PBXGroup;
 			children = (
 				FA8C95012FED6268004E66E7 /* steam */,
 				FA8C95002FED6268004E66E7 /* Products */,
+				06A7A98C8668743181CA5A70 /* Frameworks */,
+				713D5909E1410E1000266C7E /* steamTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,13 +285,40 @@
 			isa = PBXGroup;
 			children = (
 				FA8C94FF2FED6268004E66E7 /* steam.app */,
+				D1268A9F63A5F15CCB7EB4F8 /* steamTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FCFB2F3B6656BE28972F1906 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				28AF4A2BB019159048F14EFE /* KeychainManagerTests.swift */,
+			);
+			name = Managers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		59CEFA41CF7F53676ED477D7 /* steamTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BAA0F0E66ADBAC2BF02160A9 /* Build configuration list for PBXNativeTarget "steamTests" */;
+			buildPhases = (
+				F6002384712DF36F0CB9D8FA /* Sources */,
+				7CEC26CA5576F947DC49154A /* Frameworks */,
+				35C45FA1E5708203FC07AD04 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				95EA6ADB40D7D3F85A206CC2 /* PBXTargetDependency */,
+			);
+			name = steamTests;
+			productName = steamTests;
+			productReference = D1268A9F63A5F15CCB7EB4F8 /* steamTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		FA8C94FE2FED6267004E66E7 /* steam */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FA8C950A2FED6269004E66E7 /* Build configuration list for PBXNativeTarget "steam" */;
@@ -77,8 +335,6 @@
 				FA8C95012FED6268004E66E7 /* steam */,
 			);
 			name = steam;
-			packageProductDependencies = (
-			);
 			productName = steam;
 			productReference = FA8C94FF2FED6268004E66E7 /* steam.app */;
 			productType = "com.apple.product-type.application";
@@ -113,11 +369,19 @@
 			projectRoot = "";
 			targets = (
 				FA8C94FE2FED6267004E66E7 /* steam */,
+				59CEFA41CF7F53676ED477D7 /* steamTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		35C45FA1E5708203FC07AD04 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA8C94FD2FED6267004E66E7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -128,6 +392,35 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F6002384712DF36F0CB9D8FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D02031FC7384B92946B0096D /* MockAPIClientProvider.swift in Sources */,
+				1D52589373755212016323B6 /* PlaybackConfigurationTests.swift in Sources */,
+				45DDA2C7154BD85849111B3C /* RetryStrategyTests.swift in Sources */,
+				ECFADED7C923A803E54CBD43 /* MediaMTXConfigTests.swift in Sources */,
+				90BA31EC31A5CC08FFF6AA2A /* CredentialSecurityTests.swift in Sources */,
+				1176C14146E4585AA7168B82 /* URLWhitelistIntegrationTests.swift in Sources */,
+				DB315944A4962DC9022C08AD /* StateActorIntegrationTests.swift in Sources */,
+				73FAFF631DF749DE6ABEA9E6 /* KeychainManagerTests.swift in Sources */,
+				21431E9F82E83F14FE6743CD /* ConnectionStatusTests.swift in Sources */,
+				AC35A0C69F59527A58B3B868 /* ViewerCountStateTests.swift in Sources */,
+				EB36AEFC38B756EAD8111A85 /* RetryStateTests.swift in Sources */,
+				7A826934075C6F758EF70E00 /* ViewerCountPollingServiceTests.swift in Sources */,
+				35729BCA534CD57CDBAC95E7 /* RetryOrchestratorTests.swift in Sources */,
+				263726695E766436D56D1652 /* PlaybackViewModelDITests.swift in Sources */,
+				B674BB9F609F105470480EF5 /* StreamAdminPollingServiceTests.swift in Sources */,
+				D390303EFADE27BE72DFA686 /* StreamAdminStateActorTests.swift in Sources */,
+				5D62552B120B66253D897E89 /* PlaybackStateActorTests.swift in Sources */,
+				3E4F0A3D4EEFFE90D951ED80 /* PerformanceBaseline.swift in Sources */,
+				1A87B615B531B7211CAC46F7 /* MediaMTXAPIClientTests.swift in Sources */,
+				357F65AA2D5D2E2E997E8D14 /* URLValidatorTests.swift in Sources */,
+				24F9908A385D0812862478A2 /* URLValidationLoggerTests.swift in Sources */,
+				E3592B0E6F661625D4657E11 /* PollingServiceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA8C94FB2FED6267004E66E7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -137,7 +430,47 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		95EA6ADB40D7D3F85A206CC2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = steam;
+			target = FA8C94FE2FED6267004E66E7 /* steam */;
+			targetProxy = 9A0EA45CFB8B70A32A4585B2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		183D62B5A967E929C0F69AE1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_IDENTIFIER = com.amonrit.steam.Tests;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = LW8TA5FBZ7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = "";
+				PRODUCT_NAME = steamTests;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/steam.app/steam";
+			};
+			name = Debug;
+		};
+		52C465C550A5131B84D4DB89 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_IDENTIFIER = com.amonrit.steam.Tests;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = LW8TA5FBZ7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = "";
+				PRODUCT_NAME = steamTests;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/steam.app/steam";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		FA8C95082FED6269004E66E7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -327,6 +660,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		BAA0F0E66ADBAC2BF02160A9 /* Build configuration list for PBXNativeTarget "steamTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52C465C550A5131B84D4DB89 /* Release */,
+				183D62B5A967E929C0F69AE1 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		FA8C94FA2FED6267004E66E7 /* Build configuration list for PBXProject "steam" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
