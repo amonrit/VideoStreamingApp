@@ -2,6 +2,8 @@
 //  PlaybackViewModel.swift
 //  steam
 //
+//  Created by Amonrit on 25/6/2569 BE.
+//
 
 import Foundation
 import AVFoundation
@@ -26,7 +28,6 @@ class PlaybackViewModel: ObservableObject {
     // MARK: - Core Properties
     let player: AVPlayer
     private let worker: VideoPlayerWorker
-    private var playbackState: PlaybackState = .idle
     private var cancellables = Set<AnyCancellable>()
     private let stateActor: DefaultPlaybackStateActor
     private var stateObserverTask: Task<Void, Never>?
@@ -102,7 +103,6 @@ class PlaybackViewModel: ObservableObject {
         stopViewerCountPolling()
         player.pause()
         cancellables.removeAll()
-        viewerCount = nil
         viewerCountFailureCount = 0
         logger.info("🛑 Stopped playback of previous stream")
 
@@ -130,11 +130,11 @@ class PlaybackViewModel: ObservableObject {
         logger.debug("   Original URL: \(urlString, privacy: .public)")
         logger.debug("   Clean URL: \(url.absoluteString, privacy: .public)")
 
-        playbackState = PlaybackState(loading: stream)
-        updateConnectionStatus(.connecting)
-        updatePlaybackViewModel()
-
         Task {
+            await stateActor.updateCurrentStream(stream)
+            await stateActor.updateLoading(true)
+            await stateActor.updateConnectionStatus(.connecting)
+            await stateActor.updateViewerCount(nil)
             await loadStreamWithRetry(stream, url: url)
         }
     }
@@ -154,8 +154,8 @@ class PlaybackViewModel: ObservableObject {
                     try await self.setupStreamWithTimeout(stream, url: url)
                 },
                 onError: { [weak self] error, attempt in
-                    DispatchQueue.main.async {
-                        self?.retryAttempt = attempt
+                    Task {
+                        await self?.stateActor.updateRetryAttempt(attempt)
                     }
                     logger.warning("❌ Stream loading attempt \(attempt) failed: \(error.localizedDescription)")
                 }
@@ -165,12 +165,9 @@ class PlaybackViewModel: ObservableObject {
         } catch {
             let errorMessage = "Stream connection failed.\nCheck:\n• Network connection\n• MediaMTX server"
             logger.error("❌ \(errorMessage, privacy: .public)")
-            presentError(errorMessage)
-            updateConnectionStatus(.failed(errorMessage))
-
-            DispatchQueue.main.async {
-                self.retryAttempt = 0  // Reset on final error
-            }
+            await stateActor.updateError(errorMessage)
+            await stateActor.updateConnectionStatus(.failed(errorMessage))
+            await stateActor.updateRetryAttempt(0)  // Reset on final error
         }
     }
 
@@ -213,35 +210,39 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    private func updateConnectionStatus(_ status: ConnectionStatus) {
-        Task {
-            await stateActor.updateConnectionStatus(status)
-        }
-    }
 
     func play() {
-        guard playbackState.errorMessage == nil else { return }
+        guard errorMessage == nil else { return }
         player.play()
-        playbackState.isPlaying = true
-        playbackState.isLoading = false
-        updateConnectionStatus(.connected)
-        updatePlaybackViewModel()
+        Task {
+            await stateActor.updatePlaying(true)
+            await stateActor.updateLoading(false)
+            await stateActor.updateConnectionStatus(.connected)
+            let currentStream = await stateActor.currentState.currentStream
+            logger.info("▶️  Playing: \(currentStream?.title ?? "unknown", privacy: .public)")
+        }
         startViewerCountPolling()
-        logger.info("▶️  Playing: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
     func pause() {
         player.pause()
-        playbackState.isPlaying = false
-        updateConnectionStatus(.disconnected)
-        updatePlaybackViewModel()
+        Task {
+            await stateActor.updatePlaying(false)
+            await stateActor.updateConnectionStatus(.disconnected)
+            let currentStream = await stateActor.currentState.currentStream
+            logger.info("⏸️  Paused: \(currentStream?.title ?? "unknown", privacy: .public)")
+        }
         stopViewerCountPolling()
-        logger.info("⏸️  Paused: \(self.playbackState.currentStream?.title ?? "unknown", privacy: .public)")
     }
 
     func retry() {
-        guard let stream = playbackState.currentStream else { return }
-        loadStream(stream)
+        Task {
+            let stream = await stateActor.currentState.currentStream
+            guard let stream = stream else { return }
+            await MainActor.run {
+                self.loadStream(stream)
+            }
+        }
     }
 
     // MARK: - Setup Observers
@@ -275,42 +276,34 @@ class PlaybackViewModel: ObservableObject {
                 streamLoadingContinuation = nil
             }
 
-            playbackState.isLoading = false
-            playbackState.errorMessage = nil
             Task {
                 await stateActor.updateLoading(false)
                 await stateActor.updateError(nil)
                 await stateActor.updateConnectionStatus(.connected)
             }
 
-            updatePlaybackViewModel()
             logger.info("✅ Stream ready to play")
 
         case .failed:
-            playbackState.isLoading = false
             let errorDesc = player.currentItem?.error?.localizedDescription ?? "Unknown error"
             if let continuation = streamLoadingContinuation {
                 continuation.resume(throwing: PlaybackError.playerFailed(errorDesc))
                 streamLoadingContinuation = nil
             } else {
-                playbackState.errorMessage = "Failed to load: \(errorDesc)"
                 Task {
                     await stateActor.updateConnectionStatus(.failed(errorDesc))
                     await stateActor.updateError("Failed to load: \(errorDesc)")
                 }
             }
 
-            updatePlaybackViewModel()
             logger.error("❌ Playback failed: \(errorDesc, privacy: .public)")
 
         case .unknown:
-            playbackState.isLoading = true
             Task {
                 await stateActor.updateLoading(true)
                 await stateActor.updateConnectionStatus(.buffering)
             }
 
-            updatePlaybackViewModel()
             logger.info("⏳ Loading stream...")
 
         @unknown default:
@@ -319,40 +312,43 @@ class PlaybackViewModel: ObservableObject {
     }
 
     private func handleBuffering(_ isBuffering: Bool) {
-        playbackState.isLoading = isBuffering
         Task {
             await stateActor.updateLoading(isBuffering)
 
             if isBuffering {
-                playbackState.bufferingCount += 1
-                await stateActor.updateBufferingCount(self.playbackState.bufferingCount)
+                let currentCount = await stateActor.currentState.bufferingCount
+                await stateActor.updateBufferingCount(currentCount + 1)
                 await stateActor.updateConnectionStatus(.buffering)
-                logger.info("📦 Buffering... (count: \(self.playbackState.bufferingCount))")
+                let newCount = await stateActor.currentState.bufferingCount
+                logger.info("📦 Buffering... (count: \(newCount))")
             } else {
-                if playbackState.isPlaying {
+                let isPlaying = await stateActor.currentState.isPlaying
+                if isPlaying {
                     await stateActor.updateConnectionStatus(.connected)
                 }
                 logger.info("✅ Buffering complete")
             }
         }
-
-        updatePlaybackViewModel()
     }
 
     private func handlePlaybackStall() {
-        playbackState.isLoading = true
-        playbackState.errorMessage = "Network unstable - buffering..."
-        playbackState.bufferingCount += 1
-        updateConnectionStatus(.buffering)
-        updatePlaybackViewModel()
-        logger.warning("⚠️  Playback stalled (count: \(self.playbackState.bufferingCount))")
+        Task {
+            await stateActor.updateLoading(true)
+            await stateActor.updateError("Network unstable - buffering...")
+            let currentCount = await stateActor.currentState.bufferingCount
+            await stateActor.updateBufferingCount(currentCount + 1)
+            await stateActor.updateConnectionStatus(.buffering)
+            let newCount = await stateActor.currentState.bufferingCount
+            logger.warning("⚠️  Playback stalled (count: \(newCount))")
+        }
     }
 
     private func handleFailedToPlayToEnd(_ error: Error?) {
         let errorMessage = error?.localizedDescription ?? "Playback interrupted"
-        playbackState.errorMessage = "Playback error: \(errorMessage)"
-        updateConnectionStatus(.failed(errorMessage))
-        updatePlaybackViewModel()
+        Task {
+            await stateActor.updateError("Playback error: \(errorMessage)")
+            await stateActor.updateConnectionStatus(.failed(errorMessage))
+        }
         logger.error("❌ Failed to play to end: \(errorMessage, privacy: .public)")
     }
 
@@ -363,17 +359,6 @@ class PlaybackViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Update Published Properties
-
-    private func updatePlaybackViewModel() {
-        DispatchQueue.main.async {
-            self.isLoading = self.playbackState.isLoading
-            self.isPlaying = self.playbackState.isPlaying
-            self.errorMessage = self.playbackState.errorMessage
-            self.bufferingCount = self.playbackState.bufferingCount
-            self.currentStream = self.playbackState.currentStream
-        }
-    }
 
     // MARK: - Viewer Count Polling
 
@@ -394,20 +379,18 @@ class PlaybackViewModel: ObservableObject {
                 let count = service.getLastCount()
                 let error = service.getLastError()
 
-                await MainActor.run {
-                    if let count = count {
-                        self.viewerCount = count
-                        self.viewerCountFailureCount = 0
-                    }
+                if let count = count {
+                    await stateActor.updateViewerCount(count)
+                    self.viewerCountFailureCount = 0
+                }
 
-                    if error != nil {
-                        self.viewerCountFailureCount += 1
-                        logger.warning("👁️  Viewer count poll failed")
+                if error != nil {
+                    self.viewerCountFailureCount += 1
+                    logger.warning("👁️  Viewer count poll failed")
 
-                        // Hide stale count after 3 consecutive failures
-                        if self.viewerCountFailureCount >= self.maxViewerCountFailures {
-                            self.viewerCount = nil
-                        }
+                    // Hide stale count after 3 consecutive failures
+                    if self.viewerCountFailureCount >= self.maxViewerCountFailures {
+                        await stateActor.updateViewerCount(nil)
                     }
                 }
                 try? await Task.sleep(nanoseconds: 500_000_000)
