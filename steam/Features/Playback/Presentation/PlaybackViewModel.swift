@@ -14,17 +14,6 @@ import os
 private let logger = Logger(subsystem: "amonrit.steam", category: "playback")
 
 class PlaybackViewModel: ObservableObject {
-    // MARK: - @Published Properties
-    /// Synchronized from PlaybackStateActor for backward compatibility with SwiftUI views
-    @Published var isLoading: Bool = false
-    @Published var isPlaying: Bool = false
-    @Published var errorMessage: String?
-    @Published var bufferingCount: Int = 0
-    @Published var currentStream: VideoStream?
-    @Published var connectionStatus: ConnectionStatus = .disconnected
-    @Published var retryAttempt: Int = 0
-    @Published var viewerCount: Int?
-
     // MARK: - Core Properties
     let player: AVPlayer
     private let worker: VideoPlayerWorker
@@ -62,31 +51,18 @@ class PlaybackViewModel: ObservableObject {
         self._showVolumeSlider = Published(initialValue: false)
         self._showControls = Published(initialValue: true)
         setupPlayerSettings()
-        startStateObserver()
+        observeStateChanges()
     }
 
-    /// Observes state changes from actor and syncs to @Published properties for backward compatibility
-    private func startStateObserver() {
+    /// Observes state changes from actor and notifies SwiftUI views via objectWillChange
+    private func observeStateChanges() {
         stateObserverTask = Task {
-            for await state in stateActor.stateUpdates {
+            for await _ in stateActor.stateUpdates {
                 await MainActor.run { [weak self] in
-                    self?.syncPublishedProperties(from: state)
+                    self?.objectWillChange.send()
                 }
             }
         }
-    }
-
-    /// Synchronizes @Published properties from actor state
-    /// Called whenever the state actor updates
-    private func syncPublishedProperties(from state: PlaybackStateSnapshot) {
-        self.isLoading = state.isLoading
-        self.isPlaying = state.isPlaying
-        self.errorMessage = state.errorMessage
-        self.bufferingCount = state.bufferingCount
-        self.currentStream = state.currentStream
-        self.connectionStatus = state.connectionStatus
-        self.retryAttempt = state.retryAttempt
-        self.viewerCount = state.viewerCount
     }
 
     private func setupPlayerSettings() {
@@ -95,6 +71,47 @@ class PlaybackViewModel: ObservableObject {
         player.volume = 1.0
         player.rate = 1.0
         logger.info("✅ AVPlayer configured for HLS streaming with auto-retry strategy")
+    }
+
+    // MARK: - State Properties (from Actor)
+    /// Loading state from the playback actor
+    var isLoading: Bool {
+        stateActor.currentState.isLoading
+    }
+
+    /// Playing state from the playback actor
+    var isPlaying: Bool {
+        stateActor.currentState.isPlaying
+    }
+
+    /// Error message from the playback actor
+    var errorMessage: String? {
+        stateActor.currentState.errorMessage
+    }
+
+    /// Buffering count from the playback actor
+    var bufferingCount: Int {
+        stateActor.currentState.bufferingCount
+    }
+
+    /// Current stream from the playback actor
+    var currentStream: VideoStream? {
+        stateActor.currentState.currentStream
+    }
+
+    /// Connection status from the playback actor
+    var connectionStatus: ConnectionStatus {
+        stateActor.currentState.connectionStatus
+    }
+
+    /// Retry attempt count from the playback actor
+    var retryAttempt: Int {
+        stateActor.currentState.retryAttempt
+    }
+
+    /// Viewer count from the playback actor
+    var viewerCount: Int? {
+        stateActor.currentState.viewerCount
     }
 
     // MARK: - Stream Loading
