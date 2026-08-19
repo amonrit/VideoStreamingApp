@@ -7,25 +7,6 @@ import AVFoundation
 /// (one instance per app run) rather than accessed as a global singleton, so
 /// call sites can be tested with a container built from mock dependencies.
 class DIContainer: ObservableObject {
-    // MARK: - Core Dependencies (Lazily Initialized)
-    private lazy var urlValidator: URLValidator = URLValidator()
-    private lazy var mediaMTXAPIClient: MediaMTXAPIClient = {
-        // Default to localhost MediaMTX server
-        let baseURL = URL(string: "http://localhost:9997") ?? URL(fileURLWithPath: "")
-        return MediaMTXAPIClient(baseURL: baseURL)
-    }()
-
-    // MARK: - Repositories (Lazily Initialized)
-    private lazy var streamRepository: StreamRepository = {
-        let remoteDataSource = StreamRemoteDataSourceImpl(apiClient: mediaMTXAPIClient)
-        return StreamRepositoryImpl(remoteDataSource: remoteDataSource)
-    }()
-
-    private lazy var streamAdminRepository: StreamAdminRepository = {
-        let remoteDataSource = StreamAdminRemoteDataSourceImpl(apiClient: mediaMTXAPIClient)
-        return StreamAdminRepositoryImpl(remoteDataSource: remoteDataSource)
-    }()
-
     init() {
         // Initialize container
     }
@@ -37,33 +18,11 @@ class DIContainer: ObservableObject {
         PlaybackViewModel(player: player)
     }
 
-    /// Get StreamRepository
-    func getStreamRepository() -> StreamRepository {
-        streamRepository
-    }
-
     // MARK: - StreamAdmin Feature Dependencies
 
     /// Create StreamAdminViewModel with all dependencies
     func makeStreamAdminViewModel() -> StreamAdminViewModel {
         StreamAdminViewModel()
-    }
-
-    /// Get StreamAdminRepository
-    func getStreamAdminRepository() -> StreamAdminRepository {
-        streamAdminRepository
-    }
-
-    // MARK: - Core Services
-
-    /// Get URLValidator
-    func getURLValidator() -> URLValidator {
-        urlValidator
-    }
-
-    /// Get MediaMTXAPIClient
-    func getMediaMTXAPIClient() -> MediaMTXAPIClient {
-        mediaMTXAPIClient
     }
 
     // MARK: - Settings Feature Dependencies
