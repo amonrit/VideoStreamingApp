@@ -5,17 +5,17 @@ final class ViewerCountPollingServiceTests: XCTestCase {
     // MARK: - Initialization Tests
 
     @MainActor
-    func testInitialization_defaultConfiguration() {
+    func testInitialization_defaultConfiguration() async {
         let service = ViewerCountPollingService {
             return 42
         }
 
-        XCTAssertAsyncFalse(await service.isPolling())
-        XCTAssertNil(await service.getLastCount())
+        await XCTAssertAsyncFalse(await service.isPolling())
+        XCTAssertNil(service.getLastCount())
     }
 
     @MainActor
-    func testInitialization_customConfiguration() {
+    func testInitialization_customConfiguration() async {
         let config = PlaybackConfiguration(viewerCountPollingInterval: 10.0)
         let service = ViewerCountPollingService(
             configuration: config
@@ -23,7 +23,7 @@ final class ViewerCountPollingServiceTests: XCTestCase {
             return 42
         }
 
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - Polling Control Tests
@@ -37,7 +37,7 @@ final class ViewerCountPollingServiceTests: XCTestCase {
         }
 
         await service.startPolling()
-        XCTAssertAsyncTrue(await service.isPolling())
+        await XCTAssertAsyncTrue(await service.isPolling())
 
         // Give time for first poll
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -52,10 +52,10 @@ final class ViewerCountPollingServiceTests: XCTestCase {
         }
 
         await service.startPolling()
-        XCTAssertAsyncTrue(await service.isPolling())
+        await XCTAssertAsyncTrue(await service.isPolling())
 
         await service.stopPolling()
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     @MainActor
@@ -133,7 +133,7 @@ final class ViewerCountPollingServiceTests: XCTestCase {
 
         let countAfter = await service.getLastCount()
         XCTAssertNil(countAfter)
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - Error Handling Tests
@@ -198,7 +198,7 @@ final class ViewerCountPollingServiceTests: XCTestCase {
         await service.stopPolling()  // Should be safe
         await service.stopPolling()  // Should be safe
 
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - State Tests

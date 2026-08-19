@@ -14,7 +14,7 @@ final class PollingServiceTests: XCTestCase {
             emittedValues.count + 1
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         // Collect a few values
         var count = 0
@@ -26,7 +26,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
         XCTAssertGreaterThanOrEqual(emittedValues.count, 1)
     }
 
@@ -36,11 +36,11 @@ final class PollingServiceTests: XCTestCase {
             interval: 0.05,
             timeout: 1.0
         ) {
-            Date().timeIntervalSince1970
+            Int(Date().timeIntervalSince1970)
         }
 
         let startTime = Date()
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var count = 0
         for try await _ in pollingSequence {
@@ -50,7 +50,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
         let elapsed = Date().timeIntervalSince(startTime)
 
         // Should have waited at least one interval
@@ -72,17 +72,19 @@ final class PollingServiceTests: XCTestCase {
             throw TestError.pollingFailed
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var errorCaught = false
-        for try await _ in pollingSequence {
-            // Should not reach here
-            XCTFail("Should have thrown an error")
+        do {
+            for try await _ in pollingSequence {
+                // Should not reach here
+                XCTFail("Should have thrown an error")
+            }
         } catch {
             errorCaught = true
         }
 
-        service.stopPolling()
+        await service.stopPolling()
         XCTAssertTrue(errorCaught || true) // Error handling verified
     }
 
@@ -99,17 +101,19 @@ final class PollingServiceTests: XCTestCase {
             return "done"
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var timeoutOccurred = false
-        for try await _ in pollingSequence {
-            // Should timeout
-            timeoutOccurred = true
+        do {
+            for try await _ in pollingSequence {
+                // Should timeout
+                timeoutOccurred = true
+            }
         } catch {
             timeoutOccurred = true
         }
 
-        service.stopPolling()
+        await service.stopPolling()
         // Timeout behavior verified
     }
 
@@ -127,7 +131,7 @@ final class PollingServiceTests: XCTestCase {
             return current
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var count = 0
         for try await _ in pollingSequence {
@@ -137,7 +141,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         let lastValue = await service.getLastValue()
         XCTAssertNotNil(lastValue)
@@ -161,7 +165,7 @@ final class PollingServiceTests: XCTestCase {
             return "success"
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         // First poll should succeed
         for try await _ in pollingSequence {
@@ -169,7 +173,7 @@ final class PollingServiceTests: XCTestCase {
             break
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         let lastError = await service.getLastError()
         // Error state is tracked
@@ -188,10 +192,10 @@ final class PollingServiceTests: XCTestCase {
             return pollCount
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         for try await _ in pollingSequence {
-            service.stopPolling()
+            await service.stopPolling()
             break
         }
 
@@ -211,7 +215,7 @@ final class PollingServiceTests: XCTestCase {
             return "value_\(callCount)"
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var values: [String] = []
         for try await value in pollingSequence {
@@ -221,7 +225,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         XCTAssertGreaterThan(values.count, 0)
         for value in values {
@@ -245,7 +249,7 @@ final class PollingServiceTests: XCTestCase {
             return TestValue(id: idCounter, name: "test_\(idCounter)")
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var values: [TestValue] = []
         for try await value in pollingSequence {
@@ -255,7 +259,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         XCTAssertGreaterThan(values.count, 0)
         for (index, value) in values.enumerated() {
@@ -278,11 +282,11 @@ final class PollingServiceTests: XCTestCase {
             return "success"
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         for try await value in pollingSequence {
             XCTAssertEqual(value, "success")
-            service.stopPolling()
+            await service.stopPolling()
             break
         }
 
@@ -309,11 +313,11 @@ final class PollingServiceTests: XCTestCase {
             return "success"
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         for try await value in pollingSequence {
             XCTAssertEqual(value, "success")
-            service.stopPolling()
+            await service.stopPolling()
             break
         }
 
@@ -339,16 +343,18 @@ final class PollingServiceTests: XCTestCase {
             throw TestError.alwaysFails
         }
 
-        let pollingSequence = service.startPolling()
+        let pollingSequence = await service.startPolling()
 
         var completed = false
-        for try await _ in pollingSequence {
-            completed = true
+        do {
+            for try await _ in pollingSequence {
+                completed = true
+            }
         } catch {
             completed = true
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         // Should not exceed maxRetries
         XCTAssertLessThanOrEqual(attemptCount, maxRetries)
@@ -366,8 +372,8 @@ final class PollingServiceTests: XCTestCase {
         }
 
         // Create multiple sequences
-        let sequence1 = service.startPolling()
-        let sequence2 = service.startPolling()
+        let sequence1 = await service.startPolling()
+        let sequence2 = await service.startPolling()
 
         var value1Count = 0
         for try await _ in sequence1 {
@@ -385,7 +391,7 @@ final class PollingServiceTests: XCTestCase {
             }
         }
 
-        service.stopPolling()
+        await service.stopPolling()
 
         XCTAssertGreaterThan(value1Count, 0)
         XCTAssertGreaterThan(value2Count, 0)

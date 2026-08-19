@@ -5,23 +5,23 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     // MARK: - Initialization Tests
 
     @MainActor
-    func testInitialization_defaultConfiguration() {
+    func testInitialization_defaultConfiguration() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
-        XCTAssertAsyncFalse(await service.isPolling())
-        XCTAssertNil(await service.getLastStreams())
+        await XCTAssertAsyncFalse(await service.isPolling())
+        XCTAssertNil(service.getLastUpdateTime())
     }
 
     @MainActor
-    func testInitialization_customConfiguration() {
+    func testInitialization_customConfiguration() async {
         let config = PlaybackConfiguration()
         let service = StreamAdminPollingService(configuration: config) {
-            return []
+            return 0
         }
 
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - Polling Control Tests
@@ -29,11 +29,11 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testStartPolling() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
-        XCTAssertAsyncTrue(await service.isPolling())
+        await XCTAssertAsyncTrue(await service.isPolling())
 
         // Give time for first poll
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -44,20 +44,20 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testStopPolling() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
-        XCTAssertAsyncTrue(await service.isPolling())
+        await XCTAssertAsyncTrue(await service.isPolling())
 
         await service.stopPolling()
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     @MainActor
     func testStartPolling_idempotent() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
@@ -77,7 +77,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testFetchEmptyStreamList() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
@@ -85,8 +85,10 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         // Give time for polling
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        let streams = await service.getLastStreams()
-        XCTAssertEqual(streams?.count ?? 0, 0)
+        let lastUpdateTime = await service.getLastUpdateTime()
+        XCTAssertNotNil(lastUpdateTime)
+        let error = await service.getLastError()
+        XCTAssertNil(error)
 
         await service.stopPolling()
     }
@@ -96,8 +98,8 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         var callCount = 0
         let service = StreamAdminPollingService {
             callCount += 1
-            // Return mock streams
-            return []  // In real scenario, would return actual MediaMTXConfig
+            // Return mock stream count
+            return callCount  // In real scenario, would return pathList.items.count
         }
 
         await service.startPolling()
@@ -105,8 +107,8 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         // Give time for polling
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        let streams = await service.getLastStreams()
-        XCTAssertNotNil(streams)
+        let lastUpdateTime = await service.getLastUpdateTime()
+        XCTAssertNotNil(lastUpdateTime)
 
         await service.stopPolling()
     }
@@ -135,20 +137,20 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testReset() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        let streamsBefore = await service.getLastStreams()
-        XCTAssertNotNil(streamsBefore)
+        let updateTimeBefore = await service.getLastUpdateTime()
+        XCTAssertNotNil(updateTimeBefore)
 
         await service.reset()
 
-        let streamsAfter = await service.getLastStreams()
-        XCTAssertNil(streamsAfter)
-        XCTAssertAsyncFalse(await service.isPolling())
+        let updateTimeAfter = await service.getLastUpdateTime()
+        XCTAssertNil(updateTimeAfter)
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - Error Handling Tests
@@ -167,7 +169,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
                 throw TestError.temporary
             }
             shouldFail = false
-            return []
+            return 0
         }
 
         await service.startPolling()
@@ -178,8 +180,8 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         await service.stopPolling()
 
         // Should eventually recover
-        let streams = await service.getLastStreams()
-        XCTAssertNotNil(streams)
+        let lastUpdateTime = await service.getLastUpdateTime()
+        XCTAssertNotNil(lastUpdateTime)
     }
 
     @MainActor
@@ -193,7 +195,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
                 }
                 throw TestError.failed
             }
-            return []
+            return 0
         }
 
         await service.startPolling()
@@ -210,7 +212,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testConcurrentStartStop() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         async let start = service.startPolling()
@@ -225,7 +227,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
     @MainActor
     func testMultipleStopCalls() async {
         let service = StreamAdminPollingService {
-            return []
+            return 0
         }
 
         await service.startPolling()
@@ -233,7 +235,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         await service.stopPolling()  // Should be safe
         await service.stopPolling()  // Should be safe
 
-        XCTAssertAsyncFalse(await service.isPolling())
+        await XCTAssertAsyncFalse(await service.isPolling())
     }
 
     // MARK: - State Tests
@@ -243,7 +245,7 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         var counter = 0
         let service = StreamAdminPollingService {
             counter += 1
-            return []
+            return counter
         }
 
         await service.startPolling()
@@ -251,37 +253,16 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         // Give time for multiple polls
         try? await Task.sleep(nanoseconds: 500_000_000)
 
-        let streams = await service.getLastStreams()
+        let lastUpdateTime = await service.getLastUpdateTime()
 
         // Should have at least polled once
-        XCTAssertNotNil(streams)
+        XCTAssertNotNil(lastUpdateTime)
 
         await service.stopPolling()
     }
 }
 
 // MARK: - Helper Extensions
-
-extension XCTestCase {
-    @MainActor
-    func XCTAssertAsyncTrue(
-        _ expression: @autoclosure () async -> Bool,
-        _ message: @autoclosure () -> String = "",
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) async {
-        let result = await expression()
-        XCTAssertTrue(result, message(), file: file, line: line)
-    }
-
-    @MainActor
-    func XCTAssertAsyncFalse(
-        _ expression: @autoclosure () async -> Bool,
-        _ message: @autoclosure () -> String = "",
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) async {
-        let result = await expression()
-        XCTAssertFalse(result, message(), file: file, line: line)
-    }
-}
+//
+// XCTAssertAsyncTrue/XCTAssertAsyncFalse are defined once, on XCTestCase,
+// in ViewerCountPollingServiceTests.swift and shared across the test target.
