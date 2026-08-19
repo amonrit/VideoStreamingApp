@@ -25,8 +25,19 @@ enum MediaMTXAPIError: Error, LocalizedError {
     }
 }
 
+/// Interface for the MediaMTX Control API v3 client operations.
+/// Lets tests substitute a mock implementation without subclassing the
+/// (intentionally `final`) production client.
+protocol MediaMTXAPIClientProtocol {
+    /// Fetches all paths (streams) from MediaMTX
+    func fetchPathList() async throws -> MediaMTXPathList
+
+    /// Fetches single path status (incl. reader/viewer info) for one MediaMTX path
+    func fetchPath(named pathName: String) async throws -> MediaMTXPath
+}
+
 /// MediaMTX Control API v3 client
-final class MediaMTXAPIClient {
+final class MediaMTXAPIClient: MediaMTXAPIClientProtocol {
     private let session: URLSession
     private let baseURL: URL  // e.g. http://192.168.1.50:9997
 

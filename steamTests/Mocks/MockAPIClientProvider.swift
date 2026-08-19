@@ -25,27 +25,26 @@ final class MockAPIClientProviderForTests: APIClientProvider {
         return newMock
     }
 
-    func createAPIClient(baseURL: URL) -> MediaMTXAPIClient {
+    func createAPIClient(baseURL: URL) -> MediaMTXAPIClientProtocol {
         if let mockClient = mockClients[baseURL.absoluteString] {
-            return mockClient as MediaMTXAPIClient
+            return mockClient
         }
         if let defaultMock = defaultMockClient {
-            return defaultMock as MediaMTXAPIClient
+            return defaultMock
         }
         // Return default mock if nothing configured
-        return MockMediaMTXAPIClient() as MediaMTXAPIClient
+        return MockMediaMTXAPIClient()
     }
 
-    func getDefaultClient() -> MediaMTXAPIClient? {
-        defaultMockClient as? MediaMTXAPIClient
+    func getDefaultClient() -> MediaMTXAPIClientProtocol? {
+        defaultMockClient
     }
 }
 
-/// Mock implementation of MediaMTXAPIClient for testing.
-/// Allows control of responses and verification of calls.
-final class MockMediaMTXAPIClient: MediaMTXAPIClient {
-    private let mockBaseURL = URL(string: "http://mock:9997")!
-
+/// Mock implementation of MediaMTXAPIClientProtocol for testing.
+/// Allows control of responses and verification of calls, without depending
+/// on the (intentionally `final`) production `MediaMTXAPIClient` class.
+final class MockMediaMTXAPIClient: MediaMTXAPIClientProtocol {
     // Control mock responses
     var nextPaths: [MediaMTXPath] = []
     var nextViewerCount: Int = 0
@@ -58,13 +57,7 @@ final class MockMediaMTXAPIClient: MediaMTXAPIClient {
     var fetchPathNames: [String] = []
 
     /// Initializes mock client
-    init() {
-        super.init(baseURL: URL(string: "http://mock:9997")!)
-    }
-
-    required init(baseURL: URL) {
-        super.init(baseURL: mockBaseURL)
-    }
+    init() {}
 
     // MARK: - Mock Configuration
 
@@ -107,21 +100,21 @@ final class MockMediaMTXAPIClient: MediaMTXAPIClient {
         fetchPathNames.filter { $0 == name }.count == callCount
     }
 
-    // MARK: - Mock Overrides (Would override real methods in actual MediaMTXAPIClient)
+    // MARK: - MediaMTXAPIClientProtocol
 
     /// Mock the paths fetching behavior
-    func mockFetchPathList() async throws -> MediaMTXPathList {
+    func fetchPathList() async throws -> MediaMTXPathList {
         fetchPathListCallCount += 1
 
         if shouldFail, let error = nextError {
             throw error
         }
 
-        return MediaMTXPathList(items: nextPaths)
+        return MediaMTXPathList(itemCount: nextPaths.count, pageCount: 1, items: nextPaths)
     }
 
     /// Mock the individual path fetching behavior
-    func mockFetchPath(named pathName: String) async throws -> MediaMTXPath {
+    func fetchPath(named pathName: String) async throws -> MediaMTXPath {
         fetchPathCallCount += 1
         fetchPathNames.append(pathName)
 
@@ -129,16 +122,18 @@ final class MockMediaMTXAPIClient: MediaMTXAPIClient {
             throw error
         }
 
-        // Return a mock path with the requested name and viewer count
+        // Return a mock path with the requested name and viewer count.
+        // `viewerCount` is computed from `readers`, so synthesize that many.
+        let readers = (0..<nextViewerCount).map { MediaMTXReader(type: "hlsSession", id: "\($0)") }
         return MediaMTXPath(
             name: pathName,
-            source: "rtmp://test:1935/live/\(pathName)",
-            ready: true,
-            tracks: [],
-            bytesReceived: 1000,
-            bytesSent: 2000,
-            viewerCount: nextViewerCount,
-            createdAt: Date()
+            confName: pathName,
+            available: true,
+            online: true,
+            source: MediaMTXSource(type: "rtmpConn", id: "test"),
+            readers: readers,
+            inboundBytes: 1000,
+            outboundBytes: 2000
         )
     }
 }
@@ -170,6 +165,26 @@ class APIClientTestHelper {
         let client = MockMediaMTXAPIClient()
         client.setNextError(error)
         return client
+    }
+
+    /// Builds a `MediaMTXPath` fixture with the requested viewer count.
+    /// `viewerCount` is computed from `readers`, so this synthesizes that many.
+    static func makeTestPath(
+        name: String,
+        viewerCount: Int = 0,
+        online: Bool = true
+    ) -> MediaMTXPath {
+        let readers = (0..<viewerCount).map { MediaMTXReader(type: "hlsSession", id: "\($0)") }
+        return MediaMTXPath(
+            name: name,
+            confName: name,
+            available: true,
+            online: online,
+            source: MediaMTXSource(type: "rtmpConn", id: "test"),
+            readers: readers,
+            inboundBytes: 0,
+            outboundBytes: 0
+        )
     }
 }
 

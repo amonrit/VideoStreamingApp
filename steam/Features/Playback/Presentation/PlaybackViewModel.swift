@@ -24,7 +24,7 @@ class PlaybackViewModel: ObservableObject {
     private let playbackConfiguration: PlaybackConfiguration = .production
     private var viewerCountPollingService: ViewerCountPollingService?
     private let apiClientProvider: APIClientProvider
-    private var mediaMTXClient: MediaMTXAPIClient?
+    private var mediaMTXClient: MediaMTXAPIClientProtocol?
     private var mediaMTXPathName: String?
     private var viewerCountFailureCount: Int = 0
     private let maxViewerCountFailures: Int = 3

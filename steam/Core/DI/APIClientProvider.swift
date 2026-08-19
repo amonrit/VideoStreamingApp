@@ -6,11 +6,11 @@ protocol APIClientProvider {
     /// Creates an API client for the specified base URL
     /// - Parameter baseURL: The base URL for the API client
     /// - Returns: Configured MediaMTXAPIClient instance
-    func createAPIClient(baseURL: URL) -> MediaMTXAPIClient
+    func createAPIClient(baseURL: URL) -> MediaMTXAPIClientProtocol
 
     /// Gets the default API client (if configured)
     /// - Returns: Default MediaMTXAPIClient or nil
-    func getDefaultClient() -> MediaMTXAPIClient?
+    func getDefaultClient() -> MediaMTXAPIClientProtocol?
 }
 
 /// Default production implementation of APIClientProvider.
@@ -24,11 +24,11 @@ final class DefaultAPIClientProvider: APIClientProvider {
         self.defaultBaseURL = defaultBaseURL ?? URL(string: "http://localhost:9997")
     }
 
-    func createAPIClient(baseURL: URL) -> MediaMTXAPIClient {
+    func createAPIClient(baseURL: URL) -> MediaMTXAPIClientProtocol {
         MediaMTXAPIClient(baseURL: baseURL)
     }
 
-    func getDefaultClient() -> MediaMTXAPIClient? {
+    func getDefaultClient() -> MediaMTXAPIClientProtocol? {
         guard let url = defaultBaseURL else { return nil }
         return MediaMTXAPIClient(baseURL: url)
     }
@@ -37,8 +37,8 @@ final class DefaultAPIClientProvider: APIClientProvider {
 /// Mock implementation of APIClientProvider for testing.
 /// Allows injection of mock clients with controlled behavior.
 final class MockAPIClientProvider: APIClientProvider {
-    private var mockClients: [String: MediaMTXAPIClient] = [:]
-    var defaultMockClient: MediaMTXAPIClient?
+    private var mockClients: [String: MediaMTXAPIClientProtocol] = [:]
+    var defaultMockClient: MediaMTXAPIClientProtocol?
 
     /// Initializes with no mock clients (can be added later)
     init() {}
@@ -47,11 +47,11 @@ final class MockAPIClientProvider: APIClientProvider {
     /// - Parameters:
     ///   - mockClient: The mock client to use
     ///   - forURL: The base URL key (uses absoluteString)
-    func setMockClient(_ mockClient: MediaMTXAPIClient, forURL url: URL) {
+    func setMockClient(_ mockClient: MediaMTXAPIClientProtocol, forURL url: URL) {
         mockClients[url.absoluteString] = mockClient
     }
 
-    func createAPIClient(baseURL: URL) -> MediaMTXAPIClient {
+    func createAPIClient(baseURL: URL) -> MediaMTXAPIClientProtocol {
         if let mockClient = mockClients[baseURL.absoluteString] {
             return mockClient
         }
@@ -62,7 +62,7 @@ final class MockAPIClientProvider: APIClientProvider {
         return MediaMTXAPIClient(baseURL: baseURL)
     }
 
-    func getDefaultClient() -> MediaMTXAPIClient? {
+    func getDefaultClient() -> MediaMTXAPIClientProtocol? {
         defaultMockClient
     }
 }
