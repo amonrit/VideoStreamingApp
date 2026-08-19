@@ -7,6 +7,7 @@
 
 import XCTest
 import Foundation
+@testable import steam
 
 class CredentialSecurityTests: XCTestCase {
 
@@ -27,6 +28,7 @@ class CredentialSecurityTests: XCTestCase {
     /// 3. Use the `strings` command to find hardcoded credentials
     /// 4. Gain unauthorized access to the MediaMTX API
     func test_no_hardcoded_changeme_password_in_binary() throws {
+        #if os(macOS)
         // Get the path to the built app binary
         let bundle = Bundle(for: type(of: self))
         guard let executablePath = bundle.executablePath else {
@@ -58,10 +60,16 @@ class CredentialSecurityTests: XCTestCase {
             "SECURITY FAILURE: Hardcoded password 'changeme123' found in binary. " +
             "Credentials must be stored in Keychain, not hardcoded."
         )
+        #else
+        // `Process` (subprocess spawning) is unavailable on iOS/iOS Simulator,
+        // so this binary-inspection check can only run on macOS.
+        throw XCTSkip("Process is unavailable on iOS; run this test on a macOS target.")
+        #endif
     }
 
     /// Integration test: Verify no hardcoded apiviewer username pattern
     func test_no_hardcoded_apiviewer_credentials_in_binary() throws {
+        #if os(macOS)
         let bundle = Bundle(for: type(of: self))
         guard let executablePath = bundle.executablePath else {
             XCTFail("Could not find executable path")
@@ -96,6 +104,9 @@ class CredentialSecurityTests: XCTestCase {
             output.contains("changeme"),
             "SECURITY FAILURE: Credential pattern containing 'changeme' found in binary"
         )
+        #else
+        throw XCTSkip("Process is unavailable on iOS; run this test on a macOS target.")
+        #endif
     }
 
     /// Integration test: Verify MediaMTXConfig doesn't hardcode credentials

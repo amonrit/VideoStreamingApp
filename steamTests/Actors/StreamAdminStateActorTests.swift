@@ -8,6 +8,7 @@
 
 import XCTest
 import Foundation
+@testable import steam
 
 final class StreamAdminStateActorTests: XCTestCase {
     var stateActor: DefaultStreamAdminStateActor!

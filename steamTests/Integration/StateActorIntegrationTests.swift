@@ -8,6 +8,7 @@
 
 import XCTest
 import Foundation
+@testable import steam
 
 final class StateActorIntegrationTests: XCTestCase {
 
@@ -122,17 +123,19 @@ final class StateActorIntegrationTests: XCTestCase {
         let stateActor = DefaultPlaybackStateActor()
 
         // Start: Initialize
-        XCTAssertEqual(await stateActor.currentState.connectionStatus, .disconnected)
+        var state = await stateActor.currentState
+        XCTAssertEqual(state.connectionStatus, .disconnected)
 
         // Step 1: Start loading
         await stateActor.updateLoading(true)
         await stateActor.updateConnectionStatus(.connecting)
-        XCTAssertEqual(await stateActor.currentState.connectionStatus, .connecting)
+        state = await stateActor.currentState
+        XCTAssertEqual(state.connectionStatus, .connecting)
 
         // Step 2: Buffer
         await stateActor.updateConnectionStatus(.buffering)
         await stateActor.updateBufferingCount(1)
-        var state = await stateActor.currentState
+        state = await stateActor.currentState
         XCTAssertEqual(state.connectionStatus, .buffering)
         XCTAssertEqual(state.bufferingCount, 1)
 
