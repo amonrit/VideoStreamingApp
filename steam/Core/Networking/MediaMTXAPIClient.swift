@@ -50,7 +50,7 @@ final class MediaMTXAPIClient: MediaMTXAPIClientProtocol {
     func fetchPathList() async throws -> MediaMTXPathList {
         let url = baseURL.appendingPathComponent("v3/paths/list")
         var request = URLRequest(url: url)
-        request.setValue(MediaMTXConfig.authHeaderValue, forHTTPHeaderField: "Authorization")
+        request.setValue(await MediaMTXConfig.authHeaderValue, forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 5
 
         do {
@@ -78,7 +78,7 @@ final class MediaMTXAPIClient: MediaMTXAPIClientProtocol {
         let url = baseURL.appendingPathComponent("v3/paths/get/\(encodedPathName)")
 
         var request = URLRequest(url: url)
-        request.setValue(MediaMTXConfig.authHeaderValue, forHTTPHeaderField: "Authorization")
+        request.setValue(await MediaMTXConfig.authHeaderValue, forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 5
 
         do {

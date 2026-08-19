@@ -113,7 +113,7 @@ class CredentialSecurityTests: XCTestCase {
     ///
     /// **Why:** Ensures that at runtime, MediaMTXConfig properly uses Keychain
     /// or environment variables instead of hardcoded values.
-    func test_mediamtx_config_uses_dynamic_credentials() {
+    func test_mediamtx_config_uses_dynamic_credentials() async {
         // Set environment variables for this test
         setenv("API_VIEWER_USER", "testuser", 1)
         setenv("API_VIEWER_PASS", "testpass", 1)
@@ -124,7 +124,7 @@ class CredentialSecurityTests: XCTestCase {
 
         // The authHeaderValue should be generated from environment variables,
         // not hardcoded values
-        let authHeader = MediaMTXConfig.authHeaderValue
+        let authHeader = await MediaMTXConfig.authHeaderValue
 
         // Decode the base64 auth header
         guard authHeader.hasPrefix("Basic ") else {

@@ -16,7 +16,7 @@ struct VideoStreamListView: View {
     @State private var showAddStream = false
     @State private var customURL = ""
     @State private var customTitle = ""
-    @StateObject private var urlLogger = URLValidationLogger()
+    @State private var urlLogger = URLValidationLogger()
     private let urlValidator = URLValidator()
 
     init(playbackViewModel: PlaybackViewModel) {
@@ -216,8 +216,10 @@ struct VideoStreamListView: View {
     private func addCustomStream(title: String, url: String) {
         let newStream = playbackViewModel.createCustomStream(title: title, url: url)
 
-        // Log the custom URL with timestamp
-        urlLogger.logCustomURL(url, title: title)
+        // Log the custom URL with timestamp (fire-and-forget, same as before)
+        Task {
+            await urlLogger.logCustomURL(url, title: title)
+        }
 
         streams.insert(newStream, at: 0)
         select(stream: newStream)

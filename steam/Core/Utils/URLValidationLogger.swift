@@ -4,15 +4,18 @@
 //
 
 import Foundation
-import Combine
 
 /// Service for logging custom stream URLs added by users.
 /// Provides audit trail with timestamps for security monitoring.
-class URLValidationLogger: ObservableObject {
+///
+/// Actor-isolated instead of the old `DispatchQueue(attributes: .concurrent)` +
+/// barrier pattern, so concurrent writers can't interleave into the log file.
+/// Not `ObservableObject` — it never published any state for views to observe,
+/// that conformance was vestigial.
+actor URLValidationLogger {
 
     private let logFilePath: String
     private let fileManager = FileManager.default
-    private let queue = DispatchQueue(label: "com.steam.url-validation-logger", attributes: .concurrent)
     private let dateFormatter = ISO8601DateFormatter()
 
     // MARK: - Initialization
@@ -36,24 +39,18 @@ class URLValidationLogger: ObservableObject {
     ///   - url: The URL being added
     ///   - title: The display title for the stream
     func logCustomURL(_ url: String, title: String) {
-        queue.async(flags: .barrier) { [weak self] in
-            self?.writeLog(url: url, title: title)
-        }
+        writeLog(url: url, title: title)
     }
 
     /// Retrieves all logged URLs.
     /// - Returns: Array of log entries as strings
     func getAllLogs() -> [String] {
-        return queue.sync {
-            readLogs()
-        }
+        readLogs()
     }
 
     /// Clears all logged URLs (use with caution).
     func clearLogs() {
-        queue.async(flags: .barrier) { [weak self] in
-            try? self?.fileManager.removeItem(atPath: self?.logFilePath ?? "")
-        }
+        try? fileManager.removeItem(atPath: logFilePath)
     }
 
     // MARK: - Private Methods

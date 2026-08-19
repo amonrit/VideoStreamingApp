@@ -15,12 +15,18 @@ import Security
 /// - **Never:** Hardcoded values in source code
 ///
 /// See docs/CREDENTIAL_MANAGEMENT.md for the full credential lifecycle strategy.
-class KeychainManager {
+///
+/// Actor-isolated instead of the old `DispatchQueue(attributes: .concurrent)` +
+/// barrier pattern: `save()`/`delete()` are each a delete-then-add pair against
+/// the Keychain that isn't atomic as a whole, so concurrent callers still need
+/// to be serialized even though each individual Security-framework call is
+/// itself thread-safe.
+actor KeychainManager {
     // MARK: - Singleton
     static let shared = KeychainManager()
 
     // MARK: - Credentials Struct
-    struct Credentials {
+    struct Credentials: Sendable {
         let username: String
         let password: String
 
@@ -56,8 +62,6 @@ class KeychainManager {
             }
         }
     }
-
-    private let queue = DispatchQueue(label: "com.steam.keychain", attributes: .concurrent)
 
     // MARK: - Private Methods
 
@@ -125,32 +129,30 @@ class KeychainManager {
     ///   - service: The service identifier (e.g., "MediaMTX")
     /// - Throws: KeychainError if save fails
     func save(_ credentials: Credentials, service: String) throws {
-        try queue.sync(flags: .barrier) {
-            // Save username
-            let usernameQuery = buildQuery(service: service, account: "username")
-            let usernameData = credentials.username.data(using: .utf8) ?? Data()
+        // Save username
+        let usernameQuery = buildQuery(service: service, account: "username")
+        let usernameData = credentials.username.data(using: .utf8) ?? Data()
 
-            SecItemDelete(usernameQuery as CFDictionary)
-            let usernameStatus = SecItemAdd(
-                usernameQuery.merging([kSecValueData as String: usernameData], uniquingKeysWith: { _, new in new }) as CFDictionary,
-                nil
-            )
-            guard usernameStatus == errSecSuccess else {
-                throw KeychainError.saveFailed(usernameStatus)
-            }
+        SecItemDelete(usernameQuery as CFDictionary)
+        let usernameStatus = SecItemAdd(
+            usernameQuery.merging([kSecValueData as String: usernameData], uniquingKeysWith: { _, new in new }) as CFDictionary,
+            nil
+        )
+        guard usernameStatus == errSecSuccess else {
+            throw KeychainError.saveFailed(usernameStatus)
+        }
 
-            // Save password
-            let passwordQuery = buildQuery(service: service, account: "password")
-            let passwordData = credentials.password.data(using: .utf8) ?? Data()
+        // Save password
+        let passwordQuery = buildQuery(service: service, account: "password")
+        let passwordData = credentials.password.data(using: .utf8) ?? Data()
 
-            SecItemDelete(passwordQuery as CFDictionary)
-            let passwordStatus = SecItemAdd(
-                passwordQuery.merging([kSecValueData as String: passwordData], uniquingKeysWith: { _, new in new }) as CFDictionary,
-                nil
-            )
-            guard passwordStatus == errSecSuccess else {
-                throw KeychainError.saveFailed(passwordStatus)
-            }
+        SecItemDelete(passwordQuery as CFDictionary)
+        let passwordStatus = SecItemAdd(
+            passwordQuery.merging([kSecValueData as String: passwordData], uniquingKeysWith: { _, new in new }) as CFDictionary,
+            nil
+        )
+        guard passwordStatus == errSecSuccess else {
+            throw KeychainError.saveFailed(passwordStatus)
         }
     }
 
@@ -168,9 +170,7 @@ class KeychainManager {
     /// - Returns: Loaded Credentials
     /// - Throws: KeychainError if load fails from both Keychain and environment
     func load(service: String, userKey: String, passKey: String) throws -> Credentials {
-        try queue.sync {
-            try loadCredentials(service: service, userKey: userKey, passKey: passKey)
-        }
+        try loadCredentials(service: service, userKey: userKey, passKey: passKey)
     }
 
     /// Deletes credentials from Keychain for the given service.
@@ -179,20 +179,18 @@ class KeychainManager {
     ///   - service: The service identifier (e.g., "MediaMTX")
     /// - Throws: KeychainError if delete fails
     func delete(service: String) throws {
-        try queue.sync(flags: .barrier) {
-            let usernameQuery = buildQuery(service: service, account: "username")
-            let passwordQuery = buildQuery(service: service, account: "password")
+        let usernameQuery = buildQuery(service: service, account: "username")
+        let passwordQuery = buildQuery(service: service, account: "password")
 
-            let usernameStatus = SecItemDelete(usernameQuery as CFDictionary)
-            let passwordStatus = SecItemDelete(passwordQuery as CFDictionary)
+        let usernameStatus = SecItemDelete(usernameQuery as CFDictionary)
+        let passwordStatus = SecItemDelete(passwordQuery as CFDictionary)
 
-            // SecItemDelete returns errSecItemNotFound if the item doesn't exist, which is OK
-            guard usernameStatus == errSecSuccess || usernameStatus == errSecItemNotFound else {
-                throw KeychainError.deleteFailed(usernameStatus)
-            }
-            guard passwordStatus == errSecSuccess || passwordStatus == errSecItemNotFound else {
-                throw KeychainError.deleteFailed(passwordStatus)
-            }
+        // SecItemDelete returns errSecItemNotFound if the item doesn't exist, which is OK
+        guard usernameStatus == errSecSuccess || usernameStatus == errSecItemNotFound else {
+            throw KeychainError.deleteFailed(usernameStatus)
+        }
+        guard passwordStatus == errSecSuccess || passwordStatus == errSecItemNotFound else {
+            throw KeychainError.deleteFailed(passwordStatus)
         }
     }
 

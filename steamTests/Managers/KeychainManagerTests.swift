@@ -10,21 +10,21 @@ class KeychainManagerTests: XCTestCase {
 
     var sut: KeychainManager!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         sut = KeychainManager()
         // Clean up any existing test credentials
-        try? sut.delete(service: "TestService")
+        try? await sut.delete(service: "TestService")
     }
 
-    override func tearDown() {
-        super.tearDown()
-        try? sut.delete(service: "TestService")
+    override func tearDown() async throws {
+        try? await sut.delete(service: "TestService")
+        try await super.tearDown()
     }
 
     // MARK: - Tests
 
-    func test_save_and_load_credentials() throws {
+    func test_save_and_load_credentials() async throws {
         // Given
         let credentials = KeychainManager.Credentials(
             username: "testuser",
@@ -32,15 +32,15 @@ class KeychainManagerTests: XCTestCase {
         )
 
         // When
-        try sut.save(credentials, service: "TestService")
-        let loaded = try sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
+        try await sut.save(credentials, service: "TestService")
+        let loaded = try await sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
 
         // Then
         XCTAssertEqual(loaded.username, "testuser")
         XCTAssertEqual(loaded.password, "testpassword123")
     }
 
-    func test_load_from_environment_fallback() throws {
+    func test_load_from_environment_fallback() async throws {
         // Given
         setenv("TEST_USER", "envuser", 1)
         setenv("TEST_PASS", "envpass", 1)
@@ -50,99 +50,101 @@ class KeychainManagerTests: XCTestCase {
         }
 
         // When
-        let loaded = try sut.load(service: "NonexistentService", userKey: "TEST_USER", passKey: "TEST_PASS")
+        let loaded = try await sut.load(service: "NonexistentService", userKey: "TEST_USER", passKey: "TEST_PASS")
 
         // Then
         XCTAssertEqual(loaded.username, "envuser")
         XCTAssertEqual(loaded.password, "envpass")
     }
 
-    func test_load_fails_with_missing_environment_variable() {
+    func test_load_fails_with_missing_environment_variable() async {
         // Given
         unsetenv("MISSING_USER")
         unsetenv("MISSING_PASS")
 
         // When/Then
-        XCTAssertThrowsError(
-            try sut.load(service: "NonexistentService", userKey: "MISSING_USER", passKey: "MISSING_PASS")
-        ) { error in
-            guard case KeychainManager.KeychainError.environmentVariableNotFound = error else {
-                XCTFail("Expected environmentVariableNotFound error")
-                return
-            }
+        do {
+            _ = try await sut.load(service: "NonexistentService", userKey: "MISSING_USER", passKey: "MISSING_PASS")
+            XCTFail("Expected environmentVariableNotFound error")
+        } catch KeychainManager.KeychainError.environmentVariableNotFound {
+            // expected
+        } catch {
+            XCTFail("Expected environmentVariableNotFound error, got \(error)")
         }
     }
 
-    func test_delete_credentials() throws {
+    func test_delete_credentials() async throws {
         // Given
         let credentials = KeychainManager.Credentials(username: "user", password: "pass")
-        try sut.save(credentials, service: "TestService")
-        XCTAssertTrue(sut.exists(service: "TestService"))
+        try await sut.save(credentials, service: "TestService")
+        let existsBefore = await sut.exists(service: "TestService")
+        XCTAssertTrue(existsBefore)
 
         // When
-        try sut.delete(service: "TestService")
+        try await sut.delete(service: "TestService")
 
         // Then
-        XCTAssertFalse(sut.exists(service: "TestService"))
+        let existsAfter = await sut.exists(service: "TestService")
+        XCTAssertFalse(existsAfter)
     }
 
-    func test_exists_returns_true_when_credentials_stored() throws {
+    func test_exists_returns_true_when_credentials_stored() async throws {
         // Given
         let credentials = KeychainManager.Credentials(username: "user", password: "pass")
-        try sut.save(credentials, service: "TestService")
+        try await sut.save(credentials, service: "TestService")
 
         // When
-        let exists = sut.exists(service: "TestService")
+        let exists = await sut.exists(service: "TestService")
 
         // Then
         XCTAssertTrue(exists)
     }
 
-    func test_exists_returns_false_when_credentials_not_stored() {
+    func test_exists_returns_false_when_credentials_not_stored() async {
         // When
-        let exists = sut.exists(service: "NonexistentService")
+        let exists = await sut.exists(service: "NonexistentService")
 
         // Then
         XCTAssertFalse(exists)
     }
 
-    func test_save_overwrites_existing_credentials() throws {
+    func test_save_overwrites_existing_credentials() async throws {
         // Given
         let oldCredentials = KeychainManager.Credentials(username: "olduser", password: "oldpass")
-        try sut.save(oldCredentials, service: "TestService")
+        try await sut.save(oldCredentials, service: "TestService")
 
         let newCredentials = KeychainManager.Credentials(username: "newuser", password: "newpass")
 
         // When
-        try sut.save(newCredentials, service: "TestService")
-        let loaded = try sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
+        try await sut.save(newCredentials, service: "TestService")
+        let loaded = try await sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
 
         // Then
         XCTAssertEqual(loaded.username, "newuser")
         XCTAssertEqual(loaded.password, "newpass")
     }
 
-    func test_special_characters_in_credentials() throws {
+    func test_special_characters_in_credentials() async throws {
         // Given
         let specialChars = "p@ssw0rd!#$%^&*()"
         let credentials = KeychainManager.Credentials(username: "user@example.com", password: specialChars)
 
         // When
-        try sut.save(credentials, service: "TestService")
-        let loaded = try sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
+        try await sut.save(credentials, service: "TestService")
+        let loaded = try await sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
 
         // Then
         XCTAssertEqual(loaded.username, "user@example.com")
         XCTAssertEqual(loaded.password, specialChars)
     }
 
-    func test_empty_credentials_handling() throws {
+    func test_empty_credentials_handling() async throws {
         // Given
         let credentials = KeychainManager.Credentials(username: "", password: "")
 
         // When
-        try sut.save(credentials, service: "TestService")
-        let loaded = try sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
+        try await sut.save(credentials, service: "TestService")
+        let loaded = try await sut.load(service: "TestService", userKey: "DUMMY_USER", passKey: "DUMMY_PASS")
 
         // Then
         XCTAssertEqual(loaded.username, "")

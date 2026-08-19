@@ -26,30 +26,32 @@ enum MediaMTXConfig {
 
     /// Loads credentials from Keychain (or environment fallback) at runtime.
     /// This avoids hardcoding credentials in the app binary.
-    private static func loadCredentials() -> KeychainManager.Credentials? {
-        credentialsLock.lock()
-        defer { credentialsLock.unlock() }
-
-        // Return cached credentials if available
-        if let cached = cachedCredentials {
+    ///
+    /// The lock is never held across the `await` below — `KeychainManager` is
+    /// now an actor, and holding an `NSLock` across a suspension point is
+    /// unsafe (the continuation can resume on a different thread than the one
+    /// that took the lock). We check the cache, release, do the `await`, then
+    /// re-acquire just to write the result.
+    private static func loadCredentials() async -> KeychainManager.Credentials? {
+        if let cached = credentialsLock.withLock({ cachedCredentials }) {
             return cached
         }
 
         // Try to load from Keychain
         do {
-            let credentials = try KeychainManager.shared.load(
+            let credentials = try await KeychainManager.shared.load(
                 service: keychainService,
                 userKey: usernameEnvKey,
                 passKey: passwordEnvKey
             )
-            cachedCredentials = credentials
+            credentialsLock.withLock { cachedCredentials = credentials }
             return credentials
         } catch {
             // Fallback to environment variables for testing/development
             if let username = ProcessInfo.processInfo.environment[usernameEnvKey],
                let password = ProcessInfo.processInfo.environment[passwordEnvKey] {
                 let credentials = KeychainManager.Credentials(username: username, password: password)
-                cachedCredentials = credentials
+                credentialsLock.withLock { cachedCredentials = credentials }
                 return credentials
             }
             return nil
@@ -60,22 +62,24 @@ enum MediaMTXConfig {
     /// Retrieves the API username from Keychain (or environment fallback).
     /// Returns empty string if no credentials are available.
     static var apiUsername: String {
-        loadCredentials()?.username ?? ""
+        get async { await loadCredentials()?.username ?? "" }
     }
 
     /// Retrieves the API password from Keychain (or environment fallback).
     /// Returns empty string if no credentials are available.
     static var apiPassword: String {
-        loadCredentials()?.password ?? ""
+        get async { await loadCredentials()?.password ?? "" }
     }
 
     // MARK: - Computed Auth Header
     /// Generates HTTP Basic authentication header from Keychain credentials.
     static var authHeaderValue: String {
-        let raw = "\(apiUsername):\(apiPassword)"
-        let data = Data(raw.utf8)
-        let encoded = data.base64EncodedString()
-        return "Basic \(encoded)"
+        get async {
+            let raw = "\(await apiUsername):\(await apiPassword)"
+            let data = Data(raw.utf8)
+            let encoded = data.base64EncodedString()
+            return "Basic \(encoded)"
+        }
     }
 
     // MARK: - Credential Management
@@ -86,27 +90,23 @@ enum MediaMTXConfig {
     ///   - username: The API viewer username
     ///   - password: The API viewer password
     /// - Throws: KeychainManager.KeychainError if storage fails
-    static func storeCredentials(username: String, password: String) throws {
+    static func storeCredentials(username: String, password: String) async throws {
         let credentials = KeychainManager.Credentials(username: username, password: password)
-        try KeychainManager.shared.save(credentials, service: keychainService)
+        try await KeychainManager.shared.save(credentials, service: keychainService)
         // Reset cache to load the newly stored credentials
-        credentialsLock.lock()
-        defer { credentialsLock.unlock() }
-        cachedCredentials = nil
+        credentialsLock.withLock { cachedCredentials = nil }
     }
 
     /// Checks if credentials exist in Keychain.
     static var hasStoredCredentials: Bool {
-        KeychainManager.shared.exists(service: keychainService)
+        get async { await KeychainManager.shared.exists(service: keychainService) }
     }
 
     /// Clears stored credentials from Keychain.
     /// Useful for logout or credential reset scenarios.
-    static func clearCredentials() throws {
-        try KeychainManager.shared.delete(service: keychainService)
-        credentialsLock.lock()
-        defer { credentialsLock.unlock() }
-        cachedCredentials = nil
+    static func clearCredentials() async throws {
+        try await KeychainManager.shared.delete(service: keychainService)
+        credentialsLock.withLock { cachedCredentials = nil }
     }
 
     // MARK: - Server Detection
