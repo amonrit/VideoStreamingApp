@@ -41,7 +41,7 @@ final class URLWhitelistIntegrationTests: XCTestCase {
         logger.logCustomURL(appleStream, title: "Apple Test Stream")
 
         let logs = logger.getAllLogs()
-        XCTAssertGreater(logs.count, 0, "Log should contain the entry")
+        XCTAssertGreaterThan(logs.count, 0, "Log should contain the entry")
         XCTAssertTrue(logs[0].contains(appleStream), "Log should contain URL")
         XCTAssertTrue(logs[0].contains("Apple Test Stream"), "Log should contain title")
     }
@@ -53,7 +53,7 @@ final class URLWhitelistIntegrationTests: XCTestCase {
 
         logger.logCustomURL(localhostStream, title: "Local Stream")
         let logs = logger.getAllLogs()
-        XCTAssertGreater(logs.count, 0, "Should log localhost stream")
+        XCTAssertGreaterThan(logs.count, 0, "Should log localhost stream")
     }
 
     func testNonWhitelistedStreamIsRejected() {
@@ -64,7 +64,7 @@ final class URLWhitelistIntegrationTests: XCTestCase {
         logger.logCustomURL(maliciousStream, title: "Malicious Stream")
         let logs = logger.getAllLogs()
         // Even rejected streams may be logged for audit trail
-        XCTAssertGreater(logs.count, 0, "Should log rejected stream for audit")
+        XCTAssertGreaterThan(logs.count, 0, "Should log rejected stream for audit")
     }
 
     func testHTTPStreamIsWarned() {

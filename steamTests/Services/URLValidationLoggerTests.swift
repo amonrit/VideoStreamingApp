@@ -115,7 +115,7 @@ final class URLValidationLoggerTests: XCTestCase {
         let content = readLogFile()
         // Should have logged multiple entries without corruption
         let lineCount = content.components(separatedBy: "\n").filter { !$0.isEmpty }.count
-        XCTAssertGreater(lineCount, 0, "Should have log entries after concurrent logging")
+        XCTAssertGreaterThan(lineCount, 0, "Should have log entries after concurrent logging")
     }
 
     // MARK: - Helper Methods
