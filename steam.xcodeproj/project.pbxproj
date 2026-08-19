@@ -352,6 +352,9 @@
 					FA8C94FE2FED6267004E66E7 = {
 						CreatedOnToolsVersion = 26.6;
 					};
+					59CEFA41CF7F53676ED477D7 = {
+						TestTargetID = FA8C94FE2FED6267004E66E7;
+					};
 				};
 			};
 			buildConfigurationList = FA8C94FA2FED6267004E66E7 /* Build configuration list for PBXProject "steam" */;
@@ -448,9 +451,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = LW8TA5FBZ7;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				PRODUCT_NAME = steamTests;
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/steam.app/steam";
 			};
 			name = Debug;
@@ -463,9 +467,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = LW8TA5FBZ7;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				PRODUCT_NAME = steamTests;
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/steam.app/steam";
 				VALIDATE_PRODUCT = YES;
 			};
