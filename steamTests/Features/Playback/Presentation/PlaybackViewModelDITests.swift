@@ -15,16 +15,7 @@ final class PlaybackViewModelDITests: XCTestCase {
         // Create mock provider and client
         mockProvider = APIClientTestHelper.createMockProvider()
         mockClient = APIClientTestHelper.createSuccessMockClient(paths: [
-            MediaMTXPath(
-                name: "test-stream",
-                source: "rtmp://localhost:1935/live/test-stream",
-                ready: true,
-                tracks: [],
-                bytesReceived: 0,
-                bytesSent: 0,
-                viewerCount: 42,
-                createdAt: Date()
-            )
+            APIClientTestHelper.makeTestPath(name: "test-stream", viewerCount: 42)
         ])
 
         // Set up mock provider with mock client
@@ -54,11 +45,9 @@ final class PlaybackViewModelDITests: XCTestCase {
     func testMediaMTXClientCreation() {
         // When a stream with MediaMTX URL is loaded
         let stream = VideoStream(
-            id: UUID(),
             title: "Test Stream",
             urlString: "http://localhost:8888/live/test-stream/index.m3u8",
-            thumbnail: nil,
-            description: nil
+            thumbnailURLString: ""
         )
 
         // The ViewModel should create a client via the mock provider
