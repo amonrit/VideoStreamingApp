@@ -1,6 +1,4 @@
-Last Modified: 08/17/2026 (1786926346) by amonrit
-
-Last Modified: 08/17/2026 (1786926419) by amonrit
+Last Modified: 08/19/2026 (1787140694) by amonrit
 
 # CLAUDE.md
 
@@ -27,7 +25,7 @@ This file provides guidance to Claude Code and AI assistants when working with c
 
 The project enables users to publish live video streams (via RTMP) and play them back (via HLS/RTSP/WebRTC) on iOS devices.
 
-**Phase Status:** Phase 9 (Clean View Layer) IN PROGRESS — See [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md) for latest architecture.
+**Phase Status:** Phase 9 (Clean View Layer) COMPLETE — See [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md) for latest architecture.
 
 ---
 
@@ -48,15 +46,12 @@ PlaybackViewModel (MVVM - Coordinates logic)
 Workers (Reusable Utilities)
   └─ VideoPlayerWorker — KVO observers, resolution/bitrate extraction
 
-Domain Layer (Business Logic - Framework independent)
-  ├─ Use Cases (LoadStream, RetryPlayback, etc.)
-  ├─ Repositories (protocol-based)
-  └─ Entities
+Domain Entities (Framework-independent data)
+  └─ VideoStream, ConnectionStatus, RetryState, PlaybackState, MediaMTXPath, MediaMTXConfig
 
-Data Layer (Data Access)
-  ├─ Repository Implementations
-  ├─ Remote Data Sources (MediaMTX API)
-  └─ Models
+Networking (ViewModels call this directly — no Repository layer)
+  ├─ APIClientProvider — creates MediaMTXAPIClient instances (DI seam for tests)
+  └─ MediaMTXAPIClient — talks to the MediaMTX Control API
 
 Core Services
   ├─ StateActor — Thread-safe state management
@@ -64,6 +59,12 @@ Core Services
   ├─ APIClientProvider — Dependency injection
   └─ URLValidator — Stream URL validation
 ```
+
+A Repository/Use-Case layer was scaffolded early on (`Domain/Repositories`, `Data/Repositories`,
+`Data/DataSources`) but was never wired up — it only ever returned placeholder data — and has
+since been removed. If a real need for it shows up later (a second data source to combine, or
+business logic that needs to be shared outside a ViewModel), extract it from the working
+ViewModel code at that point rather than re-scaffolding ahead of need.
 
 **Key Patterns:**
 - **StateActor** — Replaces @Published for thread-safe state
@@ -78,11 +79,11 @@ Core Services
 | File | Purpose |
 |------|---------|
 | `steam/Features/Playback/Presentation/PlaybackViewModel.swift` | Core MVVM logic with StateActor |
-| `steam/Features/Playback/Domain/UseCases/` | Business logic use cases |
-| `steam/Views/HomeView.swift` | Home menu & navigation hub |
-| `steam/Views/VideoStreamListView.swift` | Stream list & playback UI |
-| `steam/Views/VideoPlayerView.swift` | Player UI & overlays (pure presentation) |
-| `steam/Workers/VideoPlayerWorker.swift` | KVO observers & formatting |
+| `steam/Features/Playback/Domain/Services/RetryOrchestrator.swift` | Retry logic with exponential backoff |
+| `steam/Features/Home/Presentation/HomeView.swift` | Home menu & navigation hub |
+| `steam/Features/Playback/Presentation/VideoStreamListView.swift` | Stream list & playback UI |
+| `steam/Features/Playback/Presentation/VideoPlayerView.swift` | Player UI & overlays (pure presentation) |
+| `steam/Features/Playback/Presentation/VideoPlayerWorker.swift` | KVO observers & formatting |
 | `streaming/docker-compose.yml` | Docker service config |
 | `streaming/mediamtx.yml` | MediaMTX configuration |
 
