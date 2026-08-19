@@ -2,12 +2,19 @@ import Foundation
 
 /// Orchestrates retry logic with state management and messaging.
 /// Centralizes all retry behavior from ViewModels into a reusable service.
+///
+/// `@MainActor`-isolated (matching this project's default actor isolation, and
+/// `RetryState`'s) so `retryState` can never be mutated from two callers at
+/// once — previously this was a `Sendable` class with `nonisolated(unsafe)`
+/// state, which only silenced the compiler rather than making concurrent
+/// access safe.
+@MainActor
 public final class RetryOrchestrator: Sendable {
     // MARK: - Properties
 
     private let configuration: PlaybackConfiguration
-    private nonisolated(unsafe) var retryState: RetryState
-    private nonisolated(unsafe) var onStatusChanged: ((String) -> Void)?
+    private var retryState: RetryState
+    private var onStatusChanged: ((String) -> Void)?
 
     // MARK: - Initialization
 

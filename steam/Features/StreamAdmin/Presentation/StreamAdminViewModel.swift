@@ -95,7 +95,7 @@ class StreamAdminViewModel: ObservableObject {
         )
 
         Task {
-            streamAdminPollingService?.startPolling()
+            await streamAdminPollingService?.startPolling()
             logger.info("📊 Started polling with StreamAdminPollingService")
         }
     }
@@ -103,7 +103,7 @@ class StreamAdminViewModel: ObservableObject {
     /// Stop polling for updates
     func stopPolling() {
         Task {
-            streamAdminPollingService?.stopPolling()
+            await streamAdminPollingService?.stopPolling()
             streamAdminPollingService = nil
         }
         logger.info("⏹️  Stopped polling")
@@ -112,10 +112,12 @@ class StreamAdminViewModel: ObservableObject {
     deinit {
         stateObserverTask?.cancel()
 
-        let service = streamAdminPollingService
-        if service != nil {
-            Task { [weak self] in
-                await self?.streamAdminPollingService?.stopPolling()
+        // Capture the service itself, not `self` — by the time this Task runs,
+        // `self` has already finished deinitializing, so `[weak self]` would
+        // always read nil here and silently skip the cleanup.
+        if let service = streamAdminPollingService {
+            Task {
+                await service.stopPolling()
             }
         }
 

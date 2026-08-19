@@ -1,6 +1,7 @@
 import XCTest
 @testable import steam
 
+@MainActor
 final class RetryOrchestratorTests: XCTestCase {
     var sut: RetryOrchestrator!
     var statusMessages: [String] = []
@@ -24,22 +25,22 @@ final class RetryOrchestratorTests: XCTestCase {
 
     // MARK: - A. Initialization Tests
 
-    func testInitializationWithDefaultConfiguration() {
+    func testInitializationWithDefaultConfiguration() async {
         let orchestrator = RetryOrchestrator()
-        let state = orchestrator.getState()
+        let state = await orchestrator.getState()
 
         XCTAssertEqual(state.attemptCount, 0)
         XCTAssertNil(state.lastError)
     }
 
-    func testInitializationWithCustomConfiguration() {
+    func testInitializationWithCustomConfiguration() async {
         let customConfig = PlaybackConfiguration(
             maxRetryAttempts: 5,
             initialRetryDelay: 2.0,
             maxRetryDelay: 10.0
         )
         let orchestrator = RetryOrchestrator(configuration: customConfig)
-        let state = orchestrator.getState()
+        let state = await orchestrator.getState()
 
         XCTAssertEqual(state.attemptCount, 0)
         XCTAssertEqual(state.maxAttempts, 5)
@@ -67,7 +68,8 @@ final class RetryOrchestratorTests: XCTestCase {
 
         XCTAssertEqual(result, "success")
         XCTAssertEqual(operationCallCount, 1)
-        XCTAssertEqual(sut.getState().attemptCount, 1)
+        let state = await sut.getState()
+        XCTAssertEqual(state.attemptCount, 1)
     }
 
     func testSuccessfulOperationOnSecondAttempt() async throws {
@@ -83,7 +85,8 @@ final class RetryOrchestratorTests: XCTestCase {
 
         XCTAssertEqual(result, "success")
         XCTAssertEqual(operationCallCount, 2)
-        XCTAssertEqual(sut.getState().attemptCount, 2)
+        let state = await sut.getState()
+        XCTAssertEqual(state.attemptCount, 2)
     }
 
     func testSuccessfulOperationOnFinalAttempt() async throws {
@@ -112,7 +115,8 @@ final class RetryOrchestratorTests: XCTestCase {
             XCTFail("Should have thrown error")
         } catch {
             XCTAssertEqual(operationCallCount, 3)
-            XCTAssertEqual(sut.getState().attemptCount, 3)
+            let state = await sut.getState()
+            XCTAssertEqual(state.attemptCount, 3)
         }
     }
 
@@ -137,7 +141,8 @@ final class RetryOrchestratorTests: XCTestCase {
             throw TestError.operationFailed
         }
 
-        XCTAssertEqual(sut.getState().attemptCount, 3)
+        let state = await sut.getState()
+        XCTAssertEqual(state.attemptCount, 3)
     }
 
     func testRetryDelayIncreasesExponentially() async throws {
@@ -215,14 +220,14 @@ final class RetryOrchestratorTests: XCTestCase {
     }
 
     func testHasRetriesRemainingComputedCorrectly() async throws {
-        let state1 = sut.getState()
+        let state1 = await sut.getState()
         XCTAssertTrue(state1.hasRetriesRemaining)
 
         _ = try? await sut.attemptWithRetry {
             throw TestError.operationFailed
         }
 
-        let state2 = sut.getState()
+        let state2 = await sut.getState()
         XCTAssertFalse(state2.hasRetriesRemaining)
     }
 
@@ -276,7 +281,7 @@ final class RetryOrchestratorTests: XCTestCase {
             throw testError
         }
 
-        let lastError = sut.getLastError() as? TestError
+        let lastError = await sut.getLastError() as? TestError
         XCTAssertEqual(lastError, testError)
     }
 
@@ -311,11 +316,13 @@ final class RetryOrchestratorTests: XCTestCase {
             throw TestError.operationFailed
         }
 
-        XCTAssertGreaterThan(sut.getState().attemptCount, 0)
+        let stateBefore = await sut.getState()
+        XCTAssertGreaterThan(stateBefore.attemptCount, 0)
 
-        sut.reset()
+        await sut.reset()
 
-        XCTAssertEqual(sut.getState().attemptCount, 0)
+        let stateAfter = await sut.getState()
+        XCTAssertEqual(stateAfter.attemptCount, 0)
     }
 
     func testResetClearsLastError() async throws {
@@ -323,22 +330,24 @@ final class RetryOrchestratorTests: XCTestCase {
             throw TestError.operationFailed
         }
 
-        XCTAssertNotNil(sut.getLastError())
+        let errorBefore = await sut.getLastError()
+        XCTAssertNotNil(errorBefore)
 
-        sut.reset()
+        await sut.reset()
 
-        XCTAssertNil(sut.getLastError())
+        let errorAfter = await sut.getLastError()
+        XCTAssertNil(errorAfter)
     }
 
     func testGetStateReturnsCurrentState() async throws {
-        let state1 = sut.getState()
+        let state1 = await sut.getState()
         XCTAssertEqual(state1.attemptCount, 0)
 
         _ = try? await sut.attemptWithRetry {
             throw TestError.operationFailed
         }
 
-        let state2 = sut.getState()
+        let state2 = await sut.getState()
         XCTAssertEqual(state2.attemptCount, 3)
         XCTAssertNotEqual(state1.attemptCount, state2.attemptCount)
     }
@@ -409,14 +418,14 @@ final class RetryOrchestratorTests: XCTestCase {
         }
         XCTAssertEqual(stringResult, "test")
 
-        sut.reset()
+        await sut.reset()
 
         let intResult = try await sut.attemptWithRetry {
             return 42
         }
         XCTAssertEqual(intResult, 42)
 
-        sut.reset()
+        await sut.reset()
 
         let boolResult = try await sut.attemptWithRetry {
             return true

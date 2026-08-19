@@ -12,8 +12,9 @@ import AVFoundation
 // MARK: - State Snapshot
 
 /// State snapshot for video playback
-/// Conforms to Sendable for thread-safe passing across actors
-public struct PlaybackStateSnapshot: @unchecked Sendable {
+/// All stored properties are themselves `Sendable`, so this conforms to the
+/// checked `Sendable` (not `@unchecked`) — the compiler verifies it.
+public struct PlaybackStateSnapshot: Equatable, Sendable {
     public var isLoading: Bool
     public var isPlaying: Bool
     public var errorMessage: String?

@@ -11,8 +11,9 @@ import Foundation
 // MARK: - State Snapshot
 
 /// State snapshot for stream administration
-/// Conforms to Sendable for thread-safe passing across actors
-public struct StreamAdminStateSnapshot: @unchecked Sendable {
+/// All stored properties are themselves `Sendable`, so this conforms to the
+/// checked `Sendable` (not `@unchecked`) — the compiler verifies it.
+public struct StreamAdminStateSnapshot: Equatable, Sendable {
     public var isLoading: Bool
     public var errorMessage: String?
     public var paths: [MediaMTXPath]
@@ -41,16 +42,12 @@ public struct StreamAdminStateSnapshot: @unchecked Sendable {
         self.totalViewers = totalViewers
         self.lastUpdateTime = lastUpdateTime
     }
-
-    public static func == (lhs: StreamAdminStateSnapshot, rhs: StreamAdminStateSnapshot) -> Bool {
-        lhs.isLoading == rhs.isLoading &&
-        lhs.errorMessage == rhs.errorMessage &&
-        lhs.paths.count == rhs.paths.count &&
-        lhs.selectedPath?.name == rhs.selectedPath?.name &&
-        lhs.baseURL == rhs.baseURL &&
-        lhs.isOnline == rhs.isOnline &&
-        lhs.totalViewers == rhs.totalViewers
-    }
+    // `==` is now synthesized by the compiler (full structural equality) now that
+    // `Equatable` is declared above and every stored property conforms to it.
+    // The previous hand-written `==` wasn't wired to `Equatable` at all (the
+    // struct declared no such conformance), so it was dead code, and it was also
+    // a shallower check than a real equality (e.g. `paths.count ==` instead of
+    // comparing path contents).
 }
 
 // MARK: - Protocol

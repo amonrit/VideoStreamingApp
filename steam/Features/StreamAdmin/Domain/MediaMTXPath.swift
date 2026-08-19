@@ -6,7 +6,7 @@
 import Foundation
 
 /// Response model for MediaMTX `GET /v3/paths/get/{name}` endpoint
-public struct MediaMTXPath: Codable, Sendable {
+public struct MediaMTXPath: Codable, Equatable, Sendable {
     public let name: String
     public let confName: String?
     public let available: Bool?
@@ -54,12 +54,12 @@ public struct MediaMTXPath: Codable, Sendable {
     }
 }
 
-public struct MediaMTXSource: Codable, Sendable {
+public struct MediaMTXSource: Codable, Equatable, Sendable {
     public let type: String
     public let id: String
 }
 
-public struct MediaMTXReader: Codable, Sendable {
+public struct MediaMTXReader: Codable, Equatable, Sendable {
     public let type: String  // hlsSession, rtmpConn, rtspConn, webRTCSession, srtConn, moqSession, hidden, etc.
     public let id: String
 }

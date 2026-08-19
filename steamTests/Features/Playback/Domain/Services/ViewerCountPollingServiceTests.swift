@@ -11,7 +11,8 @@ final class ViewerCountPollingServiceTests: XCTestCase {
         }
 
         await XCTAssertAsyncFalse(await service.isPolling())
-        XCTAssertNil(service.getLastCount())
+        let lastCount = await service.getLastCount()
+        XCTAssertNil(lastCount)
     }
 
     @MainActor

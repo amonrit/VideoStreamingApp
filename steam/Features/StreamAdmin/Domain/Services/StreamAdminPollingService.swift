@@ -2,16 +2,21 @@ import Foundation
 
 /// Polling service for stream updates using PollingService<Int>.
 /// Replaces Timer-based polling with modern async/await patterns.
-public final class StreamAdminPollingService: Sendable {
+///
+/// Actor-isolated so `lastUpdateTime`/`lastError`/`isCurrentlyPolling` can't be
+/// written by the polling `Task` while a caller reads them at the same time —
+/// previously this was a `Sendable` class with `nonisolated(unsafe)` state, which
+/// only silenced the compiler rather than making concurrent access safe.
+public actor StreamAdminPollingService {
     // MARK: - Properties
 
     private let configuration: PlaybackConfiguration
     private let fetchStreams: @Sendable () async throws -> Int
     private var pollingService: PollingService<Int>?
     private var pollingTask: Task<Void, Never>?
-    private nonisolated(unsafe) var lastUpdateTime: Date?
-    private nonisolated(unsafe) var lastError: Error?
-    private nonisolated(unsafe) var isCurrentlyPolling: Bool = false
+    private var lastUpdateTime: Date?
+    private var lastError: Error?
+    private var isCurrentlyPolling: Bool = false
 
     // MARK: - Initialization
 
@@ -36,18 +41,14 @@ public final class StreamAdminPollingService: Sendable {
         isCurrentlyPolling = true
 
         // Create polling service with retry support
-        pollingService = PollingService<Int>.withRetry(
+        let service = PollingService<Int>.withRetry(
             interval: 2.0,
             timeout: configuration.pollingTimeout,
             maxRetries: 2,
-            retryStrategy: .exponential()
-        ) { [weak self] in
-            guard let self = self else { throw PollingError.cancelled }
-            return try await self.fetchStreams()
-        }
-
-        // Start polling loop
-        guard let service = pollingService else { return }
+            retryStrategy: .exponential(),
+            operation: fetchStreams
+        )
+        pollingService = service
 
         pollingTask = Task {
             do {
@@ -67,12 +68,11 @@ public final class StreamAdminPollingService: Sendable {
         isCurrentlyPolling = false
         pollingTask?.cancel()
         pollingTask = nil
-
-        guard let service = pollingService else { return }
-
-        Task {
-            await service.stopPolling()
-        }
+        // Dropping the reference is enough — cancelling `pollingTask` already
+        // stops the consuming loop, and PollingService.stopPolling() is itself
+        // actor-isolated so it can't be awaited from here without making this
+        // method async (which would ripple into every call site for little gain).
+        pollingService = nil
     }
 
     /// Gets the last update time
@@ -98,12 +98,15 @@ public final class StreamAdminPollingService: Sendable {
         lastUpdateTime = nil
         lastError = nil
         isCurrentlyPolling = false
-        pollingService?.stopPolling()
         pollingTask?.cancel()
         pollingTask = nil
+        pollingService = nil
     }
 
     deinit {
-        stopPolling()
+        // Actor deinit can't `await`, so we can't call the (actor-isolated)
+        // stopPolling() here — cancelling the task directly is enough since
+        // it's what actually tears down the consuming loop.
+        pollingTask?.cancel()
     }
 }

@@ -391,10 +391,10 @@ class PlaybackViewModel: ObservableObject {
         )
 
         Task {
-            viewerCountPollingService?.startPolling()
+            await viewerCountPollingService?.startPolling()
             while let service = viewerCountPollingService {
-                let count = service.getLastCount()
-                let error = service.getLastError()
+                let count = await service.getLastCount()
+                let error = await service.getLastError()
 
                 if let count = count {
                     await stateActor.updateViewerCount(count)
@@ -417,7 +417,7 @@ class PlaybackViewModel: ObservableObject {
 
     private func stopViewerCountPolling() {
         Task {
-            viewerCountPollingService?.stopPolling()
+            await viewerCountPollingService?.stopPolling()
             viewerCountPollingService = nil
         }
     }
@@ -500,6 +500,23 @@ class PlaybackViewModel: ObservableObject {
         player.currentItem?.duration.seconds ?? 0
     }
 
+    /// Buffered progress fraction (0.0 to 1.0) based on the current item's loaded time ranges
+    var bufferedProgress: Double {
+        guard let range = player.currentItem?.loadedTimeRanges.first?.timeRangeValue else {
+            return 0
+        }
+        let bufferedDuration = CMTimeRangeGetEnd(range).seconds
+        let totalDuration = currentDuration
+        return totalDuration > 0 ? bufferedDuration / totalDuration : 0
+    }
+
+    /// Seeks to a fractional position (0.0 to 1.0) within the current item's duration
+    func seek(toProgress progress: Double) {
+        guard let duration = player.currentItem?.duration.seconds, duration.isFinite else { return }
+        let newTime = CMTime(seconds: progress * duration, preferredTimescale: 600)
+        player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
     /// Tracks whether volume slider should be visible
     @Published var showVolumeSlider: Bool = false
 
@@ -571,14 +588,21 @@ class PlaybackViewModel: ObservableObject {
         url.starts(with: "https://")
     }
 
+    /// Whether to warn the user that a custom stream URL they're typing is plain HTTP
+    func shouldShowHTTPSWarning(for url: String) -> Bool {
+        !url.isEmpty && !isHTTPSURL(url) && url.contains("http://")
+    }
+
     deinit {
         stateObserverTask?.cancel()
         hideControlsTask?.cancel()
         cancellables.removeAll()
-        let service = viewerCountPollingService
-        if service != nil {
-            Task { [weak self] in
-                await self?.viewerCountPollingService?.stopPolling()
+        // Capture the service itself, not `self` — by the time this Task runs,
+        // `self` has already finished deinitializing, so `[weak self]` would
+        // always read nil here and silently skip the cleanup.
+        if let service = viewerCountPollingService {
+            Task {
+                await service.stopPolling()
             }
         }
         player.replaceCurrentItem(with: nil)

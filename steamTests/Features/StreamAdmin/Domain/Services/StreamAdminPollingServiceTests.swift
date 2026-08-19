@@ -11,7 +11,8 @@ final class StreamAdminPollingServiceTests: XCTestCase {
         }
 
         await XCTAssertAsyncFalse(await service.isPolling())
-        XCTAssertNil(service.getLastUpdateTime())
+        let lastUpdateTime = await service.getLastUpdateTime()
+        XCTAssertNil(lastUpdateTime)
     }
 
     @MainActor
