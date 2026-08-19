@@ -6,11 +6,11 @@ public struct RetryState: Equatable, Sendable {
     private let configuration: PlaybackConfiguration
     private let retryStrategy: RetryStrategy
 
-    public private(set) var attemptCount: Int = 0
-    public private(set) var lastAttemptTime: Date?
-    public private(set) var totalRetryTime: TimeInterval = 0
-    public private(set) var isRetrying: Bool = false
-    public private(set) var lastError: Error?
+    public internal(set) var attemptCount: Int = 0
+    public internal(set) var lastAttemptTime: Date?
+    public internal(set) var totalRetryTime: TimeInterval = 0
+    public internal(set) var isRetrying: Bool = false
+    public internal(set) var lastError: Error?
 
     // MARK: - Initialization
 

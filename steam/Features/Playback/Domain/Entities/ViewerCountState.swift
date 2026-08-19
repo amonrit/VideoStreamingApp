@@ -5,11 +5,11 @@ import Foundation
 public struct ViewerCountState: Equatable, Sendable {
     private let configuration: PlaybackConfiguration
 
-    public private(set) var currentCount: Int?
-    public private(set) var lastUpdateTime: Date?
-    public private(set) var failureCount: Int = 0
-    public private(set) var isPolling: Bool = false
-    public private(set) var lastError: Error?
+    public internal(set) var currentCount: Int?
+    public internal(set) var lastUpdateTime: Date?
+    public internal(set) var failureCount: Int = 0
+    public internal(set) var isPolling: Bool = false
+    public internal(set) var lastError: Error?
 
     // MARK: - Initialization
 

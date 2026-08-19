@@ -269,8 +269,8 @@ final class ViewerCountStateTests: XCTestCase {
         }
 
         var state = ViewerCountState()
-        state.failureCount = 2
-        state.lastError = TestError.failed as Error
+        state.recordFailure(error: TestError.failed)
+        state.recordFailure(error: TestError.failed)
 
         state.clearFailures()
 
