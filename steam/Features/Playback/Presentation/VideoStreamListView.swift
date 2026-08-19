@@ -294,10 +294,6 @@ struct AddStreamSheet: View {
         playbackViewModel.isValidStreamURL(customURL)
     }
 
-    var isHTTPSURL: Bool {
-        playbackViewModel.isHTTPSURL(customURL)
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -352,9 +348,9 @@ struct AddStreamSheet: View {
                                 .autocapitalization(.none)
                                 #endif
                                 .padding(.horizontal, 4)
-                                .onChange(of: customURL) { newURL in
+                                .onChange(of: customURL) { _, newURL in
                                     // Show warning if URL is entered and not HTTPS
-                                    showHTTPSWarning = !newURL.isEmpty && !isHTTPSURL && newURL.contains("http://")
+                                    showHTTPSWarning = playbackViewModel.shouldShowHTTPSWarning(for: newURL)
                                 }
 
                             // HTTPS Security Warning

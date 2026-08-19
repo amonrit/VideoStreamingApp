@@ -6,13 +6,11 @@
 import SwiftUI
 import AVKit
 import AVFoundation
-import Combine
 
 struct VideoPlayerView: View {
     @ObservedObject var viewModel: PlaybackViewModel
     @Binding var isFullScreen: Bool
     @State private var currentTime: Double = 0.0
-    @State private var updateTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     @State private var previousVolume: Double = 1.0
 
     // showControls, showVolumeSlider, volume, playbackRate now come from ViewModel
@@ -29,8 +27,14 @@ struct VideoPlayerView: View {
                     }
                     viewModel.resetControlsVisibilityTimer()
                 }
-                .onReceive(updateTimer) { _ in
-                    currentTime = viewModel.player.currentTime().seconds
+                .task(id: viewModel.currentStream?.id) {
+                    // Replaces the old Combine `Timer.publish(...).autoconnect()` —
+                    // `.task` cancels automatically when the view disappears or
+                    // `id` changes, so there's no timer to tear down manually.
+                    while !Task.isCancelled {
+                        currentTime = viewModel.player.currentTime().seconds
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
                 }
 
             // Custom Controls (show/hide on tap)
@@ -376,18 +380,11 @@ struct ProgressBarView: View {
     }
 
     private var bufferedProgress: Double {
-        guard let range = viewModel.player.currentItem?.loadedTimeRanges.first?.timeRangeValue else {
-            return 0
-        }
-        let bufferedDuration = CMTimeRangeGetEnd(range).seconds
-        let totalDuration = viewModel.currentDuration
-        return totalDuration > 0 ? bufferedDuration / totalDuration : 0
+        viewModel.bufferedProgress
     }
 
     private func seek(to progress: Double) {
-        guard let duration = viewModel.player.currentItem?.duration.seconds, duration.isFinite else { return }
-        let newTime = CMTime(seconds: progress * duration, preferredTimescale: 600)
-        viewModel.player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        viewModel.seek(toProgress: progress)
     }
 }
 
