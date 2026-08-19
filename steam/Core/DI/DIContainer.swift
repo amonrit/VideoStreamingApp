@@ -3,11 +3,10 @@ import Combine
 import AVFoundation
 
 /// Dependency Injection Container
-/// Manages creation and injection of all dependencies across the app
+/// Creates ViewModels and shared services for the app. Owned by `AppCoordinator`
+/// (one instance per app run) rather than accessed as a global singleton, so
+/// call sites can be tested with a container built from mock dependencies.
 class DIContainer: ObservableObject {
-    // MARK: - Singleton Instance
-    static let shared = DIContainer()
-
     // MARK: - Core Dependencies (Lazily Initialized)
     private lazy var urlValidator: URLValidator = URLValidator()
     private lazy var mediaMTXAPIClient: MediaMTXAPIClient = {
@@ -27,7 +26,7 @@ class DIContainer: ObservableObject {
         return StreamAdminRepositoryImpl(remoteDataSource: remoteDataSource)
     }()
 
-    private init() {
+    init() {
         // Initialize container
     }
 
@@ -44,6 +43,11 @@ class DIContainer: ObservableObject {
     }
 
     // MARK: - StreamAdmin Feature Dependencies
+
+    /// Create StreamAdminViewModel with all dependencies
+    func makeStreamAdminViewModel() -> StreamAdminViewModel {
+        StreamAdminViewModel()
+    }
 
     /// Get StreamAdminRepository
     func getStreamAdminRepository() -> StreamAdminRepository {

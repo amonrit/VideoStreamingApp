@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject private var coordinator: AppCoordinator
     @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
@@ -16,7 +16,7 @@ struct SettingsView: View {
             // Header
             HStack {
                 Button(action: {
-                    presentationMode.wrappedValue.dismiss()
+                    coordinator.goBack()
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "chevron.left")
@@ -111,5 +111,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environmentObject(AppCoordinator())
         .environmentObject(ThemeManager())
 }

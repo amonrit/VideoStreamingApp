@@ -8,130 +8,111 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var selectedMenuOption: MenuOption?
-
-    enum MenuOption: Hashable {
-        case watchStreams
-        case streamAdmin
-        case settings
-        case about
-        case help
-    }
+    @EnvironmentObject var coordinator: AppCoordinator
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Steam")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.blue)
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Steam")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.blue)
 
-                    Text("Live Video Streaming")
-                        .font(.system(.subheadline, design: .default))
-                        .foregroundColor(.secondary)
+                Text("Live Video Streaming")
+                    .font(.system(.subheadline, design: .default))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+
+            Divider()
+
+            // Menu List
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Watch Streams
+                    MenuCardView(
+                        title: "Watch Streams",
+                        subtitle: "Browse and play live streams",
+                        icon: "play.circle.fill",
+                        iconColor: .blue
+                    )
+                    .onTapGesture {
+                        coordinator.navigate(to: .watchStreams)
+                    }
+
+                    // Stream Admin
+                    MenuCardView(
+                        title: "Stream Admin",
+                        subtitle: "Monitor live streams & viewers",
+                        icon: "chart.bar.fill",
+                        iconColor: .purple
+                    )
+                    .onTapGesture {
+                        coordinator.navigate(to: .streamAdmin)
+                    }
+
+                    // Settings
+                    MenuCardView(
+                        title: "Settings",
+                        subtitle: "Configure your preferences",
+                        icon: "gearshape.fill",
+                        iconColor: .gray
+                    )
+                    .onTapGesture {
+                        coordinator.navigate(to: .settings)
+                    }
+
+                    // About (Mock)
+                    MenuCardView(
+                        title: "About",
+                        subtitle: "Learn about Steam",
+                        icon: "info.circle.fill",
+                        iconColor: .orange
+                    )
+                    .opacity(0.5)
+
+                    // Help (Mock)
+                    MenuCardView(
+                        title: "Help",
+                        subtitle: "Get support and documentation",
+                        icon: "questionmark.circle.fill",
+                        iconColor: .green
+                    )
+                    .opacity(0.5)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                .padding(16)
+            }
 
+            Spacer()
+
+            // Footer
+            VStack(spacing: 8) {
                 Divider()
 
-                // Menu List
-                ScrollView {
-                    VStack(spacing: 12) {
-                        // Watch Streams
-                        NavigationLink(
-                            destination: VideoStreamListView(),
-                            tag: MenuOption.watchStreams,
-                            selection: $selectedMenuOption
-                        ) {
-                            MenuCardView(
-                                title: "Watch Streams",
-                                subtitle: "Browse and play live streams",
-                                icon: "play.circle.fill",
-                                iconColor: .blue
-                            )
-                        }
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.caption)
 
-                        // Stream Admin
-                        NavigationLink(
-                            destination: StreamAdminView(),
-                            tag: MenuOption.streamAdmin,
-                            selection: $selectedMenuOption
-                        ) {
-                            MenuCardView(
-                                title: "Stream Admin",
-                                subtitle: "Monitor live streams & viewers",
-                                icon: "chart.bar.fill",
-                                iconColor: .purple
-                            )
-                        }
-
-                        // Settings
-                        NavigationLink(
-                            destination: SettingsView(),
-                            tag: MenuOption.settings,
-                            selection: $selectedMenuOption
-                        ) {
-                            MenuCardView(
-                                title: "Settings",
-                                subtitle: "Configure your preferences",
-                                icon: "gearshape.fill",
-                                iconColor: .gray
-                            )
-                        }
-
-                        // About (Mock)
-                        MenuCardView(
-                            title: "About",
-                            subtitle: "Learn about Steam",
-                            icon: "info.circle.fill",
-                            iconColor: .orange
-                        )
-                        .opacity(0.5)
-
-                        // Help (Mock)
-                        MenuCardView(
-                            title: "Help",
-                            subtitle: "Get support and documentation",
-                            icon: "questionmark.circle.fill",
-                            iconColor: .green
-                        )
-                        .opacity(0.5)
-                    }
-                    .padding(16)
-                }
-
-                Spacer()
-
-                // Footer
-                VStack(spacing: 8) {
-                    Divider()
-
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.caption)
-
-                        Text("MediaMTX Server Connected")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-
-                    Text("Version 1.0.0")
-                        .font(.caption2)
+                    Text("MediaMTX Server Connected")
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                        .padding(.bottom, 12)
+
+                    Spacer()
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Text("Version 1.0.0")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 12)
             }
-            #if os(iOS)
-            .navigationBarHidden(true)
-            #endif
         }
+        #if os(iOS)
+        .navigationBarHidden(true)
+        #endif
     }
 }
 
@@ -179,5 +160,8 @@ struct MenuCardView: View {
 }
 
 #Preview {
-    HomeView()
+    NavigationStack {
+        HomeView()
+    }
+    .environmentObject(AppCoordinator())
 }

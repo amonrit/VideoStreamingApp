@@ -6,13 +6,16 @@
 import SwiftUI
 
 struct StreamAdminView: View {
-    @StateObject private var viewModel = StreamAdminViewModel()
+    @ObservedObject var viewModel: StreamAdminViewModel
     @State private var showServerConfig = false
     @State private var serverURL = "http://localhost:9997"
 
+    init(viewModel: StreamAdminViewModel) {
+        self.viewModel = viewModel
+    }
+
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Stream Admin")
@@ -142,7 +145,6 @@ struct StreamAdminView: View {
                     }
                 }
             }
-        }
     }
 
     private func timeAgoString(_ date: Date) -> String {
@@ -323,7 +325,7 @@ struct ServerConfigSheet: View {
     var onSave: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("MediaMTX Server") {
                     TextField("Server URL", text: $serverURL)
@@ -369,5 +371,5 @@ struct ServerConfigSheet: View {
 }
 
 #Preview {
-    StreamAdminView()
+    StreamAdminView(viewModel: StreamAdminViewModel())
 }

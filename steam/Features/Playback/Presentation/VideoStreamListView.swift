@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct VideoStreamListView: View {
-    @StateObject private var playbackViewModel = PlaybackViewModel()
+    @ObservedObject var playbackViewModel: PlaybackViewModel
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
     @State private var showDebug = false
@@ -19,9 +19,12 @@ struct VideoStreamListView: View {
     @StateObject private var urlLogger = URLValidationLogger()
     private let urlValidator = URLValidator()
 
+    init(playbackViewModel: PlaybackViewModel) {
+        self.playbackViewModel = playbackViewModel
+    }
+
     var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
+        VStack(spacing: 16) {
                 VideoPlayerView(viewModel: playbackViewModel, isFullScreen: $isFullScreen)
                     .frame(height: 240)
                     .background(Color.black)
@@ -204,7 +207,6 @@ struct VideoStreamListView: View {
                 )
             }
 #endif
-        }
     }
 
     private func select(stream: VideoStream) {
@@ -297,7 +299,7 @@ struct AddStreamSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Header Icon
@@ -537,5 +539,7 @@ struct AddStreamSheet: View {
 
 
 #Preview {
-    VideoStreamListView()
+    NavigationStack {
+        VideoStreamListView(playbackViewModel: PlaybackViewModel())
+    }
 }
