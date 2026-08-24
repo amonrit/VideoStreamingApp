@@ -1,4 +1,4 @@
-Last Modified: 08/19/2026 (1787140694) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # CLAUDE.md
 
@@ -25,7 +25,7 @@ This file provides guidance to Claude Code and AI assistants when working with c
 
 The project enables users to publish live video streams (via RTMP) and play them back (via HLS/RTSP/WebRTC) on iOS devices.
 
-**Phase Status:** Phase 9 (Clean View Layer) COMPLETE — See [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md) for latest architecture.
+**Phase Status:** Phase 9 (Clean View Layer) COMPLETE. Since then: the Repository/DataSource scaffold was removed (see note below), `KeychainManager`/`URLLogger` became actors, and navigation/DI moved to a Coordinator pattern (`AppCoordinator` + `DIContainer`, see [ADR-004](./docs/adr/ADR-004-coordinator-navigation.md)). See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the current architecture.
 
 ---
 
@@ -35,14 +35,16 @@ The iOS app uses **State Actors** for thread-safe state management and **RetryOr
 
 **Quick structure:**
 ```
+AppCoordinator (@Observable, owns NavigationStack path + DIContainer)
+  ↓ builds & injects
 Views (SwiftUI - Pure Presentation)
-  ↓ observe via @Published
-PlaybackViewModel (MVVM - Coordinates logic)
-  ├─ Uses StateActor for thread-safe state
-  ├─ Owns AVPlayer instance
+  ↓ observe via @Observable (NOT @Published/ObservableObject)
+PlaybackViewModel / StreamAdminViewModel (MVVM - Coordinates logic)
+  ├─ Uses StateActor for thread-safe state (mirrored into an @Observable property)
+  ├─ Owns AVPlayer instance (Playback) / polls MediaMTX (StreamAdmin)
   ├─ Manages stream loading, playback state, error handling
   └─ Delegates to Workers for KVO/Combine setup
-  
+
 Workers (Reusable Utilities)
   └─ VideoPlayerWorker — KVO observers, resolution/bitrate extraction
 
@@ -57,6 +59,8 @@ Core Services
   ├─ StateActor — Thread-safe state management
   ├─ RetryOrchestrator — Resilient error handling with exponential backoff
   ├─ APIClientProvider — Dependency injection
+  ├─ DIContainer — factory for ViewModels, owned by AppCoordinator
+  ├─ KeychainManager / URLLogger — actor-isolated secure storage & logging
   └─ URLValidator — Stream URL validation
 ```
 
@@ -78,12 +82,15 @@ ViewModel code at that point rather than re-scaffolding ahead of need.
 
 | File | Purpose |
 |------|---------|
+| `steam/App/AppCoordinator.swift` | Owns navigation state; only place that constructs feature ViewModels |
+| `steam/Core/DI/DIContainer.swift` | ViewModel/service factory, owned by `AppCoordinator` |
 | `steam/Features/Playback/Presentation/PlaybackViewModel.swift` | Core MVVM logic with StateActor |
 | `steam/Features/Playback/Domain/Services/RetryOrchestrator.swift` | Retry logic with exponential backoff |
 | `steam/Features/Home/Presentation/HomeView.swift` | Home menu & navigation hub |
 | `steam/Features/Playback/Presentation/VideoStreamListView.swift` | Stream list & playback UI |
 | `steam/Features/Playback/Presentation/VideoPlayerView.swift` | Player UI & overlays (pure presentation) |
 | `steam/Features/Playback/Presentation/VideoPlayerWorker.swift` | KVO observers & formatting |
+| `steam/Features/StreamAdmin/Presentation/StreamAdminViewModel.swift` | Stream monitoring/admin logic with StateActor |
 | `streaming/docker-compose.yml` | Docker service config |
 | `streaming/mediamtx.yml` | MediaMTX configuration |
 
@@ -96,12 +103,10 @@ ViewModel code at that point rather than re-scaffolding ahead of need.
 | [DOCUMENTATION.md](./DOCUMENTATION.md) | Master index of all docs | First! Choose what you need |
 | [GETTING_STARTED.md](./GETTING_STARTED.md) | 5-minute setup guide | New to project |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Deep dive into modern patterns | Understanding system design |
-| [docs/REFACTORING_GUIDE.md](./docs/REFACTORING_GUIDE.md) | How to use StateActor, RetryOrchestrator, APIClientProvider | Modernizing code |
-| [docs/MIGRATION_GUIDE.md](./docs/MIGRATION_GUIDE.md) | Step-by-step migration examples | Planning refactoring work |
+| [docs/PATTERN-CHEAT-SHEET.md](./docs/PATTERN-CHEAT-SHEET.md) | How to use StateActor, RetryOrchestrator, APIClientProvider, Coordinator | Writing or reviewing feature code |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local dev workflows & debugging | Daily development |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production setup & deployment | Setting up on new machine |
 | [docs/adr/](./docs/adr/) | Architecture Decision Records | Understanding "why" decisions |
-| [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md) | Latest phase completion & modern architecture | Current state overview |
 
 ---
 

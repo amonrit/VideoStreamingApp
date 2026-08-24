@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786902544) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Steam Project - Credential Management Strategy
 
@@ -187,13 +187,13 @@ authInternalUsers:
 
 **✅ DO:**
 ```swift
-// Fetch credentials from Keychain
-let credentials = KeychainManager.shared.load(service: "MediaMTX")
-let apiClient = MediaMTXAPIClient(
-    baseURL: streamBaseURL,
-    username: credentials.username,
-    password: credentials.password
+// Fetch credentials from Keychain (KeychainManager is an actor, so this is async)
+let credentials = try await KeychainManager.shared.load(
+    service: "MediaMTX",
+    userKey: "API_VIEWER_USER",
+    passKey: "API_VIEWER_PASS"
 )
+let apiClient = clientProvider.createAPIClient(baseURL: streamBaseURL)
 ```
 
 **❌ DON'T:**

@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786365804) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Antigravity + Claude Code Integration Guide
 
@@ -29,10 +29,10 @@ Antigravity is enabled in `.claude/settings.json`:
   "codeUnderstandingMode": "semantic",
   "semanticIndexing": true,
   "indexedPaths": [
-    "steam/ViewModels/",
-    "steam/Views/",
-    "steam/Models/",
-    "steam/Workers/",
+    "steam/App/",
+    "steam/Core/",
+    "steam/Features/",
+    "steam/DesignSystem/",
     "streaming/"
   ]
 }
@@ -45,8 +45,8 @@ Antigravity is enabled in `.claude/settings.json`:
 cat .claude/settings.json | grep antigravity
 
 # Verify indexed paths contain your code
-ls -la steam/ViewModels/
-ls -la steam/Views/
+ls -la steam/Features/
+ls -la steam/Core/
 ```
 
 ### 3. Initialize Index (First Time)
@@ -67,7 +67,7 @@ When you first open the project:
 ```
 "Where is PlaybackViewModel used in the codebase?"
 "What calls loadStream()?"
-"Show me all references to @Published variables"
+"Show me all @Observable properties in PlaybackViewModel"
 "Trace the data flow from VideoStreamListView to AVPlayer"
 ```
 
@@ -139,10 +139,10 @@ Antigravity understands:
 Example:
 ```swift
 // Antigravity understands the full type:
-@Published var currentStream: VideoStream?
+var currentStream: VideoStream? { state.currentStream }
 
 // Can find:
-// - All assignments to currentStream
+// - Where `state.currentStream` gets assigned (inside the StateActor)
 // - All unwrapping sites
 // - Type-based usages
 ```
@@ -156,7 +156,7 @@ Antigravity follows:
 Example:
 ```swift
 // When you ask "what does PlaybackViewModel depend on?"
-// Antigravity finds: AVFoundation, Combine, SwiftUI, os.Logger
+// Antigravity finds: AVFoundation, SwiftUI, os.Logger
 ```
 
 ### Control Flow
@@ -187,8 +187,8 @@ Antigravity tracks:
 Example:
 ```swift
 // Antigravity traces:
-// isLoading → @Published in ViewModel
-//          → View binds to it
+// isLoading → mirrored from PlaybackStateActor into the @Observable ViewModel
+//          → View reads viewModel.isLoading
 //          → UI renders based on value
 ```
 
@@ -203,7 +203,7 @@ Example:
 ```
 
 Antigravity:
-- Finds `@Published var isLoading`
+- Finds the `isLoading` computed property and the StateActor field it mirrors
 - Traces all observers (Views)
 - Shows cascade of re-renders
 - Identifies dependent UI updates
@@ -282,10 +282,9 @@ Antigravity:
 ### Indexed (Semantic Analysis)
 
 ```
-steam/ViewModels/       ✅ Full analysis
-steam/Views/            ✅ Full analysis
-steam/Models/           ✅ Full analysis
-steam/Workers/          ✅ Full analysis
+steam/App/              ✅ Full analysis
+steam/Core/             ✅ Full analysis
+steam/Features/         ✅ Full analysis
 streaming/              ✅ Full analysis
 ```
 
@@ -315,7 +314,7 @@ recordings/             ❌ Skipped
 
 ### Step 1: Understand Current State
 ```
-"Show me all @Published variables in PlaybackViewModel"
+"Show me all @Observable properties in PlaybackViewModel"
 ```
 → Antigravity finds all state properties
 
@@ -333,7 +332,7 @@ recordings/             ❌ Skipped
 
 ### Step 4: Plan Changes
 ```
-"If I add @Published var currentTime, what would need to observe it?"
+"If I add a currentTime property to PlaybackStateActor, what would need to observe it?"
 ```
 → Antigravity suggests which Views should update
 
@@ -387,9 +386,9 @@ Claude Code:
 **Problem**: "It says PlaybackViewModel isn't found"
 
 **Solution**: 
-- Verify `.claude/settings.json` has `steam/ViewModels/` in `indexedPaths`
+- Verify `.claude/settings.json` has `steam/Features/` in `indexedPaths`
 - Restart Claude Code (reload window)
-- Check file path: `steam/ViewModels/PlaybackViewModel.swift`
+- Check file path: `steam/Features/Playback/Presentation/PlaybackViewModel.swift`
 
 ### Slow Index Generation
 
@@ -420,8 +419,8 @@ To optimize for your workflow, edit `.claude/settings.json`:
 ```json
 "antigravity": {
   "indexedPaths": [
-    "steam/ViewModels/",      // Always semantic analyze
-    "steam/Views/",
+    "steam/Features/",        // Always semantic analyze
+    "steam/Core/",
     "streaming/mediamtx.yml", // Can index configs too
   ],
   "skipPaths": [

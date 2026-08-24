@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786922418) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Architecture Decision Records (ADR)
 
@@ -47,6 +47,15 @@ ADRs are useful for:
 
 **Key Quote:**
 > Protocol-based DI decouples services from HTTP implementation, making code testable and flexible.
+
+### ADR-004: Coordinator Pattern for Navigation & DI
+**Status:** ✅ ACCEPTED (implemented)  
+**Topic:** Centralizing navigation state and ViewModel construction  
+**Impact:** `AppCoordinator` + `DIContainer` are the only place ViewModels get built; Views never construct their own  
+**Read:** [ADR-004-coordinator-navigation.md](./ADR-004-coordinator-navigation.md)
+
+**Key Quote:**
+> One coordinator with an enum-based route list is enough for this app's navigation depth — no need for the heavier traditional UIKit Coordinator.
 
 ## How to Read an ADR
 
@@ -157,6 +166,10 @@ Concurrency?
   → See ADR-001 (mentions Task-based polling)
      Use Task.sleep instead of Timer
 
+Navigation or where a ViewModel comes from?
+  → See ADR-004 (Coordinator)
+     Get it from AppCoordinator, don't construct it in a View
+
 Something new?
   → Create a new ADR!
 ```
@@ -165,9 +178,10 @@ Something new?
 
 | ADR | Topic | Decision | Status |
 |-----|-------|----------|--------|
-| 001 | State | Use StateActor + AsyncStream | ✅ Active |
+| 001 | State | Use StateActor + AsyncStream, mirrored into `@Observable` | ✅ Active |
 | 002 | Retry | Use RetryOrchestrator | ✅ Active |
 | 003 | DI | Use APIClientProvider | ✅ Active |
+| 004 | Navigation/DI | Use AppCoordinator + DIContainer | ✅ Active |
 
 ## Relationship Between ADRs
 
@@ -177,12 +191,15 @@ ADR-001 (Structured Concurrency)
 ADR-002 (Retry Orchestrator)
   ↓ enables
 ADR-003 (Dependency Injection)
+  ↓ composed by
+ADR-004 (Coordinator)
 ```
 
-All three work together:
+All four work together:
 1. **StateActor** manages state safely (ADR-001)
 2. **RetryOrchestrator** makes network calls resilient (ADR-002)
 3. **APIClientProvider** makes everything testable (ADR-003)
+4. **AppCoordinator/DIContainer** wire ViewModels (built from 1-3) into the right screen (ADR-004)
 
 ## Reviewing an ADR
 
@@ -217,8 +234,7 @@ A: They're guidelines for new code. Legacy code can follow old patterns until re
 ## Links
 
 - **[ARCHITECTURE.md](../ARCHITECTURE.md)** — Complete system design
-- **[REFACTORING_GUIDE.md](../REFACTORING_GUIDE.md)** — How to use patterns in ADRs
-- **[MIGRATION_GUIDE.md](../MIGRATION_GUIDE.md)** — How to migrate to patterns in ADRs
+- **[PATTERN-CHEAT-SHEET.md](../PATTERN-CHEAT-SHEET.md)** — Templates for using every pattern in these ADRs
 
 ## Quick Links by Topic
 
@@ -234,8 +250,11 @@ A: They're guidelines for new code. Legacy code can follow old patterns until re
 ### Concurrency
 → ADR-001 (Structured Concurrency with Tasks)
 
+### Navigation & ViewModel Construction
+→ ADR-004 (Coordinator)
+
 ---
 
 **ADR Directory Created:** August 2026 (Phase 11)  
-**Current Count:** 3 ADRs  
+**Current Count:** 4 ADRs  
 **Next Review:** August 2027

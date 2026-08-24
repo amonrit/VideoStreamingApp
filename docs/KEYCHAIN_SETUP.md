@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786903935) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Keychain Setup for iOS App
 
@@ -104,11 +104,15 @@ If you're testing credential storage directly, use the API:
 import Foundation
 
 // In your app setup code or a settings screen:
-try MediaMTXConfig.storeCredentials(
+try await MediaMTXConfig.storeCredentials(
     username: "apiviewer",
     password: "your-secure-password"
 )
 ```
+
+Note: `KeychainManager` is an `actor` and `MediaMTXConfig`'s credential methods are all
+`async` — every call above (`storeCredentials`, `clearCredentials`, `apiUsername`,
+`apiPassword`, `hasStoredCredentials`) needs `await`.
 
 ### For Production
 
@@ -216,8 +220,8 @@ xcodebuild build -project steam.xcodeproj -scheme steam \
 
 ## Related Files
 
-- `steam/Managers/KeychainManager.swift` — Main Keychain implementation
-- `steam/Config/MediaMTXConfig.swift` — Uses Keychain for API credentials
+- `steam/Core/Managers/KeychainManager.swift` — Main Keychain implementation (actor)
+- `steam/Features/StreamAdmin/Domain/MediaMTXConfig.swift` — Uses Keychain for API credentials
 - `steam/steam.entitlements` — Keychain access group configuration
 - `steamTests/Managers/KeychainManagerTests.swift` — Unit tests
 - `steamTests/Integration/CredentialSecurityTests.swift` — Security tests

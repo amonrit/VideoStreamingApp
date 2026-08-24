@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # GitHub Copilot Instructions - Steam iOS Streaming App
 
@@ -17,18 +17,35 @@ This file provides guidance to GitHub Copilot when working on this repository.
 - **Indentation**: 4 spaces (no tabs)
 - **Line Length**: Max 120 characters
 - **Naming**: camelCase for variables/functions, PascalCase for types
-- **Architecture**: MVVM - Views observe ViewModels, ViewModels own business logic
-- **Threading**: All UI updates on main thread guaranteed
+- **Architecture**: MVVM + Coordinator - Views observe `@Observable` ViewModels; `AppCoordinator` owns navigation and builds ViewModels
+- **Threading**: ViewModels are `@MainActor`-isolated; all UI updates guaranteed on main thread
 
 ### File Organization
 ```
 steam/
-├── steamApp.swift           (Entry point)
-├── Models/                  (Data entities)
-├── ViewModels/              (Business logic)
-├── Views/                   (SwiftUI UI)
-└── Workers/                 (Reusable utilities)
+├── App/
+│   ├── steamApp.swift            (Entry point)
+│   ├── AppCoordinator.swift      (Navigation + DI, @Observable)
+│   └── Navigation/AppRoute.swift (Navigation destinations)
+├── Core/
+│   ├── Architecture/StateActor.swift
+│   ├── DI/ (APIClientProvider, DIContainer)
+│   ├── Managers/ (KeychainManager, ThemeManager — actors/@Observable)
+│   ├── Networking/MediaMTXAPIClient.swift
+│   └── Utils/ (RetryStrategy, PollingService, URLValidator, ...)
+├── Features/
+│   ├── Home/Presentation/HomeView.swift
+│   ├── Playback/
+│   │   ├── Domain/ (Entities, Actors, Services — RetryOrchestrator, PlaybackStateActor)
+│   │   └── Presentation/ (PlaybackViewModel, VideoStreamListView, VideoPlayerView, VideoPlayerWorker)
+│   ├── StreamAdmin/ (Domain + Presentation, mirrors Playback's shape)
+│   └── Settings/Presentation/SettingsView.swift
+└── DesignSystem/, Resources/
 ```
+
+A Repository/DataSource layer was scaffolded early on but never wired up (only returned
+placeholder data) and has since been removed — ViewModels call `MediaMTXAPIClient` directly
+through `APIClientProvider`. Don't re-add a Repository layer speculatively.
 
 ### Documentation
 - Use `// MARK: - Section Name` to organize code sections
@@ -38,18 +55,20 @@ steam/
 
 ## Architecture Guidelines
 
-### MVVM Pattern
-- **Views**: Observe @Published properties, call ViewModel methods on user action
-- **ViewModel**: Owns AVPlayer, manages state, coordinates Workers
+### MVVM + Coordinator Pattern
+- **Views**: Read `@Observable` ViewModel properties directly, call ViewModel methods on user action
+- **ViewModel**: `@Observable @MainActor` class; owns AVPlayer (Playback) or polls the API (StreamAdmin), manages state via a `StateActor` mirrored into a stored property, coordinates Workers
+- **AppCoordinator**: `@Observable`, owns `NavigationStack` path and is the only place that constructs ViewModels (via `DIContainer`)
 - **Worker**: Reusable utilities (KVO setup, format extraction), no UI code
-- **Models**: Data entities (VideoStream, PlaybackState)
+- **Models**: Framework-independent entities (VideoStream, PlaybackState, ConnectionStatus)
 
 ### Important Rules
-- ✅ Use @StateObject for objects created in Views (preserves instance)
-- ❌ Never use @ObservedObject for objects you create (causes memory leaks)
-- ✅ All Combine publishers deliver on main thread
-- ✅ Use [weak self] in closures to avoid retain cycles
+- ✅ Every ViewModel is `@Observable` — never `ObservableObject`/`@Published`
+- ✅ Views get ViewModels from `AppCoordinator`, never construct one themselves
+- ✅ Long-lived mutable state goes through a `StateActor`, not a plain stored property mutated from multiple places
+- ✅ Use `[weak self]` in closures to avoid retain cycles
 - ❌ Never put business logic in Views
+- ❌ Never mix `@Published`/`ObservedObject` into a type that's already `@Observable`
 
 ## Streaming Server
 
@@ -71,15 +90,16 @@ steam/
 ## Common Development Tasks
 
 ### Adding a Feature
-1. Add `@Published` property to ViewModel if new state needed
-2. Add method to ViewModel for user action
-3. Create Worker helper if complex logic needed
-4. Create/update SwiftUI View to call ViewModel
-5. Write tests (XCTest)
+1. Add state to the ViewModel's `StateActor` (or a plain `@Observable` property if it's simple UI-only state)
+2. Add a method to the ViewModel for the user action
+3. Create a Worker helper if complex logic is needed
+4. If the screen is new, add a case to `AppRoute` and a branch in `AppCoordinator.navigationView(for:)`
+5. Create/update the SwiftUI View to read the ViewModel's properties and call its methods
+6. Write tests (XCTest) — see `docs/PATTERN-CHEAT-SHEET.md` for the StateActor/mock-provider test patterns
 
 ### Debugging
 - **iOS**: Search Xcode Console for `[playback]` category
-- **Server**: `./streaming.sh logs` to watch output
+- **Server**: `make server-logs` to watch output
 - **Network**: Use `curl` to test HLS endpoint
 - **Logs**: Structured logging via `os.Logger`
 
@@ -130,9 +150,9 @@ logger.debug("   Debug info here")
 ## Performance Considerations
 
 ### Memory
-- AVPlayer can be heavy (use @StateObject)
+- AVPlayer can be heavy — the ViewModel that owns it comes from `AppCoordinator`, which keeps it alive for the lifetime of the screen
 - Don't create multiple AVPlayer instances
-- Clean up Combine subscriptions with cancellables
+- Cancel `Task`s (state observers, polling) in `deinit`
 
 ### Network
 - HLS: ~5-10s latency (buffered playback)
@@ -168,7 +188,8 @@ test: add tests for retry logic
 |------|---------|
 | `README.md` | Project overview & quick start |
 | `CLAUDE.md` | AI assistant guide |
-| `docs/ARCHITECTURE.md` | Deep dive into MVVM |
+| `docs/ARCHITECTURE.md` | Deep dive into MVVM + Coordinator |
+| `docs/PATTERN-CHEAT-SHEET.md` | StateActor/RetryOrchestrator/APIClientProvider/Coordinator templates |
 | `docs/DEPLOYMENT.md` | Server deployment |
 | `DOCUMENTATION.md` | Master index for all docs |
 
@@ -190,14 +211,14 @@ setupObservers { [weak self] in
 ### State Duplication
 ```swift
 // ❌ WRONG - Duplicate state
-class MyView: View {
-    @State var isLoading = false
-    @ObservedObject var viewModel = ViewModel()  // Also has isLoading
+struct MyView: View {
+    @State var isLoading = false           // Duplicates the ViewModel's own isLoading
+    let viewModel: MyViewModel
 }
 
 // ✅ CORRECT - Single source of truth
-class MyView: View {
-    @StateObject var viewModel = ViewModel()  // One @Published var isLoading
+struct MyView: View {
+    let viewModel: MyViewModel             // @Observable — one isLoading, sourced from AppCoordinator
 }
 ```
 

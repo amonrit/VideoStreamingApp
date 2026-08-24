@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786922418) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Steam - Video Streaming App Architecture
 
@@ -24,7 +24,8 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 | **7** | Concurrency | StateActor, structured concurrency |
 | **8** | Performance | Optimization, debouncing |
 | **9** | Cleanup | View refactoring, logic consolidation |
-| **11** | Handoff | Documentation, migration guides |
+| **11** | Handoff | Documentation, ADRs |
+| **12+** | Modernization | Repository/DataSource scaffold removed, `KeychainManager`/`URLLogger` became actors, ViewModels migrated to `@Observable`, navigation/DI moved to a Coordinator pattern (`AppCoordinator`/`DIContainer`, [ADR-004](./adr/ADR-004-coordinator-navigation.md)) |
 
 ---
 
@@ -38,28 +39,31 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 
 ### 2. ViewModel
 
-**PlaybackViewModel** — All business logic, state management, and observer setup:
+**PlaybackViewModel** — `@MainActor @Observable` class holding all business logic, state management, and observer setup:
 
 **Responsibilities:**
 - Load and manage playback lifecycle
 - Setup KVO observers for player status, buffering, errors
-- Update internal `playbackState` and publish to `@Published` properties
+- Mirror `PlaybackStateActor`'s state into a local, `@Observable`-tracked property (see [ADR-001](./adr/ADR-001-structured-concurrency.md))
 - Format debug info (resolution, bitrate)
-- Handle stream errors and retry logic
+- Handle stream errors and retry logic via `RetryOrchestrator`
 
-**Published Properties:**
+**Observable Properties** (computed from the mirrored actor state):
 - `isLoading`, `isPlaying`, `errorMessage`
-- `bufferingCount`, `currentStream`
+- `bufferingCount`, `currentStream`, `connectionStatus`, `viewerCount`
 - `resolutionText`, `bitrateText`
+
+Note: this is `@Observable`, not `ObservableObject`/`@Published` — the project migrated
+off Combine's observation system. See [ADR-001](./adr/ADR-001-structured-concurrency.md).
 
 ### 3. View
 
 **HomeView** — Root app container (Navigation Hub)
-- Navigation menu with options: Watch Streams, Settings, About, Help
-- NavigationLink to VideoStreamListView
+- Navigation menu with options: Watch Streams, Stream Admin, Settings, About (mock), Help (mock)
+- Navigates via `@Environment(AppCoordinator.self)` + `coordinator.navigate(to:)`, not `NavigationLink(destination:)`
 
 **VideoStreamListView** — Playback screen with stream management
-- Owns `@StateObject private var playbackViewModel`
+- Receives its `PlaybackViewModel` from `AppCoordinator` (constructed via `DIContainer`) instead of owning a `@StateObject`
 - Shows video list, current selection, debug panel
 - Calls `viewModel.loadStream()` on stream selection
 
@@ -69,11 +73,15 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 
 **FullScreenPlayerView** — Fullscreen player wrapper
 
+**StreamAdminView** — Live stream/viewer monitoring screen, mirrors `VideoStreamListView`'s shape with `StreamAdminViewModel`
+
+**SettingsView** — App settings (theme, etc.), real screen (not a mock)
+
 ### 4. Worker
 
 **VideoPlayerWorker** — Reusable KVO observer setup:
-- Setup Combine publishers for KVO changes
-- All publishers deliver callbacks on main thread
+- Sets up KVO observers for player/item status changes
+- All callbacks deliver on the main thread
 - Extract debug info (resolution, bitrate)
 
 ---
@@ -83,26 +91,49 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 ```
 steam/
 ├── steam/
-│   ├── steamApp.swift
+│   ├── App/
+│   │   ├── steamApp.swift               (Entry point)
+│   │   ├── AppCoordinator.swift         (Navigation + DI, @Observable)
+│   │   └── Navigation/AppRoute.swift    (Navigation destinations)
 │   │
-│   ├── Models/
-│   │   ├── VideoStream.swift          (Entity)
-│   │   └── PlaybackState.swift        (Entity)
+│   ├── Core/
+│   │   ├── Architecture/StateActor.swift    (Generic thread-safe state base)
+│   │   ├── DI/
+│   │   │   ├── APIClientProvider.swift
+│   │   │   └── DIContainer.swift
+│   │   ├── Managers/
+│   │   │   ├── KeychainManager.swift    (actor)
+│   │   │   └── ThemeManager.swift       (@Observable)
+│   │   ├── Networking/MediaMTXAPIClient.swift
+│   │   └── Utils/                       (RetryStrategy, PollingService, URLValidator, ...)
 │   │
-│   ├── ViewModels/
-│   │   └── PlaybackViewModel.swift    (ViewModel + Business Logic)
+│   ├── Features/
+│   │   ├── Home/Presentation/HomeView.swift
+│   │   ├── Playback/
+│   │   │   ├── Domain/
+│   │   │   │   ├── Entities/            (VideoStream, PlaybackState, ConnectionStatus, RetryState)
+│   │   │   │   ├── Actors/PlaybackStateActor.swift
+│   │   │   │   └── Services/            (RetryOrchestrator, ViewerCountPollingService)
+│   │   │   └── Presentation/
+│   │   │       ├── PlaybackViewModel.swift    (ViewModel + Business Logic)
+│   │   │       ├── VideoStreamListView.swift  (Playback & stream management)
+│   │   │       ├── VideoPlayerView.swift      (Player UI component)
+│   │   │       ├── VideoPlayerWorker.swift    (Reusable KVO Setup)
+│   │   │       └── FullScreenPlayerView.swift (Fullscreen player container)
+│   │   ├── StreamAdmin/                 (Domain + Presentation, mirrors Playback's shape)
+│   │   └── Settings/Presentation/SettingsView.swift
 │   │
-│   ├── Views/
-│   │   ├── HomeView.swift             (Root entry point - Navigation menu)
-│   │   ├── VideoStreamListView.swift  (Playback & stream management)
-│   │   ├── VideoPlayerView.swift      (Player UI component)
-│   │   └── FullScreenPlayerView.swift (Fullscreen player container)
-│   │
-│   └── Workers/
-│       └── VideoPlayerWorker.swift    (Reusable KVO/Combine Setup)
+│   ├── DesignSystem/
+│   └── Resources/
 │
 └── steam.xcodeproj/
 ```
+
+There is no `Repository`/`DataSource` layer: it was scaffolded early on (`Domain/Repositories`,
+`Data/Repositories`, `Data/DataSources`), never wired up (it only returned placeholder data),
+and has since been removed. ViewModels call `MediaMTXAPIClient` directly through
+`APIClientProvider`. If a real need shows up (a second data source to combine, or logic that
+needs to be shared outside a ViewModel), extract it from the working ViewModel at that point.
 
 ---
 
@@ -110,44 +141,47 @@ steam/
 
 | Component | Type | Responsibility |
 |-----------|------|-----------------|
+| **AppCoordinator** | Coordinator | Navigation state, builds ViewModels via `DIContainer` |
 | **PlaybackViewModel** | ViewModel | Business logic, state, observer setup |
+| **StreamAdminViewModel** | ViewModel | Stream/viewer monitoring, polling |
 | **VideoPlayerView** | View | Player + overlays, calls ViewModel actions |
 | **FullScreenPlayerView** | View | Fullscreen container |
 | **HomeView** | View | Root menu, navigation hub |
 | **VideoStreamListView** | View | Stream list, selection, debug panel |
+| **StreamAdminView** | View | Stream/viewer monitoring UI |
 | **VideoPlayerWorker** | Utility | KVO setup, formatting |
-| **PlaybackState** | Model | Data entity |
-| **VideoStream** | Model | Data entity |
+| **PlaybackState** | Entity | Data entity |
+| **VideoStream** | Entity | Data entity |
 
 ---
 
 ## State Management
 
 ### PlaybackViewModel Internal State
-- `playbackState: PlaybackState` — internal tracking of stream + playback status
-- `@Published` properties — synced to UI via Combine
-- `cancellables: Set<AnyCancellable>` — KVO subscription management
+- `stateActor: DefaultPlaybackStateActor` — the actual source of truth, mutated only through `updateX(...)` calls
+- `state: PlaybackStateSnapshot` — a private, `@Observable`-tracked mirror kept in sync by a `Task` observing `stateActor.stateUpdates`
+- Public `var isLoading: Bool { state.isLoading }`-style computed properties — what Views actually read
 
 ### VideoStreamListView Local State
-- `@StateObject playbackViewModel` — preserved across re-renders (prevents AVPlayer leak)
-- `@State showDebug` — pure UI state, not synced to ViewModel
+- `playbackViewModel` — received from `AppCoordinator`/`DIContainer`, not owned via `@StateObject` (there's no `ObservableObject` here to wrap)
+- `@State showDebug` — pure UI state, not synced to the ViewModel
 
 ### Data Flow
 1. User action → ViewModel method called
-2. ViewModel updates `playbackState` internally
-3. `updatePlaybackViewModel()` copies to `@Published` properties on main thread
-4. SwiftUI observes `@Published` → re-renders
+2. ViewModel calls `await stateActor.updateX(...)`, which mutates the actor's state and yields it on `stateUpdates`
+3. The ViewModel's observer `Task` receives the new state and assigns it to its private `state` property
+4. `@Observable` tracks that assignment → SwiftUI re-renders any View reading a computed property derived from it
 
 ---
 
-## Key Benefits of MVVM
+## Key Benefits of MVVM + Coordinator
 
 ✅ **Simplicity** — Single ViewModel owns all logic  
-✅ **Testability** — ViewModel can be tested independently  
-✅ **State Management** — Combine `@Published` is SwiftUI-native  
-✅ **No Routing Complexity** — No protocols, DTOs, or dependency injection boilerplate  
-✅ **Direct Data Binding** — Views directly observe ViewModel  
-✅ **Memory Safety** — `@StateObject` prevents AVPlayer leaks on re-render  
+✅ **Testability** — ViewModel can be tested independently, and `AppCoordinator` can be built with mock dependencies  
+✅ **State Management** — `@Observable` is SwiftUI-native, no Combine boilerplate  
+✅ **Centralized Navigation** — One `AppCoordinator` owns the nav path; Views never build their own ViewModels  
+✅ **Direct Data Binding** — Views directly read `@Observable` ViewModel properties  
+✅ **Memory Safety** — the ViewModel's lifetime is tied to the navigation stack via `AppCoordinator`, not a View-owned `@StateObject`  
 
 ---
 
@@ -155,7 +189,7 @@ steam/
 
 ### 1. StateActor: Thread-Safe State Management
 
-**Problem Solved:** ObservableObject + @Published was not thread-safe at compile time
+**Problem Solved:** `ObservableObject` + `@Published` wasn't thread-safe at compile time, and ViewModels needed a way to mutate state from multiple async contexts safely
 
 **Solution:** Generic `StateActor` using Swift's structured concurrency
 
@@ -268,34 +302,72 @@ func startPolling() async {
 - No manual timer management
 - Memory safe by default
 
+### 5. Coordinator: Navigation & Dependency Injection
+
+**Problem Solved:** Navigation state scattered across Views, `DIContainer` existed but had no caller, `AppCoordinator` was an unwired template (issues #33, #35)
+
+**Solution:** `AppCoordinator` (`@Observable`) owns the `NavigationStack`'s path and is the only place that builds ViewModels, via a `DIContainer` it holds privately
+
+```swift
+@MainActor @Observable
+final class AppCoordinator {
+    var navigationPath: [AppRoute] = []
+    private let diContainer: DIContainer
+
+    func navigate(to route: AppRoute) { navigationPath.append(route) }
+
+    @ViewBuilder
+    func navigationView(for route: AppRoute) -> some View {
+        switch route {
+        case .watchStreams: VideoStreamListView(playbackViewModel: makePlaybackViewModel())
+        case .streamAdmin: StreamAdminView(viewModel: makeStreamAdminViewModel())
+        case .settings: SettingsView()
+        }
+    }
+}
+```
+
+**Features:**
+- Single source of truth for "where am I in the app"
+- Views never construct their own ViewModels
+- `DIContainer` has exactly one caller, so it's easy to swap in mocks for tests
+
+**See Also:** [ADR-004: Coordinator](./adr/ADR-004-coordinator-navigation.md)
+
 ---
 
 ## Complete Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────┐
+│              AppCoordinator                  │
+│   (navigation path + DIContainer, builds     │
+│    every ViewModel below)                    │
+└────────────────┬────────────────────────────┘
+                 │ injects
+                 ▼
+┌─────────────────────────────────────────────┐
 │             SwiftUI Views                   │
 │  ┌──────────────┬──────────────┐           │
 │  │ HomeView     │ VideoPlayer  │           │
 │  │ StreamList   │ FullScreen   │           │
+│  │ StreamAdmin  │ Settings     │           │
 │  └──────────────┴──────────────┘           │
 └────────────────┬────────────────────────────┘
-                 │ observes AsyncStream
+                 │ reads @Observable properties
                  ▼
-      ┌──────────────────────────┐
-      │   StateActors            │
-      │  ┌────────────────────┐  │
-      │  │PlaybackStateActor  │  │
-      │  │StreamAdminStateAct │  │
-      │  └────────────────────┘  │
-      └────────┬─────────────────┘
-               │ calls methods
-               ▼
     ┌──────────────────────────────────┐
-    │   ViewModels & Services          │
+    │   ViewModels (@Observable)       │
     │  ┌──────────────────────────┐   │
     │  │PlaybackViewModel         │   │
     │  │StreamAdminViewModel      │   │
+    │  └───────────┬──────────────┘   │
+    │              │ mirrors stateUpdates
+    │              ▼                   │
+    │  ┌──────────────────────────┐   │
+    │  │StateActors               │   │
+    │  │ PlaybackStateActor       │   │
+    │  │ StreamAdminStateActor    │   │
     │  └──────────────────────────┘   │
     │  ┌──────────────────────────┐   │
     │  │RetryOrchestrator         │   │
@@ -379,9 +451,10 @@ Measure performance:
 
 ---
 
-**Architecture**: MVVM + Actors + DI  
+**Architecture**: MVVM + Coordinator + Actors + DI  
 **Concurrency Model**: Structured Concurrency (async/await)  
-**State Management**: StateActor + AsyncStream  
+**State Management**: StateActor + AsyncStream, mirrored into `@Observable` ViewModels  
+**Navigation & DI**: AppCoordinator + DIContainer  
 **Resilience**: RetryOrchestrator  
 **Testing**: Dependency Injection via APIClientProvider  
 **Platform**: iOS (SwiftUI) + MediaMTX Server  
@@ -391,9 +464,10 @@ Measure performance:
 
 ## Quick References
 
-- **[REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md)** — How to modernize code
+- **[PATTERN-CHEAT-SHEET.md](./PATTERN-CHEAT-SHEET.md)** — Templates & checklists for every pattern
 - **[adr/ADR-001-structured-concurrency.md](./adr/ADR-001-structured-concurrency.md)** — StateActor decisions
 - **[adr/ADR-002-retry-orchestrator.md](./adr/ADR-002-retry-orchestrator.md)** — Retry decisions
 - **[adr/ADR-003-dependency-injection.md](./adr/ADR-003-dependency-injection.md)** — DI decisions
+- **[adr/ADR-004-coordinator-navigation.md](./adr/ADR-004-coordinator-navigation.md)** — Coordinator decisions
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** — Development workflow
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Production deployment

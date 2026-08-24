@@ -1,8 +1,8 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # AI Workflow Guide
 
-How to work effectively with Claude Code, Cursor IDE, and GitHub Copilot on this project.
+How to work effectively with Claude Code and GitHub Copilot on this project.
 
 ---
 
@@ -76,11 +76,11 @@ General questions:
 1. Make changes in your editor
 2. Ask Claude Code:
    ```
-   "Review my changes in steam/ViewModels/PlaybackViewModel.swift
+   "Review my changes in steam/Features/Playback/Presentation/PlaybackViewModel.swift
    against these criteria:
-   - MVVM pattern adherence
-   - Memory safety ([weak self] usage)
-   - Thread safety
+   - MVVM + Coordinator pattern adherence
+   - Memory safety ([weak self] usage, task cancellation)
+   - Actor isolation / thread safety
    - Error handling
    - Code simplicity"
    ```
@@ -248,22 +248,7 @@ Think first. Ask AI when you have direction.
 
 **Guides Included**
 - `.claude/instructions/swift-style.md` - Coding standards
-- `.claude/antigravity-guide.md` - Deep code understanding
-
-### Cursor IDE (`.cursorrules`)
-
-- Context-aware autocomplete
-- Code generation from comments
-- Refactoring assistance
-- Automatic formatting
-
-**Use like:**
-```
-// Generate a test for this function:
-func testLoadStreamWithValidURL() {
-    // Start typing and Cursor suggests the rest
-}
-```
+- `.claude/SETUP.md` - Antigravity semantic-analysis setup & usage
 
 ### GitHub Copilot (`.github/copilot-instructions.md`)
 
@@ -551,7 +536,7 @@ Use /streaming-expert for:
 
 ## Next Steps
 
-1. Read `.claude/antigravity-guide.md` for deep code understanding
+1. Read `.claude/SETUP.md` for deep code understanding via Antigravity
 2. Read `.claude/instructions/swift-style.md` for coding standards  
 3. Read `ARCHITECTURE.md` to understand project deeply
 4. Start using these workflows on real tasks

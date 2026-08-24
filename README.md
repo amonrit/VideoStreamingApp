@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786925413) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Steam — iOS Video Streaming App
 
@@ -106,12 +106,12 @@ ffmpeg -re -i video.mp4 -c copy -f flv \
 ### Control the Server
 
 ```bash
-./streaming.sh start                # Start server
-./streaming.sh stop                 # Stop server
-./streaming.sh restart              # Restart (after config change)
-./streaming.sh status               # Check if running
-./streaming.sh logs                 # View live logs
-./streaming.sh test                 # Run verification tests
+make dev-server                     # Start server
+make server-stop                    # Stop server
+make server-restart                 # Restart (after config change)
+make server-status                  # Check if running
+make server-logs                    # View live logs
+make server-test                    # Run verification tests
 ```
 
 ---
@@ -120,41 +120,42 @@ ffmpeg -re -i video.mp4 -c copy -f flv \
 
 ### iOS App (Modern MVVM + Structured Concurrency)
 
-**Phase 11 Complete:** Modern patterns implemented — StateActor, RetryOrchestrator, APIClientProvider
+**Current architecture:** Modern MVVM + Coordinator — StateActor, RetryOrchestrator, APIClientProvider, and an `AppCoordinator`/`DIContainer` pair for navigation & dependency injection
 
 ```
+AppCoordinator (@Observable — owns NavigationStack path + DIContainer)
+  ↓ builds & injects ViewModels
 HomeView (Root UI - Navigation Hub)
   ├─ Watch Streams → VideoStreamListView
-  ├─ Settings (Mock)
+  ├─ Stream Admin → StreamAdminView (live stream/viewer monitoring)
+  ├─ Settings → SettingsView
   ├─ About (Mock)
   └─ Help (Mock)
-       
+
 VideoStreamListView (Playback Screen)
   ├─ VideoPlayerView (Player UI - Pure Presentation)
   ├─ Stream List (Add/Select streams)
   └─ Debug Panel (Metrics)
-       ↓ observe via StateActor
+       ↓ observe via @Observable
 PlaybackViewModel
   ├─ Manages AVPlayer playback
-  ├─ Thread-safe state (StateActor)
+  ├─ Thread-safe state (StateActor, mirrored into an @Observable property)
   ├─ Resilient retries (RetryOrchestrator)
-  └─ Coordinates with Domain Layer & Workers
+  └─ Coordinates with Domain entities & Workers
        ↓ uses
 Domain Layer (Framework-Independent)
-  ├─ Use Cases (LoadStream, RetryPlayback, GetViewerCount)
-  ├─ Repositories (protocol-based)
-  └─ Entities (VideoStream, PlaybackState)
-       ↓ implements
-Data Layer (Data Access)
-  ├─ Repository Implementations
-  ├─ Remote Data Sources (MediaMTX API)
-  └─ Models
+  └─ Entities (VideoStream, PlaybackState, ConnectionStatus, RetryState)
+       ↓ calls directly — no Repository/DataSource layer
+Networking
+  ├─ APIClientProvider (DI seam for tests)
+  └─ MediaMTXAPIClient (talks to the MediaMTX Control API)
 ```
 
 **Key Patterns:**
-- **StateActor** — Thread-safe state management (replaces @Published)
+- **StateActor** — Thread-safe state management (replaces @Published/ObservableObject)
 - **RetryOrchestrator** — Resilient error handling with exponential backoff
 - **APIClientProvider** — Dependency injection for testability
+- **Coordinator** — `AppCoordinator` + `DIContainer` own navigation and ViewModel construction
 - **Structured Concurrency** — Async/await + Task management
 
 See **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** for deep dive.
@@ -204,7 +205,7 @@ Check for error messages. Common issues:
 - Config error: `streaming/mediamtx.yml` has invalid YAML
 
 ### Stream Buffering
-- **Server side**: Check logs for connection issues: `./streaming.sh logs`
+- **Server side**: Check logs for connection issues: `make server-logs`
 - **Network side**: Use `ping YOUR_IP` to check latency
 - **Client side**: iOS app debug panel shows bitrate; if too low, reduce publisher bitrate
 
@@ -300,7 +301,7 @@ For questions or issues:
 2. **[DOCUMENTATION.md](./DOCUMENTATION.md)** — Find the right doc for your question
 3. **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** — Debugging & common issues
 4. **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — Production setup
-5. Check streaming server logs: `./streaming.sh logs`
+5. Check streaming server logs: `make server-logs`
 6. View app logs in Xcode Console
 
 **Ready to stream!** 🎬

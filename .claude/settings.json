@@ -73,10 +73,10 @@
     "codeUnderstandingMode": "semantic",
     "semanticIndexing": true,
     "indexedPaths": [
-      "steam/ViewModels/",
-      "steam/Views/",
-      "steam/Models/",
-      "steam/Workers/",
+      "steam/App/",
+      "steam/Core/",
+      "steam/Features/",
+      "steam/DesignSystem/",
       "streaming/"
     ],
     "skipPaths": [

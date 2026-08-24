@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # 📊 Dependency Analysis System
 
@@ -8,6 +8,9 @@ This system automatically analyzes and tracks Swift code dependencies across com
 ✅ **Track architecture** — Monitor how dependencies evolve  
 ✅ **Revert with confidence** — See exactly what was different in old versions  
 ✅ **Detect issues early** — Catch architecture violations and circular dependencies  
+
+It runs automatically on every commit via a pre-commit hook — `dependency-map.md` and the
+`diagrams/` SVGs are always a snapshot of the current tree, not a doc you edit by hand.
 
 ---
 
@@ -99,14 +102,14 @@ class PlaybackViewModel {         ← Local type definition
 ```json
 {
   "files": {
-    "ViewModels/PlaybackViewModel.swift": {
+    "Features/Playback/Presentation/PlaybackViewModel.swift": {
       "imports": {
-        "apple": ["AVFoundation", "Combine", "Foundation"],
+        "apple": ["Foundation", "AVFoundation", "SwiftUI", "os"],
         "local": [],
         "external": []
       },
       "references": ["VideoPlayerWorker", "PlaybackState"],
-      "total_imports": 3
+      "total_imports": 4
     }
   },
   "graph": {
@@ -145,15 +148,15 @@ git commit -m "feat: add new feature"
 ```
 steamApp.swift (Entry Point)
     ↓
-ContentView.swift (UI Coordinator)
-    ├─ PlaybackViewModel (State)
-    ├─ VideoPlayerView (Player UI)
-    └─ FullScreenPlayerView (Full-screen UI)
+AppCoordinator (Navigation + DI)
+    ├─ HomeView, VideoStreamListView, StreamAdminView, SettingsView
+    └─ builds ViewModels via DIContainer
 
-PlaybackViewModel (Business Logic)
-    ├─ VideoPlayerWorker (KVO Observers)
-    ├─ PlaybackState (State Model)
-    └─ VideoStream (Data Model)
+PlaybackViewModel / StreamAdminViewModel (Business Logic)
+    ├─ StateActor (thread-safe state)
+    ├─ RetryOrchestrator / APIClientProvider (resilience + DI)
+    ├─ VideoPlayerWorker (KVO Observers, Playback only)
+    └─ Domain Entities (VideoStream, PlaybackState, ...)
 
 VideoPlayerWorker (Utilities)
     └─ (Pure logic, no project dependencies)
@@ -161,13 +164,15 @@ VideoPlayerWorker (Utilities)
 
 ### Dependency Metrics
 
-| Metric | Value |
+Live numbers are always in `dependency-map.md` (regenerated every commit). As of the last
+run: 35 Swift files, 7 unique frameworks (6 Apple), no circular dependencies. Don't hand-edit
+the figures below — this table exists only to describe what "healthy" looks like:
+
+| Metric | What to watch for |
 |--------|-------|
-| **Total Files** | 8 Swift files |
-| **Average Imports** | ~3-4 per file |
-| **Apple Frameworks** | 6 (Foundation, AVFoundation, SwiftUI, Combine, AVKit, os) |
-| **Local Dependencies** | ~2 per file on average |
-| **Circular Dependencies** | ✅ None detected |
+| **Average Imports** | A sudden jump per file often means a layering violation crept in |
+| **Local Dependencies** | Views should depend on their ViewModel, not on other Views |
+| **Circular Dependencies** | Should always read "None detected" |
 
 ---
 
@@ -288,11 +293,26 @@ chmod -R 755 .claude/analysis/history/
 
 ---
 
+## ⚠️ Red Flags to Watch For
+
+❌ **Circular dependencies** — `ViewA → ViewB → ViewA`. Fix by mediating through a ViewModel.
+
+❌ **Views importing other Views' internals** — keep Views isolated; communicate through the ViewModel/Coordinator.
+
+❌ **A Domain entity importing a View** — entities must stay framework-independent.
+
+❌ **A file with 10+ imports** — usually a sign it should be split.
+
+Catch these early with `python3 .claude/analysis/snapshot-manager.py compare <bad-commit> <good-commit>` and look for imports/references that shouldn't be there.
+
+---
+
 ## 📖 Related Documentation
 
-- [[CLAUDE.md]] — Project overview and architecture
-- [[docs/ARCHITECTURE.md]] — Deep dive into MVVM pattern
-- [[GETTING_STARTED.md]] — Setup guide
+- [CLAUDE.md](../../CLAUDE.md) — Project overview and architecture
+- [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) — Deep dive into MVVM + Coordinator
+- [GETTING_STARTED.md](../../GETTING_STARTED.md) — Setup guide
+- [diagrams/README.md](./diagrams/README.md) — Visual (SVG) versions of this data
 
 ---
 

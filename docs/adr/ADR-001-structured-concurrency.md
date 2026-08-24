@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786922418) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # ADR-001: Structured Concurrency with StateActor
 
@@ -78,7 +78,17 @@ actor PlaybackStateActor: GenericStateActor<PlaybackStateActor.State> {
 - **Phase 7:** Introduced StateActor and integrated into PlaybackViewModel
 - **Phase 8:** Added StateActor to StreamAdminViewModel
 - **Phase 9:** Refactored Views to observe state updates
-- **Phase 11+:** Complete migration of all @Published properties
+- **Phase 12+:** Completed migration of all ViewModels off `ObservableObject`/`@Published` to `@Observable`
+
+### The concrete integration shape (post-migration)
+
+The pattern that shipped isn't "Views subscribe to the actor's `AsyncStream` directly" — it's:
+
+1. The actor (`PlaybackStateActor`) stays the source of truth, mutated only via `updateX(...)` methods.
+2. The owning ViewModel is `@Observable` (not `ObservableObject`) and keeps a private, `@Observable`-tracked mirror of the actor's state, kept in sync by a `Task` started in `init` that iterates `stateActor.stateUpdates`.
+3. Views read plain computed properties on the ViewModel (`viewModel.isLoading`) — they never touch `AsyncStream` or the actor directly.
+
+This mirroring step exists because SwiftUI's `@Observable` machinery can only track reads of stored properties on the observed object itself, not reads that reach through to a separate actor.
 
 ## Consequences
 
@@ -126,8 +136,8 @@ actor PlaybackStateActor: GenericStateActor<PlaybackStateActor.State> {
 - [x] StreamAdminStateActor integration
 - [x] Unit tests for StateActors
 - [x] Integration tests for state updates
-- [ ] Complete migration of all @Published properties
-- [ ] Documentation of migration patterns
+- [x] Complete migration of all ViewModels to `@Observable`
+- [x] Documentation of the migration pattern (see above, and `docs/PATTERN-CHEAT-SHEET.md`)
 - [ ] Team training on structured concurrency
 
 ---

@@ -1,4 +1,4 @@
-Last Modified: 08/16/2026 (1786883233) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # FFmpeg Real-Time Transcoding Setup (Phases 1-4 Complete)
 
@@ -383,10 +383,8 @@ grep -i error streaming/logs/ffmpeg-*.log
 
 ## 📚 Related Documentation
 
-- **IMPLEMENTATION_PLAN.md** — Original requirements & architecture
 - **TESTING_FFMPEG_TRANSCODING.md** — Comprehensive test procedures
-- **START.md** — Server startup guide
-- **QUICK_REFERENCE.md** — Common commands
+- **QUICK_REFERENCE.md** — Server startup & common commands
 
 ---
 

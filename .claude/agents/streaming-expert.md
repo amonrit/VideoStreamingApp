@@ -1,4 +1,4 @@
-Last Modified: 08/10/2026 (1786502400) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Streaming Server Expert Agent
 
@@ -57,10 +57,11 @@ Publisher (OBS, FFmpeg) → RTMP → MediaMTX ← HLS → iOS App
 
 ### Common Commands
 ```bash
-./streaming.sh start     # Start server
-./streaming.sh logs      # View live logs
-./streaming.sh test      # Verify setup
-make dev-server          # Start via Makefile
+make dev-server          # Start server (docker-compose up -d)
+make server-logs         # View live logs
+make server-test         # Verify setup (runs streaming/test-streaming.sh)
+make server-status       # Check container status
+make server-restart      # Restart after a config change
 ```
 
 ### Protocol Selection Guide

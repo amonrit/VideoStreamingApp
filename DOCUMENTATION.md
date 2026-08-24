@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786925413) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -8,9 +8,8 @@ This is your **master index** for all Steam documentation. Each section tells yo
 
 ## 📊 **Project Status**
 
-**Current Phase:** Phase 9 (Clean View Layer) — IN PROGRESS  
-**Latest Summary:** [docs/PHASE-11-SUMMARY.md](./docs/PHASE-11-SUMMARY.md)  
-**Architecture:** Modern MVVM + Structured Concurrency (StateActor, RetryOrchestrator, APIClientProvider)
+**Current Phase:** Phase 9 (Clean View Layer) — COMPLETE. Navigation/DI has since moved to a Coordinator pattern (see [ADR-004](./docs/adr/ADR-004-coordinator-navigation.md)).  
+**Architecture:** Modern MVVM + Structured Concurrency (StateActor, RetryOrchestrator, APIClientProvider, Coordinator) — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ---
 
@@ -56,44 +55,25 @@ All docs are in the `docs/` folder:
 
 ---
 
-### 2b. **[docs/REFACTORING_GUIDE.md](./docs/REFACTORING_GUIDE.md)** — Modernizing Code with New Patterns
-**For:** Refactoring legacy code, learning how to use StateActor, RetryOrchestrator, APIClientProvider  
+### 2b. **[docs/PATTERN-CHEAT-SHEET.md](./docs/PATTERN-CHEAT-SHEET.md)** — Pattern Quick Reference
+**For:** Using StateActor, RetryOrchestrator, APIClientProvider, structured-concurrency polling, and the Coordinator in day-to-day feature work  
 **Contains:**
-- Pattern 1: StateActor for thread-safe state
-- Pattern 2: RetryOrchestrator for resilience
-- Pattern 3: APIClientProvider for dependency injection
-- Pattern 4: Structured concurrency with tasks
-- Common refactoring scenarios with before/after examples
-- Testing patterns
-- Rollback strategy
+- Templates for all 5 patterns, with the real ViewModel-mirrors-actor-state shape used in this codebase
+- A decision tree for which pattern to reach for
+- Code review checklists per pattern
+- Gotchas (e.g. never mix `@Published`/`ObservableObject` with `@Observable`)
 
-**When to use:** Refactoring code, adding new features, code review
+**When to use:** Writing or reviewing feature code, onboarding
 
 ---
 
-### 2c. **[docs/MIGRATION_GUIDE.md](./docs/MIGRATION_GUIDE.md)** — Adopting Modern Patterns
-**For:** Migrating existing code to use modern patterns, planning refactoring work  
-**Contains:**
-- Quick decision tree for choosing patterns
-- Migration checklist for each pattern
-- Common patterns to replace (with grep commands)
-- Complete service modernization example
-- View refactoring example
-- Testing patterns
-- Rollout strategy
-- Common pitfalls
-- Success metrics
-
-**When to use:** Planning refactoring, migrating a service, onboarding new developers
-
----
-
-### 2d. **[docs/adr/](./docs/adr/)** — Architecture Decision Records
+### 2c. **[docs/adr/](./docs/adr/)** — Architecture Decision Records
 **For:** Understanding design decisions, learning rationale, future reference  
 **Contains:**
 - **ADR-001: Structured Concurrency** — Why StateActor instead of @Published
 - **ADR-002: Retry Orchestrator** — Why centralized retry logic
 - **ADR-003: Dependency Injection** — Why APIClientProvider for testability
+- **ADR-004: Coordinator** — Why navigation/DI moved off direct ViewModel construction
 - Status, context, decision, consequences, alternatives for each
 
 **When to use:** Understanding "why" decisions were made, code review discussions, architecture reviews
@@ -115,6 +95,7 @@ All docs are in the `docs/` folder:
 ### 4. **[docs/COMMIT_GUIDE.md](./docs/COMMIT_GUIDE.md)** — Writing Good Commits
 **For:** Committing code that follows project standards  
 **Contains:**
+- The commit tools (`.gitmessage` template, `scripts/commit-help.sh`, the `prepare-commit-msg` reminder hook) and how they fit together
 - Commit message format (type, scope, subject)
 - All 9 commit types with examples
 - Good vs bad commits
@@ -124,19 +105,7 @@ All docs are in the `docs/` folder:
 
 ---
 
-### 5. **[docs/COMMIT_WORKFLOW.md](./docs/COMMIT_WORKFLOW.md)** — Commit Tools & Workflow
-**For:** Using commit helpers, understanding the workflow  
-**Contains:**
-- Auto-reminder setup
-- `commit-help.sh` script examples
-- Before/during/after workflow
-- Checklist
-
-**When to use:** Unsure about commit flow
-
----
-
-### 6. **[docs/AI_WORKFLOW.md](./docs/AI_WORKFLOW.md)** — Working with Claude Code, Cursor, Copilot
+### 5. **[docs/AI_WORKFLOW.md](./docs/AI_WORKFLOW.md)** — Working with Claude Code, Cursor, Copilot
 **For:** Using AI tools effectively on this project  
 **Contains:**
 - Claude Code setup & specialized agents
@@ -308,16 +277,13 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
   → GETTING_STARTED.md (5 min) → docs/DEVELOPMENT.md
 
 "I need to commit code"
-  → docs/COMMIT_GUIDE.md (format) + docs/COMMIT_WORKFLOW.md (flow)
+  → docs/COMMIT_GUIDE.md (format + tools + workflow)
 
 "I don't understand how X works"
   → docs/ARCHITECTURE.md (deep dive)
 
-"I want to refactor code using new patterns"
-  → docs/REFACTORING_GUIDE.md (StateActor, RetryOrchestrator, APIClientProvider)
-
-"I need to migrate legacy code"
-  → docs/MIGRATION_GUIDE.md (step-by-step examples)
+"I want to use StateActor / RetryOrchestrator / APIClientProvider / the Coordinator"
+  → docs/PATTERN-CHEAT-SHEET.md (templates, decision tree, checklists)
 
 "Why was decision X made?"
   → docs/adr/ (ADRs explain rationale)
@@ -376,15 +342,14 @@ steam/
 ├── docs/                         ← Main documentation
 │   ├── DEVELOPMENT.md            ← Local dev guide
 │   ├── ARCHITECTURE.md           ← Deep dive into MVVM + modern patterns
-│   ├── REFACTORING_GUIDE.md      ← How to use new patterns (Phase 11)
-│   ├── MIGRATION_GUIDE.md        ← How to migrate code (Phase 11)
-│   ├── adr/                      ← Architecture Decision Records (Phase 11)
+│   ├── PATTERN-CHEAT-SHEET.md    ← How to use StateActor/RetryOrchestrator/APIClientProvider/Coordinator
+│   ├── adr/                      ← Architecture Decision Records
 │   │   ├── ADR-001-structured-concurrency.md
 │   │   ├── ADR-002-retry-orchestrator.md
-│   │   └── ADR-003-dependency-injection.md
+│   │   ├── ADR-003-dependency-injection.md
+│   │   └── ADR-004-coordinator-navigation.md
 │   ├── DEPLOYMENT.md             ← Deploy to production
-│   ├── COMMIT_GUIDE.md           ← Commit message format
-│   ├── COMMIT_WORKFLOW.md        ← Commit workflow
+│   ├── COMMIT_GUIDE.md           ← Commit message format, tools & workflow
 │   ├── AI_WORKFLOW.md            ← Working with AI tools
 │   ├── CREDENTIAL_MANAGEMENT.md  ← Credential lifecycle strategy
 │   ├── CREDENTIAL_SETUP.md       ← First-time credential setup
@@ -394,13 +359,15 @@ steam/
 │
 ├── streaming/
 │   ├── FFMPEG_SETUP.md           ← FFmpeg transcoding setup
-│   ├── QUICK_REFERENCE.md        ← MediaMTX commands & examples
-│   ├── START.md                  ← Quick server start
+│   ├── QUICK_REFERENCE.md        ← MediaMTX commands, examples & start guide
 │   └── TESTING_FFMPEG_TRANSCODING.md ← Test the transcoding
 │
 ├── .claude/                      ← AI-specific docs
 │   ├── SETUP.md                  ← Antigravity setup
 │   ├── markdown-header-rule.md   ← Header standard
+│   ├── analysis/                 ← Auto-generated dependency analysis
+│   │   ├── README.md             ← What it is & how to use it
+│   │   └── dependency-map.md     ← Current dependency snapshot (auto-updated)
 │   ├── instructions/
 │   │   └── swift-style.md        ← Code style
 │   └── agents/

@@ -1,57 +1,70 @@
-Last Modified: 08/17/2026 (1786922418) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Steam Architecture — Pattern Cheat Sheet
 
-Quick reference for the 4 modern patterns in Steam.
+Quick reference for the 5 patterns used throughout Steam: StateActor, RetryOrchestrator, APIClientProvider, structured-concurrency polling, and the Coordinator. For the rationale behind each, see [docs/adr/](./adr/); for the full system picture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
 ## Pattern 1: StateActor — Thread-Safe State
 
 ### When to Use
-✅ Long-lived state that changes  
-✅ Multiple concurrent updates  
-✅ MainActor-compatible with SwiftUI  
+✅ Long-lived state that changes over time
+✅ Multiple concurrent writers
+✅ MainActor-compatible with SwiftUI
 
 ### Basic Template
 ```swift
 @MainActor
-actor MyStateActor: GenericStateActor<MyStateActor.State> {
+final actor MyStateActor: GenericStateActor<MyStateActor.State> {
     struct State: Sendable {
         var value: String = ""
         var isLoading: Bool = false
     }
-    
+
     init() { super.init(initialState: State()) }
-    
+
     func updateValue(_ val: String) {
         updateState { $0.value = val }
     }
 }
 ```
 
-### In Views
+### How ViewModels actually consume it
+
+The actor is the source of truth, but SwiftUI can only observe stored properties on an `@Observable` object — it can't observe reads that reach through to a separate actor. So the ViewModel keeps a local, `@Observable`-tracked mirror and syncs it from the actor's `AsyncStream` in `init`:
+
 ```swift
-var body: some View {
-    VStack {
-        Text(state?.value ?? "")
-        if state?.isLoading == true { ProgressView() }
-    }
-    .onAppear {
-        task = Task {
-            for await newState in actor.stateUpdates {
-                await MainActor.run { self.state = newState }
+@MainActor
+@Observable
+final class MyViewModel {
+    private let stateActor: MyStateActor
+    private var state = MyStateActor.State()
+    @ObservationIgnored private nonisolated(unsafe) var stateObserverTask: Task<Void, Never>?
+
+    init(stateActor: MyStateActor = MyStateActor()) {
+        self.stateActor = stateActor
+        stateObserverTask = Task {
+            for await newState in stateActor.stateUpdates {
+                state = newState
             }
         }
     }
+
+    var value: String { state.value }        // Views just read this
+    var isLoading: Bool { state.isLoading }
+
+    deinit { stateObserverTask?.cancel() }
 }
 ```
 
+Views then read `viewModel.value` / `viewModel.isLoading` directly — no `AsyncStream` code in the View layer. This is the pattern `PlaybackViewModel` and `StreamAdminViewModel` both use. See the real implementation in `steam/Features/Playback/Presentation/PlaybackViewModel.swift`.
+
 ### Key Methods
 ```swift
-updateState { $0.field = value }     // Mutate & broadcast
-setState(newState)                    // Replace & broadcast
-let current = currentState             // Read current
+updateState { $0.field = value }              // Mutate & broadcast
+setState(newState)                            // Replace & broadcast
+let current = currentState                    // Read current (async, off-actor)
 var updates: AsyncStream<State> { /* ... */ } // Observe
 ```
 
@@ -60,15 +73,15 @@ var updates: AsyncStream<State> { /* ... */ } // Observe
 ## Pattern 2: RetryOrchestrator — Resilient Network Calls
 
 ### When to Use
-✅ Network operations  
-✅ Transient failures (timeouts, 5xx)  
-✅ Need consistent retry behavior  
+✅ Network operations
+✅ Transient failures (timeouts, 5xx)
+✅ Need consistent retry behavior
 
 ### Basic Template
 ```swift
-private let retryOrchestrator = RetryOrchestrator(
+let retryOrchestrator = RetryOrchestrator(
     configuration: .production,
-    onStatusChanged: { msg in logger.info(msg) }
+    onStatusChanged: { msg in logger.info("\(msg)") }
 )
 
 do {
@@ -84,8 +97,8 @@ do {
 
 ### Configurations
 ```swift
-.production    // 3 attempts, 1-30s backoff
-.testing       // 1 attempt, no delay
+.production    // 3 attempts, 1-30s exponential backoff
+.testing       // 1 attempt, no delay — use this in tests
 PlaybackConfiguration(maxAttempts: 5, initialDelaySeconds: 0.5)
 ```
 
@@ -93,10 +106,10 @@ PlaybackConfiguration(maxAttempts: 5, initialDelaySeconds: 0.5)
 ```
 Operation attempt 1
   ├─ Success → return result
-  └─ Failure → wait exponential time
+  └─ Failure → wait exponential backoff
 Operation attempt 2
   ├─ Success → return result
-  └─ Failure → wait exponential time
+  └─ Failure → wait exponential backoff
 Operation attempt 3
   ├─ Success → return result
   └─ Failure → throw error
@@ -107,19 +120,19 @@ Operation attempt 3
 ## Pattern 3: APIClientProvider — Dependency Injection
 
 ### When to Use
-✅ Creating API clients  
-✅ Need testing without network  
-✅ Support multiple configurations  
+✅ Creating `MediaMTXAPIClient` instances
+✅ Need to test without network calls
+✅ Multiple base URLs/configurations
 
 ### Basic Template
 ```swift
-class MyService {
+final class MyService {
     private let clientProvider: APIClientProvider
-    
+
     init(clientProvider: APIClientProvider = DefaultAPIClientProvider()) {
         self.clientProvider = clientProvider
     }
-    
+
     func doWork() async throws {
         let client = clientProvider.createAPIClient(baseURL: URL(string: "http://localhost:9997")!)
         return try await client.request()
@@ -145,23 +158,22 @@ MockAPIClientProvider()     // Test mocks (no network)
 
 ---
 
-## Pattern 4: Structured Concurrency — Task Management
+## Pattern 4: Structured Concurrency — Task-Based Polling
 
 ### When to Use
-✅ Long-running async operations  
-✅ Polling/background tasks  
-✅ Automatic cancellation needed  
+✅ Long-running async operations (viewer count, stream status)
+✅ Automatic cancellation needed (no `Timer.invalidate()` to forget)
 
 ### Basic Template
 ```swift
-var pollingTask: Task<Void, Never>?
+private var pollingTask: Task<Void, Never>?
 
 func startPolling() {
     pollingTask = Task {
         while !Task.isCancelled {
             do {
                 let result = try await operation()
-                // Handle result
+                // handle result
                 try await Task.sleep(nanoseconds: 1_000_000_000)
             } catch is CancellationError {
                 return
@@ -175,14 +187,7 @@ func stopPolling() {
 }
 ```
 
-### Common Sleeps
-```swift
-try await Task.sleep(nanoseconds: 1_000_000_000)     // 1 second
-try await Task.sleep(nanoseconds: 500_000_000)       // 0.5 seconds
-try await Task.sleep(nanoseconds: 5_000_000_000)     // 5 seconds
-```
-
-### Task Groups (Parallel)
+### Task Groups (Parallel Work)
 ```swift
 try await withTaskGroup(of: Result.self) { group in
     for item in items {
@@ -196,90 +201,55 @@ try await withTaskGroup(of: Result.self) { group in
 
 ---
 
+## Pattern 5: Coordinator — Navigation & ViewModel Construction
+
+### When to Use
+✅ A view needs to push another screen
+✅ A screen needs a ViewModel constructed with its dependencies
+
+### Basic Usage
+```swift
+// Navigating from a View:
+@Environment(AppCoordinator.self) var coordinator
+...
+coordinator.navigate(to: .streamAdmin)
+
+// AppCoordinator builds the destination + its ViewModel:
+func navigationView(for route: AppRoute) -> some View {
+    switch route {
+    case .streamAdmin: StreamAdminView(viewModel: makeStreamAdminViewModel())
+    ...
+    }
+}
+```
+
+**Rule of thumb:** Views never call a ViewModel initializer themselves. If a screen needs a ViewModel, it gets one from `AppCoordinator` (directly, or via `DIContainer` inside the coordinator). See [ADR-004](./adr/ADR-004-coordinator-navigation.md).
+
+---
+
 ## Decision Tree
 
 ```
 I need to...
 
 [Manage state]
-  ├─ Is it long-lived? → YES → StateActor ✓
-  └─ Is it simple? → YES → @State or struct
+  ├─ Is it long-lived, shared across methods? → StateActor, mirrored into an @Observable ViewModel
+  └─ Is it pure UI state (a toggle, a sheet flag)? → plain @Observable var, no actor
 
-[Make network call]
-  ├─ Might fail transiently? → YES → RetryOrchestrator ✓
-  └─ Nope, it's solid → Direct await
+[Make a network call]
+  ├─ Might fail transiently? → RetryOrchestrator
+  └─ Can't fail meaningfully → direct await
 
-[Create API client]
-  ├─ Need testable? → YES → APIClientProvider ✓
-  └─ Standalone script → Direct creation
+[Create an API client]
+  ├─ Needs to be testable? → APIClientProvider
+  └─ One-off script → direct creation
 
-[Run background task]
-  ├─ Long-running? → YES → Task + structured concurrency ✓
+[Run a background task]
+  ├─ Long-running (polling)? → Task + structured concurrency, checked against Task.isCancelled
   └─ One-off? → Task { } directly
-```
 
----
-
-## Common Combinations
-
-### Scenario 1: Load Data with Retry + State
-```swift
-let stateActor = MyStateActor()
-let orchestrator = RetryOrchestrator()
-
-await stateActor.setLoading(true)
-
-do {
-    let data = try await orchestrator.attemptWithRetry {
-        try await client.fetch()
-    }
-    await stateActor.setData(data)
-} catch {
-    await stateActor.setError(error)
-}
-```
-
-### Scenario 2: Poll Data + Update State
-```swift
-var task: Task<Void, Never>?
-
-func startPolling() {
-    task = Task {
-        while !Task.isCancelled {
-            do {
-                let data = try await client.fetch()
-                await stateActor.setData(data)
-                try await Task.sleep(nanoseconds: 5_000_000_000)
-            } catch is CancellationError {
-                return
-            }
-        }
-    }
-}
-
-func stopPolling() {
-    task?.cancel()
-}
-```
-
-### Scenario 3: Testable Service with DI + Retry
-```swift
-class DataService {
-    private let clientProvider: APIClientProvider
-    private let retryOrchestrator: RetryOrchestrator
-    
-    init(clientProvider: APIClientProvider = DefaultAPIClientProvider()) {
-        self.clientProvider = clientProvider
-        self.retryOrchestrator = RetryOrchestrator()
-    }
-    
-    func loadData() async throws -> Data {
-        try await retryOrchestrator.attemptWithRetry {
-            let client = self.clientProvider.createAPIClient(baseURL: url)
-            return try await client.fetch()
-        }
-    }
-}
+[Navigate to another screen / build its ViewModel]
+  → AppCoordinator.navigate(to:) / DIContainer, never construct the ViewModel in the View
 ```
 
 ---
@@ -287,170 +257,86 @@ class DataService {
 ## Code Review Checklist
 
 ### StateActor
-- [ ] Struct conforms to Sendable
-- [ ] Actor is @MainActor
-- [ ] State updates use updateState or setState
-- [ ] Views observe stateUpdates AsyncStream
-- [ ] Tests check state directly
+- [ ] `State` struct conforms to `Sendable`
+- [ ] Actor is `@MainActor`
+- [ ] Mutations go through `updateState`/`setState`, never a direct property set
+- [ ] The owning ViewModel is `@Observable` and mirrors `stateUpdates` into a stored property (not raw `AsyncStream` code inside a View)
+- [ ] `stateObserverTask` is cancelled in `deinit`
 
 ### RetryOrchestrator
-- [ ] Used for network/transient operations
-- [ ] Wrapped in attemptWithRetry
-- [ ] Error handler logs each attempt
-- [ ] Configuration matches operation criticality
-- [ ] Tests use .testing configuration
+- [ ] Used for network/transient operations only
+- [ ] Wrapped in `attemptWithRetry`
+- [ ] `onError` logs each attempt
+- [ ] Tests use `.testing` configuration (no real delays)
 
 ### APIClientProvider
-- [ ] Accepted via constructor parameter
-- [ ] Default implementation provided
-- [ ] Tests inject MockAPIClientProvider
-- [ ] No direct client creation in service
+- [ ] Accepted via constructor parameter with a `DefaultAPIClientProvider()` default
+- [ ] Tests inject `MockAPIClientProvider`
+- [ ] No direct `MediaMTXAPIClient(...)` construction inside a service
 
 ### Structured Concurrency
-- [ ] Task loops check !Task.isCancelled
-- [ ] CancellationError handled
-- [ ] Tasks cancelled on deinit/disappear
-- [ ] No dangling Task references
+- [ ] Poll loops check `!Task.isCancelled`
+- [ ] `CancellationError` handled (usually by returning)
+- [ ] Tasks cancelled in `deinit`/`stopPolling()` — no dangling `Task` references
 
----
-
-## Reference Links
-
-### Documentation
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — Complete system design
-- [REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md) — Detailed patterns & examples
-- [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) — Step-by-step refactoring
-- [adr/](./adr/) — Design decision explanations
-
-### Implementation Files
-- `steam/Core/Architecture/StateActor.swift`
-- `steam/Features/Playback/Domain/Services/RetryOrchestrator.swift`
-- `steam/Core/DI/APIClientProvider.swift`
-
----
-
-## Troubleshooting
-
-### "StateActor won't compile"
-→ Make sure State struct conforms to `Sendable`
-
-### "Test makes real network calls"
-→ Missing MockAPIClientProvider injection
-
-### "Task keeps running after cancel"
-→ Check `!Task.isCancelled` in while loop
-
-### "State updates not appearing in View"
-→ Ensure View observes stateUpdates AsyncStream
-
----
-
-## Performance Tips
-
-1. **StateActor** — Batching updates OK, but yields for each
-2. **RetryOrchestrator** — Exponential backoff prevents thundering herd
-3. **APIClientProvider** — Zero overhead, just indirection
-4. **Tasks** — Prefer Task.sleep to DispatchQueue.asyncAfter
+### Coordinator
+- [ ] The View doesn't construct its own ViewModel
+- [ ] New destinations get a case in `AppRoute` + a branch in `AppCoordinator.navigationView(for:)`
 
 ---
 
 ## Gotchas
 
 ❌ **Don't:**
-- Use @Published with StateActor (contradictory)
-- Make State mutable without Sendable (data race)
-- Retry on client errors like 400/401 (won't help)
-- Create APIClient without provider in testable code
-- Forget to cancel polling tasks (memory leak)
+- Mix `ObservableObject`/`@Published` with `@Observable` in the same type
+- Make a `State` struct mutable without `Sendable`
+- Retry on client errors like 400/401 (retrying won't help)
+- Construct a ViewModel directly inside a View's initializer
+- Forget to cancel polling tasks (leaks the `Task`, not memory in the classic sense, but it keeps running forever)
 
 ✅ **Do:**
-- Use StateActor for all MainActor state
-- Make all struct fields Sendable
+- Use `@Observable` for every ViewModel (the project migrated off Combine/`@Published`)
+- Make all `State` struct fields `Sendable`
 - Retry on transient errors (timeout, 5xx)
-- Always accept APIClientProvider parameter
-- Cancel tasks in onDisappear/deinit
+- Get ViewModels from `AppCoordinator`
+- Cancel tasks in `deinit`/`onDisappear`
 
 ---
 
-## Quick Examples
+## Reference Links
 
-### Minimal StateActor
-```swift
-@MainActor actor Counter: GenericStateActor<Int> {
-    init() { super.init(initialState: 0) }
-    func increment() { updateState { $0 += 1 } }
-}
-```
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — complete system design
+- [adr/](./adr/) — why each pattern was adopted
+  - [ADR-001](./adr/ADR-001-structured-concurrency.md) — StateActor / structured concurrency
+  - [ADR-002](./adr/ADR-002-retry-orchestrator.md) — RetryOrchestrator
+  - [ADR-003](./adr/ADR-003-dependency-injection.md) — APIClientProvider
+  - [ADR-004](./adr/ADR-004-coordinator-navigation.md) — Coordinator
 
-### Minimal RetryOrchestrator
-```swift
-let data = try await RetryOrchestrator()
-    .attemptWithRetry { try await api.fetch() }
-```
-
-### Minimal APIClientProvider
-```swift
-class Service {
-    init(clientProvider: APIClientProvider = DefaultAPIClientProvider()) {
-        self.clientProvider = clientProvider
-    }
-}
-```
-
-### Minimal Structured Concurrency
-```swift
-Task {
-    while !Task.isCancelled {
-        try? await doWork()
-        try? await Task.sleep(nanoseconds: 1e9)
-    }
-}
-```
+### Implementation Files
+- `steam/Core/Architecture/StateActor.swift`
+- `steam/Features/Playback/Domain/Services/RetryOrchestrator.swift`
+- `steam/Core/DI/APIClientProvider.swift`
+- `steam/App/AppCoordinator.swift`, `steam/App/Navigation/AppRoute.swift`, `steam/Core/DI/DIContainer.swift`
 
 ---
 
-## One-Page Diagram
+## Troubleshooting
 
-```
-                    ┌─────────────┐
-                    │  SwiftUI    │
-                    │  Views      │
-                    └──────┬──────┘
-                           │ observes
-                           ▼
-            ┌──────────────────────────────┐
-            │    StateActor (Thread-Safe)   │
-            │  - updateState() mutations    │
-            │  - AsyncStream updates        │
-            └──────────┬───────────────────┘
-                       │ calls methods
-                       ▼
-    ┌──────────────────────────────────────────┐
-    │  Services/ViewModels                     │
-    │  ├─ RetryOrchestrator (Resilience)      │
-    │  │  └─ attemptWithRetry() with backoff  │
-    │  └─ Polling (Long-running tasks)        │
-    │     └─ Task loops with cancellation     │
-    └──────────────────┬───────────────────────┘
-                       │ creates
-                       ▼
-    ┌──────────────────────────────────────────┐
-    │  APIClientProvider (Dependency Inject)  │
-    │  ├─ DefaultAPIClientProvider (prod)     │
-    │  └─ MockAPIClientProvider (test)        │
-    └──────────────────┬───────────────────────┘
-                       │ creates
-                       ▼
-    ┌──────────────────────────────────────────┐
-    │  MediaMTXAPIClient                       │
-    │  └─ Network calls (HTTP)                 │
-    └──────────────────────────────────────────┘
-```
+### "StateActor won't compile"
+→ Make sure the `State` struct conforms to `Sendable`.
+
+### "Test makes real network calls"
+→ Missing `MockAPIClientProvider` injection.
+
+### "Task keeps running after cancel"
+→ Check for `!Task.isCancelled` in the `while` loop.
+
+### "View isn't updating when state changes"
+→ Make sure the ViewModel actually mirrors `stateActor.stateUpdates` into a stored, `@Observable`-tracked property — a computed property that reaches into the actor directly won't be tracked.
 
 ---
 
-**Cheat Sheet Version:** 1.0  
-**Last Updated:** August 2026  
-**Print:** Yes, this fits on 2 pages!
+**Cheat Sheet Version:** 2.0
+**Last Updated:** August 2026 — merged the former REFACTORING_GUIDE.md and MIGRATION_GUIDE.md into this file and updated all examples from `@Published`/`ObservableObject` to `@Observable`, since the whole codebase has migrated and there's no more legacy code left to migrate *to* these patterns — this is now just "how we build new features."
 
-See [DOCUMENTATION.md](../DOCUMENTATION.md) for complete guides.
+See [DOCUMENTATION.md](../DOCUMENTATION.md) for the full documentation index.

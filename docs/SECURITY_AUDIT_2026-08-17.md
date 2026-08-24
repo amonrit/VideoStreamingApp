@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786903337) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Steam Project - Security Audit Findings
 
@@ -6,34 +6,50 @@ Last Modified: 08/17/2026 (1786903337) by amonrit
 **Scope:** iOS App (Swift/SwiftUI) + Streaming Server (Docker/MediaMTX/FFmpeg)  
 **Auditor:** Security Review Agent
 
+> **08/24/2026 update:** This is a point-in-time audit; the codebase has moved since it was
+> written (file paths reorganized into `Features/`/`Core/`, `KeychainManager` became an actor).
+> Paths below were updated to match the current tree, and findings #1, #4, #5, and #6 have been
+> re-checked against the current code and are now marked **RESOLVED** with what actually changed.
+> Findings #2, #3, #7, #8, and #10 were spot-checked and are still open as described. This pass
+> did not re-run a full audit (no new exploit testing, no re-scoring) — treat the still-open
+> items as accurate but schedule a proper follow-up audit before relying on this list as
+> current.
+
 ---
 
 ## Executive Summary
 
-The Steam project contains **4 CRITICAL** and **3 HIGH** severity security vulnerabilities. The most critical issues involve hardcoded credentials in source code and default authentication settings that allow unauthenticated publishing to the streaming server.
+The original audit found **4 CRITICAL** and **3 HIGH** severity issues. As of the 08/24/2026
+re-check: the two credential-hardcoding findings (#1, #4), the missing `.gitignore` entries
+(#5), and the unsafe URL encoding (#6) are **fixed**. Still open: unauthenticated publishing
+(#2), permissive CORS (#3), no certificate pinning (#7), Basic auth without HTTPS enforcement
+(#8), and the exposed metrics port (#10).
 
-**Risk Assessment:** HIGH - Credentials are exposed in:
-1. iOS app source code (compiled into binary)
-2. Production shell scripts (checked into version control)
-3. Project configuration files
-4. Streaming server allows unauthenticated stream publishing
+**Risk Assessment:** MEDIUM — the credential-in-source-code risk is gone, but the streaming
+server itself still accepts unauthenticated publishing and unrestricted CORS on its control API.
 
 ---
 
 ## Critical Findings
 
-### 1. HARDCODED CREDENTIALS IN IOS APP SOURCE CODE
-**File:** `/steam/Config/MediaMTXConfig.swift`  
+### 1. HARDCODED CREDENTIALS IN IOS APP SOURCE CODE ✅ FIXED
+**File:** `/steam/Features/StreamAdmin/Domain/MediaMTXConfig.swift`  
 **Severity:** CRITICAL  
 **Category:** Hardcoded Secrets / Information Disclosure  
 **Confidence:** 10/10  
+**Status:** RESOLVED
 
-**Vulnerability:**
+**Original Vulnerability:**
 ```swift
 // Lines 11-12
 static let apiUsername = "apiviewer"
 static let apiPassword = "changeme123"  // Keep in sync with streaming/.env API_VIEWER_PASS
 ```
+
+**Fix Implemented:** `apiUsername`/`apiPassword` are now `async` computed properties that
+load from `KeychainManager` (an actor), falling back to `API_VIEWER_USER`/`API_VIEWER_PASS`
+environment variables only if nothing is in the Keychain. No credential value is compiled
+into the binary. See `docs/KEYCHAIN_SETUP.md` and `docs/CREDENTIAL_MANAGEMENT.md`.
 
 **Description:**
 Hardcoded credentials are embedded directly in Swift source code. These credentials are:
@@ -151,19 +167,23 @@ The MediaMTX Control API allows CORS requests from ANY origin. This enables:
 
 ---
 
-### 4. HARDCODED CREDENTIALS IN SHELL SCRIPTS
+### 4. HARDCODED CREDENTIALS IN SHELL SCRIPTS ✅ FIXED
 **File:** `/streaming/test-streaming.sh`  
 **Severity:** CRITICAL  
 **Category:** Hardcoded Secrets in Source Control  
 **Confidence:** 10/10  
+**Status:** RESOLVED
 
-**Vulnerability:**
+**Original Vulnerability:**
 ```bash
 # Lines 21-23
 RTMP_URL="rtmp://publish:streampass123@localhost:1935/live/mystream"
 HLS_URL="http://localhost:8888/live/mystream/index.m3u8"
 RTSP_URL="rtsp://publish:streampass123@localhost:8554/live/mystream"
 ```
+
+**Fix Implemented:** The script now reads `$PUBLISH_USER`/`$PUBLISH_PASS` from `.env.local`
+and fails with an error if they're unset, instead of embedding a default password.
 
 **Description:**
 Test script contains hardcoded default credentials that are:
@@ -203,19 +223,18 @@ Test script contains hardcoded default credentials that are:
 
 ## High Severity Findings
 
-### 5. MISSING .ENV FILES IN GITIGNORE
+### 5. MISSING .ENV FILES IN GITIGNORE ✅ FIXED
 **File:** `/.gitignore`  
 **Severity:** HIGH  
 **Category:** Configuration Error / Credential Exposure Risk  
 **Confidence:** 10/10  
+**Status:** RESOLVED
 
-**Vulnerability:**
-The `.gitignore` file does not exclude `.env` files, which frequently contain sensitive credentials.
+**Original Vulnerability:**
+The `.gitignore` file did not exclude `.env` files, which frequently contain sensitive credentials.
 
-**Current .gitignore content:**
-- No `.env*` pattern
-- No `.env.local` pattern
-- No `.env.*.local` pattern
+**Fix Implemented:** `.gitignore` now includes `.env`, `.env.local`, `.env.*.local`,
+`.env.production`, `.env.development`, `.env.test`, and `*.env.private`.
 
 **Exploit Scenario:**
 1. Developer accidentally creates `.env.local` with real production credentials
@@ -240,17 +259,22 @@ Add to `.gitignore`:
 
 ---
 
-### 6. UNSAFE URL PARAMETER ENCODING IN API CLIENT
-**File:** `/steam/Services/MediaMTXAPIClient.swift`  
+### 6. UNSAFE URL PARAMETER ENCODING IN API CLIENT ✅ FIXED
+**File:** `/steam/Core/Networking/MediaMTXAPIClient.swift`  
 **Severity:** HIGH  
 **Category:** Path Traversal / URL Injection  
 **Confidence:** 7/10  
+**Status:** RESOLVED
 
-**Vulnerability:**
+**Original Vulnerability:**
 ```swift
 // Line 64
 let url = baseURL.appendingPathComponent("v3/paths/get/\(pathName)")
 ```
+
+**Fix Implemented:** `pathName` is now passed through a dedicated `encodePathComponent`
+helper (`addingPercentEncoding(withAllowedCharacters:)`) before being interpolated into the
+path, matching the recommendation below.
 
 **Description:**
 The `pathName` parameter is interpolated directly into a URL path component string. While `appendingPathComponent` does provide some encoding, the pattern allows potential issues:
@@ -287,7 +311,7 @@ let url = baseURL.appendingPathComponent("v3/paths/get/\(encodedPathName)")
 ---
 
 ### 7. NO CERTIFICATE PINNING OR CUSTOM TLS VALIDATION
-**File:** `/steam/Services/MediaMTXAPIClient.swift`  
+**File:** `/steam/Core/Networking/MediaMTXAPIClient.swift`  
 **Severity:** MEDIUM/HIGH (context-dependent)  
 **Category:** Man-in-the-Middle (MITM) Vulnerability  
 **Confidence:** 8/10  
@@ -348,7 +372,7 @@ class SecureURLSessionDelegate: NSObject, URLSessionDelegate {
 ## Medium Severity Findings
 
 ### 8. BASIC AUTH CREDENTIALS TRANSMITTED WITHOUT SUFFICIENT VALIDATION
-**File:** `/steam/Config/MediaMTXConfig.swift`  
+**File:** `/steam/Features/StreamAdmin/Domain/MediaMTXConfig.swift`  
 **Severity:** MEDIUM  
 **Category:** Authentication Weakness  
 **Confidence:** 8/10  
@@ -377,7 +401,7 @@ Basic authentication encodes (but does not encrypt) credentials. The credentials
 ---
 
 ### 9. NO INPUT VALIDATION ON CUSTOM STREAM URLS ✅ FIXED
-**File:** `/steam/Views/VideoStreamListView.swift`  
+**File:** `/steam/Features/Playback/Presentation/VideoStreamListView.swift`  
 **Severity:** MEDIUM  
 **Category:** Weak Input Validation  
 **Confidence:** 6/10  
@@ -414,7 +438,7 @@ The original validation only checked for protocol prefix and file extension, but
 
 Created comprehensive URL validation system with three components:
 
-1. **URLValidator Service** (`steam/Services/URLValidator.swift`)
+1. **URLValidator Service** (`steam/Core/Utils/URLValidator.swift`)
    - Domain whitelist validation against trusted sources:
      - `devstreaming-cdn.apple.com` (official Apple test streams)
      - `localhost` and `127.0.0.1` (local development)
@@ -422,13 +446,13 @@ Created comprehensive URL validation system with three components:
    - RTMP support only from whitelisted domains
    - User-friendly error messages
 
-2. **URLValidationLogger Service** (`steam/Services/URLValidationLogger.swift`)
+2. **URLValidationLogger Service** (`steam/Core/Utils/URLValidationLogger.swift`)
    - Logs all custom URLs with ISO 8601 timestamps
    - Thread-safe concurrent logging
    - Maintains audit trail in `url-validation-logs.txt`
    - Supports log retrieval and clearing
 
-3. **Enhanced AddStreamSheet UI** (`steam/Views/VideoStreamListView.swift`)
+3. **Enhanced AddStreamSheet UI** (`steam/Features/Playback/Presentation/VideoStreamListView.swift`)
    - Integrated URLValidator for strict whitelist checking
    - Real-time HTTPS warning when users enter HTTP URLs
    - Visual warning indicator (orange banner)
@@ -456,7 +480,7 @@ Created comprehensive URL validation system with three components:
 ---
 
 ### 10. EXPOSED METRICS/ADMIN ENDPOINTS
-**File:** `/docker-compose.yml` and `/streaming/mediamtx.yml`  
+**File:** `/streaming/docker-compose.yml` and `/streaming/mediamtx.yml`  
 **Severity:** MEDIUM  
 **Category:** Information Disclosure  
 **Confidence:** 7/10  
@@ -498,52 +522,47 @@ The MediaMTX admin/metrics endpoint (port 9997) is exposed to the network withou
 
 ## Summary Table
 
-| # | Finding | Severity | File | Confidence |
-|---|---------|----------|------|------------|
-| 1 | Hardcoded credentials in iOS source | CRITICAL | MediaMTXConfig.swift | 10/10 |
-| 2 | Unauthenticated stream publishing | CRITICAL | mediamtx.yml | 10/10 |
-| 3 | CORS allows all origins | CRITICAL | mediamtx.yml | 10/10 |
-| 4 | Hardcoded credentials in shell scripts | CRITICAL | test-streaming.sh | 10/10 |
-| 5 | .env files not in gitignore | HIGH | .gitignore | 10/10 |
-| 6 | Unsafe URL parameter encoding | HIGH | MediaMTXAPIClient.swift | 7/10 |
-| 7 | No certificate pinning | MEDIUM/HIGH | MediaMTXAPIClient.swift | 8/10 |
-| 8 | Basic auth without HTTPS validation | MEDIUM | MediaMTXConfig.swift | 8/10 |
-| 9 | Weak input validation on URLs | MEDIUM | VideoStreamListView.swift | 6/10 |
-| 10 | Exposed admin endpoints | MEDIUM | docker-compose.yml | 7/10 |
+| # | Finding | Severity | File | Confidence | Status (as of 08/24/2026) |
+|---|---------|----------|------|------------|--------|
+| 1 | Hardcoded credentials in iOS source | CRITICAL | MediaMTXConfig.swift | 10/10 | ✅ RESOLVED |
+| 2 | Unauthenticated stream publishing | CRITICAL | mediamtx.yml | 10/10 | ❌ OPEN |
+| 3 | CORS allows all origins | CRITICAL | mediamtx.yml | 10/10 | ❌ OPEN |
+| 4 | Hardcoded credentials in shell scripts | CRITICAL | test-streaming.sh | 10/10 | ✅ RESOLVED |
+| 5 | .env files not in gitignore | HIGH | .gitignore | 10/10 | ✅ RESOLVED |
+| 6 | Unsafe URL parameter encoding | HIGH | MediaMTXAPIClient.swift | 7/10 | ✅ RESOLVED |
+| 7 | No certificate pinning | MEDIUM/HIGH | MediaMTXAPIClient.swift | 8/10 | ❌ OPEN |
+| 8 | Basic auth without HTTPS validation | MEDIUM | MediaMTXConfig.swift | 8/10 | ⚠️ PARTIAL (credential is no longer hardcoded, but Basic-auth-over-HTTP itself is unchanged) |
+| 9 | Weak input validation on URLs | MEDIUM | VideoStreamListView.swift | 6/10 | ✅ RESOLVED (already marked fixed in original audit) |
+| 10 | Exposed admin endpoints | MEDIUM | docker-compose.yml | 7/10 | ❌ OPEN |
 
 ---
 
 ## Immediate Actions Required
 
+*(Original priority list below, left as written for historical context. Items already
+resolved are struck through with what shipped instead; everything else is still outstanding.)*
+
 ### Priority 1 (Do Today)
-1. **Rotate the exposed credentials:**
-   - Change `apiviewer` password in streaming/.env
-   - Remove or change `publish` user password
-   - Deploy new configuration to all running instances
-
-2. **Remove hardcoded credentials from source:**
-   - Delete credentials from MediaMTXConfig.swift
-   - Remove credentials from test-streaming.sh
-   - Update git history to remove any exposed secrets
-
-3. **Fix CORS and authentication:**
+1. ~~Rotate the exposed credentials~~ — superseded by moving to Keychain-backed credentials (finding #1)
+2. ~~Remove hardcoded credentials from source~~ — done for both MediaMTXConfig.swift (#1) and test-streaming.sh (#4)
+3. **Still open — fix CORS and authentication:**
    - Remove `apiAllowOrigins: ["*"]` from mediamtx.yml
    - Add authentication requirement for RTMP publishing
    - Restrict API access to authenticated users only
 
 ### Priority 2 (This Week)
-1. Add `.env*` files to .gitignore
-2. Implement proper credential management (Keychain, environment variables)
-3. Add certificate pinning to iOS app
-4. Implement URL whitelist for custom stream URLs
-5. Restrict port 9997 access
+1. ~~Add `.env*` files to .gitignore~~ — done (finding #5)
+2. ~~Implement proper credential management (Keychain, environment variables)~~ — done (finding #1)
+3. **Still open:** Add certificate pinning to iOS app (finding #7)
+4. ~~Implement URL whitelist for custom stream URLs~~ — done (finding #9)
+5. **Still open:** Restrict port 9997 access (finding #10)
 
 ### Priority 3 (This Sprint)
-1. Transition from Basic auth to OAuth2/Bearer tokens
-2. Enforce HTTPS for all API communication
-3. Implement comprehensive input validation
-4. Add security logging and monitoring
-5. Conduct penetration testing
+1. **Still open:** Transition from Basic auth to OAuth2/Bearer tokens
+2. **Still open:** Enforce HTTPS for all API communication
+3. Implement comprehensive input validation — partially done via `URLValidator` (finding #9); extend as new input surfaces appear
+4. **Still open:** Add security logging and monitoring
+5. **Still open:** Conduct a fresh penetration test / follow-up audit covering findings #2, #3, #7, #8, #10
 
 ---
 

@@ -1,4 +1,4 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # 🚀 MediaMTX Streaming Server - Deployment Guide
 
@@ -91,10 +91,9 @@ steam/
 │   ├── test-streaming.sh  # Test script
 │   └── quick-test.sh      # Quick test
 ├── steam/                 # iOS app code
-│   ├── Views/
-│   ├── Models/
-│   ├── ViewModels/
-│   └── Workers/
+│   ├── App/               # Entry point, AppCoordinator, navigation
+│   ├── Core/               # StateActor, DI, networking, managers
+│   └── Features/           # Playback, StreamAdmin, Home, Settings (each: Domain/ + Presentation/)
 └── README.md
 ```
 
@@ -238,14 +237,17 @@ ffplay "http://localhost:8888/live/mystream/index.m3u8"
 
 ## 📱 iOS App Configuration
 
-Update your iOS app to point to new server:
+The app doesn't hardcode a server URL — streams are added at runtime through the
+"Add Stream" UI in `VideoStreamListView`, which stores a `VideoStream` with whatever
+URL you enter. To point at a new server, just add a stream with:
 
-**In `VideoStreamListView.swift` or network config:**
-
-```swift
-let STREAM_URL = "rtmp://YOUR_SERVER_IP:1935/live/mystream"
-let PLAYBACK_URL = "http://YOUR_SERVER_IP:8888/live/mystream/index.m3u8"
 ```
+http://YOUR_SERVER_IP:8888/live/mystream/index.m3u8
+```
+
+(URL validation only allows HTTPS or the whitelisted local/dev hosts — see
+`steam/Core/Utils/URLValidator.swift` — so for a non-whitelisted remote server
+you'll need to serve HLS over HTTPS or extend the whitelist.)
 
 **Rebuild and test:**
 ```bash

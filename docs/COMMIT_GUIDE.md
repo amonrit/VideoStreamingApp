@@ -1,8 +1,29 @@
-Last Modified: 08/17/2026 (1786899911) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Commit Guide
 
-How to write good commit messages for this project.
+How to write good commit messages for this project — and the tools that help you do it.
+
+---
+
+## Your Commit Tools
+
+You have 3 layers of guidance, from lightest to heaviest:
+
+1. **Auto-reminder** — every `git commit` runs `.git/hooks/prepare-commit-msg`, which prints the quick rules below before your editor opens.
+2. **Quick reference script** — `./scripts/commit-help.sh <type>` prints a worked example for one commit type (`feature`, `fix`, `docs`, `refactor`, `test`, `perf`, `chore`, `style`, `ci`), or `./scripts/commit-help.sh all` for every type at once.
+3. **This guide** — full rules, examples, and the checklist below.
+
+`git commit` also auto-loads the `.gitmessage` template (type/scope/subject/body/footer skeleton) — just fill it in.
+
+### Fastest Workflow
+
+```bash
+./scripts/commit-help.sh fix   # or feature, docs, refactor, ...
+git commit                     # reminder prints, .gitmessage template opens
+git log -1                     # verify
+git push
+```
 
 ---
 

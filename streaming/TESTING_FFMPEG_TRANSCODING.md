@@ -1,4 +1,4 @@
-Last Modified: 08/16/2026 (1786883233) by amonrit
+Last Modified: 08/24/2026 (1787587709) by amonrit
 
 # Testing: FFmpeg Real-Time Stream Re-Encoding (Phases 1-4)
 
@@ -207,11 +207,10 @@ ffplay http://localhost:8888/live-teststream-360p/index.m3u8
 
 ### Step 6: Update iOS app to use clean stream
 
-**In Xcode:**
+**In the app:**
 
-1. Open `steam/Views/VideoStreamListView.swift`
-2. Find the playback URL section
-3. Update to use 480p stream:
+1. Open the app and use "Add Stream" in `VideoStreamListView` (no source edit needed — see `docs/DEPLOYMENT.md` § iOS App Configuration)
+2. Enter the 480p stream URL:
    ```swift
    let url = "http://YOUR_SERVER_IP:8888/live-teststream-480p/index.m3u8"
    ```
@@ -414,4 +413,4 @@ After successful testing:
 3. 📊 Phase 6: Monitoring & alerting
 4. 🚀 Phase 7: Production deployment
 
-See [[stream-re-encoding-plan]] for full roadmap.
+See `streaming/FFMPEG_SETUP.md` for the full implementation writeup.
