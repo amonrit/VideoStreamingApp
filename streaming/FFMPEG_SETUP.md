@@ -1,10 +1,10 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
-# FFmpeg Real-Time Transcoding Setup (Phases 1-4 Complete)
+# FFmpeg Real-Time Transcoding Setup
 
 ## 📋 Overview
 
-This document describes the complete FFmpeg real-time stream re-encoding implementation. Raw RTMP input is transcoded into clean 480p and 360p HLS streams.
+Raw RTMP input is transcoded in real time into clean 480p and 360p HLS streams.
 
 **Architecture:**
 ```
@@ -27,13 +27,13 @@ iOS App (Clean playback)
 
 ```
 streaming/
-├── docker-compose.yml                  # Phase 1: Service definitions
-├── mediamtx.yml                        # Phase 2: Path routing config
+├── docker-compose.yml                  # Service definitions (mediamtx + ffmpeg-transcoder)
+├── mediamtx.yml                        # Path routing config
 ├── ffmpeg-config/
-│   └── ffmpeg-transcode.sh            # Phase 1.2: Transcoding script
-├── ffmpeg-manager.py                  # Phase 3: Process manager
+│   └── ffmpeg-transcode.sh            # Transcoding script
+├── ffmpeg-manager.py                  # Process manager
 ├── transcode.sh                       # Wrapper: Host-side control
-├── TESTING_FFMPEG_TRANSCODING.md      # Phase 4: Testing guide
+├── TESTING_FFMPEG_TRANSCODING.md      # Testing guide
 ├── FFMPEG_SETUP.md                    # This file
 └── logs/
     └── ffmpeg-*.log                   # Transcoding logs
@@ -80,15 +80,10 @@ http://localhost:8888/live-mystream-360p/index.m3u8
 
 ---
 
-## ⚙️ Phase 1: FFmpeg Service Setup
+## ⚙️ How It Works
 
-**Status:** ✅ COMPLETE
+### `ffmpeg-transcoder` service (`docker-compose.yml`)
 
-### What was added:
-
-**File:** `docker-compose.yml`
-
-New `ffmpeg-transcoder` service:
 - **Image:** `jrottenberg/ffmpeg:latest`
 - **Depends on:** mediamtx (waits for MediaMTX to start)
 - **Volumes:**
@@ -96,30 +91,14 @@ New `ffmpeg-transcoder` service:
   - `./logs:/logs` — Write logs
   - `./hls_output:/hls_output` — Store HLS segments (optional)
 - **Network:** `mediamtx_network` (same as MediaMTX)
-- **Resources:**
-  - CPU limit: 2 cores
-  - Memory limit: 1 GB
-  - Reservations: 1 core, 512 MB
+- **Resources:** 2-core CPU limit, 1 GB memory limit (1 core / 512 MB reserved)
 
-### Key decision:
-FFmpeg runs as a persistent container (`while sleep 1`) and is controlled via:
-- Bash scripts (direct execution)
-- Python manager (recommended)
-- Host-side wrapper (`transcode.sh`)
+FFmpeg runs as a persistent container (`while sleep 1`) and is controlled via bash scripts,
+a Python manager (recommended), or the host-side wrapper (`transcode.sh`) — this avoids
+spinning up/down containers repeatedly.
 
-This avoids spinning up/down containers repeatedly.
+### MediaMTX path routing (`mediamtx.yml`)
 
----
-
-## ⚙️ Phase 2: MediaMTX Integration
-
-**Status:** ✅ COMPLETE
-
-### What was updated:
-
-**File:** `mediamtx.yml`
-
-New path definitions:
 ```yaml
 live-480p:
   source: publisher
@@ -132,7 +111,7 @@ live-360p:
   # Served as HLS: http://mediamtx:8888/live-360p/index.m3u8
 ```
 
-### How it works:
+**End-to-end flow:**
 1. User publishes RTMP to `/live/mystream`
 2. FFmpeg reads from `rtmp://mediamtx:1935/live/mystream`
 3. FFmpeg transcodes to two bitrates
@@ -143,15 +122,9 @@ live-360p:
    - `http://mediamtx:8888/live-mystream-480p/index.m3u8`
    - `http://mediamtx:8888/live-mystream-360p/index.m3u8`
 
----
+### Service control scripts
 
-## ⚙️ Phase 3: FFmpeg Service Control
-
-**Status:** ✅ COMPLETE
-
-### Files created:
-
-#### 1. `ffmpeg-config/ffmpeg-transcode.sh`
+#### `ffmpeg-config/ffmpeg-transcode.sh`
 Bash script that runs FFmpeg transcoding.
 
 **Usage:**
@@ -173,7 +146,7 @@ Bash script that runs FFmpeg transcoding.
 - Preset: veryfast (minimal latency)
 - Audio: AAC @ 128 kbps, 44.1 kHz
 
-#### 2. `ffmpeg-manager.py`
+#### `ffmpeg-manager.py`
 Python service manager for process lifecycle.
 
 **Commands:**
@@ -190,34 +163,24 @@ python3 ffmpeg-manager.py status
 - Logs to `/logs/ffmpeg-manager.log`
 - Process info saved to `/logs/ffmpeg-processes.json`
 
-#### 3. `transcode.sh`
-Host-side wrapper for convenience.
+#### `transcode.sh`
+Host-side wrapper for convenience — no need to manually `docker exec`; same Python manager underneath.
 
-**Usage:**
 ```bash
 ./transcode.sh start <stream_name>
 ./transcode.sh stop <stream_name>
 ./transcode.sh status
 ```
 
-**Why use this:**
-- No need to manually `docker exec`
-- Cleaner CLI
-- Same Python manager underneath
-
 ---
 
-## ⚙️ Phase 4: Testing & Validation
+## 🧪 Testing
 
-**Status:** ✅ COMPLETE
-
-See **TESTING_FFMPEG_TRANSCODING.md** for:
-- ✅ 9 comprehensive test scenarios
-- ✅ Step-by-step verification procedures
-- ✅ Expected outputs for each phase
-- ✅ Multi-stream concurrent testing
-- ✅ Failure scenario handling
-- ✅ Performance metrics
+See **TESTING_FFMPEG_TRANSCODING.md** for the full test procedure, covering:
+- Service startup, RTMP publish, transcoding start
+- HLS output verification, playback (VLC/browser/iOS)
+- Multi-stream concurrency and failure-handling scenarios
+- Performance validation
 
 **Key test matrix:**
 
@@ -361,45 +324,10 @@ grep -i error streaming/logs/ffmpeg-*.log
 
 ---
 
-## 🚀 Next Steps
-
-1. ✅ **Phase 1-4 Complete:** Real-time transcoding ready
-2. 🔨 **Phase 5:** iOS app UX improvements
-   - Allow users to select 480p/360p
-   - Show current bitrate in player
-   - Implement adaptive bitrate switching
-
-3. 📊 **Phase 6:** Monitoring & alerting
-   - Track transcoding health
-   - Alert on failures
-   - Dashboard for stream stats
-
-4. 🌐 **Phase 7:** Production deployment
-   - Configure SSL/TLS
-   - Setup load balancing
-   - Production-grade logging
-
----
-
 ## 📚 Related Documentation
 
 - **TESTING_FFMPEG_TRANSCODING.md** — Comprehensive test procedures
 - **QUICK_REFERENCE.md** — Server startup & common commands
-
----
-
-## ✅ Implementation Summary
-
-| Phase | Component | Status |
-|-------|-----------|--------|
-| 1.1 | docker-compose FFmpeg service | ✅ Complete |
-| 1.2 | ffmpeg-transcode.sh script | ✅ Complete |
-| 2.1 | mediamtx.yml path config | ✅ Complete |
-| 3.1 | ffmpeg-manager.py | ✅ Complete |
-| 3.2 | transcode.sh wrapper | ✅ Complete |
-| 4 | Testing & validation | ✅ Complete |
-
-**All 4 phases implemented and ready for testing!**
 
 ---
 

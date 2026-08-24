@@ -1,8 +1,8 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
 # Steam Architecture — Pattern Cheat Sheet
 
-Quick reference for the 5 patterns used throughout Steam: StateActor, RetryOrchestrator, APIClientProvider, structured-concurrency polling, and the Coordinator. For the rationale behind each, see [docs/adr/](./adr/); for the full system picture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+Quick reference for the 5 patterns used throughout Steam: StateActor, RetryOrchestrator, APIClientProvider, structured-concurrency polling, and the Coordinator. For the full system picture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -223,7 +223,7 @@ func navigationView(for route: AppRoute) -> some View {
 }
 ```
 
-**Rule of thumb:** Views never call a ViewModel initializer themselves. If a screen needs a ViewModel, it gets one from `AppCoordinator` (directly, or via `DIContainer` inside the coordinator). See [ADR-004](./adr/ADR-004-coordinator-navigation.md).
+**Rule of thumb:** Views never call a ViewModel initializer themselves. If a screen needs a ViewModel, it gets one from `AppCoordinator` (directly, or via `DIContainer` inside the coordinator).
 
 ---
 
@@ -306,11 +306,6 @@ I need to...
 ## Reference Links
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — complete system design
-- [adr/](./adr/) — why each pattern was adopted
-  - [ADR-001](./adr/ADR-001-structured-concurrency.md) — StateActor / structured concurrency
-  - [ADR-002](./adr/ADR-002-retry-orchestrator.md) — RetryOrchestrator
-  - [ADR-003](./adr/ADR-003-dependency-injection.md) — APIClientProvider
-  - [ADR-004](./adr/ADR-004-coordinator-navigation.md) — Coordinator
 
 ### Implementation Files
 - `steam/Core/Architecture/StateActor.swift`

@@ -1,4 +1,4 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
 # 📚 Documentation Guide — Find What You Need
 
@@ -8,8 +8,7 @@ This is your **master index** for all Steam documentation. Each section tells yo
 
 ## 📊 **Project Status**
 
-**Current Phase:** Phase 9 (Clean View Layer) — COMPLETE. Navigation/DI has since moved to a Coordinator pattern (see [ADR-004](./docs/adr/ADR-004-coordinator-navigation.md)).  
-**Architecture:** Modern MVVM + Structured Concurrency (StateActor, RetryOrchestrator, APIClientProvider, Coordinator) — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+**Architecture:** Modern MVVM + Coordinator + Structured Concurrency (StateActor, RetryOrchestrator, APIClientProvider, `AppCoordinator`/`DIContainer`) — see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ---
 
@@ -47,7 +46,7 @@ All docs are in the `docs/` folder:
 - MVVM pattern explained with code
 - Data flow (user interaction → playback)
 - Component responsibilities
-- **NEW (Phase 11):** Modern patterns (StateActor, RetryOrchestrator, APIClientProvider)
+- Modern patterns (StateActor, RetryOrchestrator, APIClientProvider, Coordinator)
 - Complete architecture diagram
 - Testing strategy
 
@@ -64,19 +63,6 @@ All docs are in the `docs/` folder:
 - Gotchas (e.g. never mix `@Published`/`ObservableObject` with `@Observable`)
 
 **When to use:** Writing or reviewing feature code, onboarding
-
----
-
-### 2c. **[docs/adr/](./docs/adr/)** — Architecture Decision Records
-**For:** Understanding design decisions, learning rationale, future reference  
-**Contains:**
-- **ADR-001: Structured Concurrency** — Why StateActor instead of @Published
-- **ADR-002: Retry Orchestrator** — Why centralized retry logic
-- **ADR-003: Dependency Injection** — Why APIClientProvider for testability
-- **ADR-004: Coordinator** — Why navigation/DI moved off direct ViewModel construction
-- Status, context, decision, consequences, alternatives for each
-
-**When to use:** Understanding "why" decisions were made, code review discussions, architecture reviews
 
 ---
 
@@ -285,9 +271,6 @@ These files help AI assistants (Claude, Copilot, etc.) understand your project:
 "I want to use StateActor / RetryOrchestrator / APIClientProvider / the Coordinator"
   → docs/PATTERN-CHEAT-SHEET.md (templates, decision tree, checklists)
 
-"Why was decision X made?"
-  → docs/adr/ (ADRs explain rationale)
-
 "I need to debug something"
   → docs/DEVELOPMENT.md (debugging section) + docs/AI_WORKFLOW.md (use AI)
 
@@ -343,11 +326,6 @@ steam/
 │   ├── DEVELOPMENT.md            ← Local dev guide
 │   ├── ARCHITECTURE.md           ← Deep dive into MVVM + modern patterns
 │   ├── PATTERN-CHEAT-SHEET.md    ← How to use StateActor/RetryOrchestrator/APIClientProvider/Coordinator
-│   ├── adr/                      ← Architecture Decision Records
-│   │   ├── ADR-001-structured-concurrency.md
-│   │   ├── ADR-002-retry-orchestrator.md
-│   │   ├── ADR-003-dependency-injection.md
-│   │   └── ADR-004-coordinator-navigation.md
 │   ├── DEPLOYMENT.md             ← Deploy to production
 │   ├── COMMIT_GUIDE.md           ← Commit message format, tools & workflow
 │   ├── AI_WORKFLOW.md            ← Working with AI tools

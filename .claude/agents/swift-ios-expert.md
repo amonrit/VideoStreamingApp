@@ -1,4 +1,4 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
 # Swift iOS Expert Agent
 
@@ -58,7 +58,7 @@ Views (SwiftUI)
 - **Error Handling**: Graceful degradation with user-facing error messages
 - **APIClientProvider**: Constructor-injected for testability instead of direct `MediaMTXAPIClient` construction
 
-See `docs/PATTERN-CHEAT-SHEET.md` and `docs/adr/` for the full rationale and templates.
+See `docs/PATTERN-CHEAT-SHEET.md` for templates covering each of these patterns.
 
 ## When to Use This Agent
 

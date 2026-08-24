@@ -1,4 +1,4 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
 # Steam - Video Streaming App Architecture
 
@@ -9,23 +9,10 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 **Tech Stack:**
 - **Language**: Swift
 - **UI Framework**: SwiftUI
-- **Architecture**: MVVM (Model-View-ViewModel)
+- **Architecture**: MVVM + Coordinator (Model-View-ViewModel, with `AppCoordinator` for navigation/DI)
 - **Playback**: AVFoundation (AVPlayer)
-- **Reactive**: Combine + KVO
-
-## Architecture Evolution Timeline
-
-| Phase | Focus | Key Additions |
-|-------|-------|----------------|
-| **1-3** | Foundation | MVVM, AVPlayer, Views |
-| **4** | Resilience | RetryOrchestrator, error handling |
-| **5** | Testability | APIClientProvider, dependency injection |
-| **6** | Observability | Polling services, metrics |
-| **7** | Concurrency | StateActor, structured concurrency |
-| **8** | Performance | Optimization, debouncing |
-| **9** | Cleanup | View refactoring, logic consolidation |
-| **11** | Handoff | Documentation, ADRs |
-| **12+** | Modernization | Repository/DataSource scaffold removed, `KeychainManager`/`URLLogger` became actors, ViewModels migrated to `@Observable`, navigation/DI moved to a Coordinator pattern (`AppCoordinator`/`DIContainer`, [ADR-004](./adr/ADR-004-coordinator-navigation.md)) |
+- **Concurrency**: Swift structured concurrency (async/await, actors) + KVO
+- **State**: `@Observable` ViewModels backed by `StateActor`s
 
 ---
 
@@ -44,7 +31,7 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 **Responsibilities:**
 - Load and manage playback lifecycle
 - Setup KVO observers for player status, buffering, errors
-- Mirror `PlaybackStateActor`'s state into a local, `@Observable`-tracked property (see [ADR-001](./adr/ADR-001-structured-concurrency.md))
+- Mirror `PlaybackStateActor`'s state into a local, `@Observable`-tracked property
 - Format debug info (resolution, bitrate)
 - Handle stream errors and retry logic via `RetryOrchestrator`
 
@@ -54,7 +41,7 @@ iOS video streaming app using **Model-View-ViewModel (MVVM)** architecture with 
 - `resolutionText`, `bitrateText`
 
 Note: this is `@Observable`, not `ObservableObject`/`@Published` — the project migrated
-off Combine's observation system. See [ADR-001](./adr/ADR-001-structured-concurrency.md).
+off Combine's observation system.
 
 ### 3. View
 
@@ -185,7 +172,7 @@ needs to be shared outside a ViewModel), extract it from the working ViewModel a
 
 ---
 
-## Modern Architectural Patterns (Phase 7+)
+## Modern Architectural Patterns
 
 ### 1. StateActor: Thread-Safe State Management
 
@@ -216,8 +203,6 @@ actor PlaybackStateActor: GenericStateActor<PlaybackStateActor.State> {
 
 **When to Use:** Any long-lived state that needs thread-safe mutations
 
-**See Also:** [ADR-001: Structured Concurrency](./adr/ADR-001-structured-concurrency.md)
-
 ### 2. RetryOrchestrator: Centralized Retry Logic
 
 **Problem Solved:** Retry logic scattered across ViewModels, inconsistent strategies
@@ -244,8 +229,6 @@ let stream = try await orchestrator.attemptWithRetry {
 - `production`: 3 attempts, 1-30s backoff
 - `testing`: 1 attempt, no delays
 - `aggressive`: 5 attempts for critical operations
-
-**See Also:** [ADR-002: Retry Orchestrator](./adr/ADR-002-retry-orchestrator.md)
 
 ### 3. APIClientProvider: Dependency Injection
 
@@ -275,8 +258,6 @@ class StreamAdminService {
 - Swappable implementations
 - Centralized configuration
 - 100x faster test execution
-
-**See Also:** [ADR-003: Dependency Injection](./adr/ADR-003-dependency-injection.md)
 
 ### 4. Polling Services: Structured Concurrency
 
@@ -331,8 +312,6 @@ final class AppCoordinator {
 - Single source of truth for "where am I in the app"
 - Views never construct their own ViewModels
 - `DIContainer` has exactly one caller, so it's easy to swap in mocks for tests
-
-**See Also:** [ADR-004: Coordinator](./adr/ADR-004-coordinator-navigation.md)
 
 ---
 
@@ -465,9 +444,5 @@ Measure performance:
 ## Quick References
 
 - **[PATTERN-CHEAT-SHEET.md](./PATTERN-CHEAT-SHEET.md)** — Templates & checklists for every pattern
-- **[adr/ADR-001-structured-concurrency.md](./adr/ADR-001-structured-concurrency.md)** — StateActor decisions
-- **[adr/ADR-002-retry-orchestrator.md](./adr/ADR-002-retry-orchestrator.md)** — Retry decisions
-- **[adr/ADR-003-dependency-injection.md](./adr/ADR-003-dependency-injection.md)** — DI decisions
-- **[adr/ADR-004-coordinator-navigation.md](./adr/ADR-004-coordinator-navigation.md)** — Coordinator decisions
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** — Development workflow
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Production deployment

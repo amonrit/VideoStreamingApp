@@ -1,4 +1,4 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
 # CLAUDE.md
 
@@ -25,7 +25,7 @@ This file provides guidance to Claude Code and AI assistants when working with c
 
 The project enables users to publish live video streams (via RTMP) and play them back (via HLS/RTSP/WebRTC) on iOS devices.
 
-**Phase Status:** Phase 9 (Clean View Layer) COMPLETE. Since then: the Repository/DataSource scaffold was removed (see note below), `KeychainManager`/`URLLogger` became actors, and navigation/DI moved to a Coordinator pattern (`AppCoordinator` + `DIContainer`, see [ADR-004](./docs/adr/ADR-004-coordinator-navigation.md)). See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the current architecture.
+The Repository/DataSource scaffold has been removed (see note below), `KeychainManager`/`URLLogger` are actors, and navigation/DI go through a Coordinator pattern (`AppCoordinator` + `DIContainer`). See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the current architecture.
 
 ---
 
@@ -106,7 +106,6 @@ ViewModel code at that point rather than re-scaffolding ahead of need.
 | [docs/PATTERN-CHEAT-SHEET.md](./docs/PATTERN-CHEAT-SHEET.md) | How to use StateActor, RetryOrchestrator, APIClientProvider, Coordinator | Writing or reviewing feature code |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local dev workflows & debugging | Daily development |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production setup & deployment | Setting up on new machine |
-| [docs/adr/](./docs/adr/) | Architecture Decision Records | Understanding "why" decisions |
 
 ---
 

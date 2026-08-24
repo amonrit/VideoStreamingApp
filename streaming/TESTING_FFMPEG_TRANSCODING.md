@@ -1,6 +1,6 @@
-Last Modified: 08/24/2026 (1787587709) by amonrit
+Last Modified: 08/24/2026 (1787588646) by amonrit
 
-# Testing: FFmpeg Real-Time Stream Re-Encoding (Phases 1-4)
+# Testing: FFmpeg Real-Time Stream Re-Encoding
 
 This guide validates the end-to-end FFmpeg transcoding setup. Follow each step in order.
 
@@ -21,14 +21,14 @@ This guide validates the end-to-end FFmpeg transcoding setup. Follow each step i
 
 - Docker & Docker Compose installed
 - FFmpeg tools available (`ffmpeg` CLI for testing)
-- Streaming server running (Phase 1-3 complete)
+- Streaming server running (see FFMPEG_SETUP.md)
 - Terminal access to repo directory
 
 ---
 
-## 🧪 Phase 4.1: Service Startup Test
+## 🧪 Step 1: Service Startup Test
 
-### Step 1: Start all services
+### Start all services
 ```bash
 cd streaming
 docker-compose up -d
@@ -62,9 +62,9 @@ Should see: FFmpeg image loaded, container running
 
 ---
 
-## 🧪 Phase 4.2: Publish Test Stream
+## 🧪 Step 2: Publish Test Stream
 
-### Step 2: Start RTMP stream publisher
+### Start RTMP stream publisher
 
 **Option A: Using test video file**
 ```bash
@@ -91,9 +91,9 @@ Publishing stream...
 
 ---
 
-## 🧪 Phase 4.3: Start Transcoding
+## 🧪 Step 3: Start Transcoding
 
-### Step 3: Access FFmpeg transcoder and start encoding
+### Access FFmpeg transcoder and start encoding
 
 **In a new terminal:**
 ```bash
@@ -129,9 +129,9 @@ Audio: aac, 44100 Hz
 
 ---
 
-## 🧪 Phase 4.4: Verify HLS Outputs
+## 🧪 Step 4: Verify HLS Outputs
 
-### Step 4: Check MediaMTX is serving re-encoded streams
+### Check MediaMTX is serving re-encoded streams
 
 **Check available streams:**
 ```bash
@@ -171,9 +171,9 @@ Should also return valid HLS playlist.
 
 ---
 
-## 🧪 Phase 4.5: Playback Test (VLC / Browser)
+## 🧪 Step 5: Playback Test (VLC / Browser)
 
-### Step 5: Play the streams
+### Play the streams
 
 **Option A: VLC Media Player**
 ```
@@ -203,9 +203,9 @@ ffplay http://localhost:8888/live-teststream-360p/index.m3u8
 
 ---
 
-## 🧪 Phase 4.6: iOS App Playback Test
+## 🧪 Step 6: iOS App Playback Test
 
-### Step 6: Update iOS app to use clean stream
+### Update iOS app to use clean stream
 
 **In the app:**
 
@@ -229,9 +229,9 @@ ffplay http://localhost:8888/live-teststream-360p/index.m3u8
 
 ---
 
-## 🧪 Phase 4.7: Multi-Stream Concurrent Test
+## 🧪 Step 7: Multi-Stream Concurrent Test
 
-### Step 7: Test with multiple simultaneous streams
+### Test with multiple simultaneous streams
 
 **Publish multiple test streams:**
 ```bash
@@ -269,9 +269,9 @@ docker stats ffmpeg-transcoder
 
 ---
 
-## 🧪 Phase 4.8: Stress & Error Handling Test
+## 🧪 Step 8: Stress & Error Handling Test
 
-### Step 8: Test failure scenarios
+### Test failure scenarios
 
 #### Scenario A: Publisher crashes
 ```bash
@@ -299,9 +299,9 @@ docker-compose restart ffmpeg-transcoder
 
 ---
 
-## 📊 Phase 4.9: Performance Validation
+## 📊 Step 9: Performance Validation
 
-### Step 9: Measure key metrics
+### Measure key metrics
 
 **Latency (input to HLS playback):**
 ```bash
@@ -348,7 +348,7 @@ Check off when complete:
 - [ ] Graceful failure handling
 - [ ] CPU/Memory within limits
 
-**If all checks pass:** ✅ Phase 1-4 Complete!
+**If all checks pass:** ✅ Transcoding pipeline verified!
 
 ---
 
@@ -403,14 +403,5 @@ rm -rf hls_output/*
 ```
 
 ---
-
-## ✨ Next Steps
-
-After successful testing:
-
-1. ✅ Phase 1-4: Real-time transcoding working
-2. 🔨 Phase 5: iOS app UX (select 480p/360p, adaptive bitrate)
-3. 📊 Phase 6: Monitoring & alerting
-4. 🚀 Phase 7: Production deployment
 
 See `streaming/FFMPEG_SETUP.md` for the full implementation writeup.
