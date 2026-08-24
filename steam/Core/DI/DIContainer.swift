@@ -1,12 +1,14 @@
 import Foundation
-import Combine
 import AVFoundation
 
 /// Dependency Injection Container
 /// Creates ViewModels and shared services for the app. Owned by `AppCoordinator`
 /// (one instance per app run) rather than accessed as a global singleton, so
 /// call sites can be tested with a container built from mock dependencies.
-class DIContainer: ObservableObject {
+///
+/// Not `ObservableObject`/`@Observable` — nothing observes it; it's a plain
+/// factory held privately by `AppCoordinator`.
+class DIContainer {
     init() {
         // Initialize container
     }

@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(AppCoordinator.self) private var coordinator
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -111,6 +111,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
-        .environmentObject(AppCoordinator())
-        .environmentObject(ThemeManager())
+        .environment(AppCoordinator())
+        .environment(ThemeManager())
 }

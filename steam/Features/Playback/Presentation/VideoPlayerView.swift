@@ -8,7 +8,10 @@ import AVKit
 import AVFoundation
 
 struct VideoPlayerView: View {
-    @ObservedObject var viewModel: PlaybackViewModel
+    // @Bindable (not a plain `var`) because the Volume Slider below needs
+    // $viewModel.volume — a two-way binding derived from an @Observable
+    // reference this view doesn't own.
+    @Bindable var viewModel: PlaybackViewModel
     @Binding var isFullScreen: Bool
     @State private var currentTime: Double = 0.0
     @State private var previousVolume: Double = 1.0
@@ -321,7 +324,7 @@ struct VideoPlayerView: View {
 
 // MARK: - Progress Bar Component
 struct ProgressBarView: View {
-    @ObservedObject var viewModel: PlaybackViewModel
+    var viewModel: PlaybackViewModel
     let currentTime: Double
     @State private var isDragging = false
     @State private var dragValue: Double = 0

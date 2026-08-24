@@ -9,8 +9,8 @@ import SwiftUI
 
 @main
 struct steamApp: App {
-    @StateObject private var themeManager = ThemeManager()
-    @StateObject private var coordinator = AppCoordinator()
+    @State private var themeManager = ThemeManager()
+    @State private var coordinator = AppCoordinator()
 
     var body: some Scene {
         WindowGroup {
@@ -20,8 +20,8 @@ struct steamApp: App {
                         coordinator.navigationView(for: route)
                     }
             }
-            .environmentObject(coordinator)
-            .environmentObject(themeManager)
+            .environment(coordinator)
+            .environment(themeManager)
             .preferredColorScheme(themeManager.currentTheme.colorScheme)
         }
     }

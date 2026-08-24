@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct StreamAdminView: View {
-    @ObservedObject var viewModel: StreamAdminViewModel
+    var viewModel: StreamAdminViewModel
     @State private var showServerConfig = false
     @State private var serverURL = "http://localhost:9997"
 

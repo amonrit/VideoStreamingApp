@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct VideoStreamListView: View {
-    @ObservedObject var playbackViewModel: PlaybackViewModel
+    var playbackViewModel: PlaybackViewModel
     @State private var streams: [VideoStream] = VideoStream.sampleStreams
     @State private var isFullScreen = false
     @State private var showDebug = false
@@ -288,7 +288,7 @@ struct AddStreamSheet: View {
     @Binding var customURL: String
     var onAdd: (String, String) -> Void
 
-    @ObservedObject var playbackViewModel: PlaybackViewModel
+    var playbackViewModel: PlaybackViewModel
 
     @State private var showHTTPSWarning = false
 

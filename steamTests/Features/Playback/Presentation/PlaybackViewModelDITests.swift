@@ -4,6 +4,7 @@ import AVFoundation
 
 /// Tests for PlaybackViewModel with dependency-injected API clients.
 /// Demonstrates the DI pattern for testing.
+@MainActor
 final class PlaybackViewModelDITests: XCTestCase {
     var viewModel: PlaybackViewModel!
     var mockProvider: MockAPIClientProviderForTests!
@@ -75,6 +76,7 @@ final class PlaybackViewModelDITests: XCTestCase {
 }
 
 /// Tests for StreamAdminViewModel with dependency-injected API clients.
+@MainActor
 final class StreamAdminViewModelDITests: XCTestCase {
     var viewModel: StreamAdminViewModel!
     var mockProvider: MockAPIClientProviderForTests!
@@ -128,6 +130,7 @@ final class StreamAdminViewModelDITests: XCTestCase {
 // MARK: - Integration Test Examples
 
 /// Example of testing with different failure scenarios
+@MainActor
 final class APIClientDIIntegrationTests: XCTestCase {
     func testViewModelWithFailingAPI() {
         // Create mock provider with failure scenario

@@ -259,7 +259,7 @@ final class PerformanceBaselineTests: XCTestCase {
 
         Task {
             let stateActor = DefaultPlaybackStateActor()
-            let viewModel = PlaybackViewModel(stateActor: stateActor)
+            let viewModel = await PlaybackViewModel(stateActor: stateActor)
 
             // Rapid updates through ViewModel
             for i in 0..<100 {

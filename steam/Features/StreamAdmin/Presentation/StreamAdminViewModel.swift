@@ -4,24 +4,33 @@
 //
 
 import Foundation
-import Combine
 import os
 
 private let logger = Logger(subsystem: "amonrit.steam", category: "admin")
 
-class StreamAdminViewModel: ObservableObject {
-    // MARK: - @Published Properties (Bridge to StateActor)
-    /// ✅ Phase 7: These are now synchronized from StreamAdminStateActor
-    /// Kept for backward compatibility with existing SwiftUI views
-    @Published var paths: [MediaMTXPath] = []
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String?
-    @Published var lastUpdated: Date?
+@MainActor
+@Observable
+final class StreamAdminViewModel {
+    // MARK: - Observed Properties (synced from StreamAdminStateActor)
+    var paths: [MediaMTXPath] = []
+    var isLoading: Bool = false
+    var errorMessage: String?
+    var lastUpdated: Date?
 
     private let stateActor: DefaultStreamAdminStateActor
-    private var stateObserverTask: Task<Void, Never>?
+    // `nonisolated(unsafe)` only to permit reading these two from `deinit`,
+    // which runs nonisolated and can't touch @MainActor-isolated storage
+    // directly (plain `nonisolated` isn't accepted on a mutable stored
+    // property). Both types are already Sendable (Task, and
+    // StreamAdminPollingService as an actor), so this doesn't weaken any
+    // actual safety — it only opts out of isolation *checking*.
+    // `@ObservationIgnored` because neither is UI-facing state the way
+    // `paths`/`isLoading`/etc. above are.
+    @ObservationIgnored
+    private nonisolated(unsafe) var stateObserverTask: Task<Void, Never>?
 
-    private var streamAdminPollingService: StreamAdminPollingService?
+    @ObservationIgnored
+    private nonisolated(unsafe) var streamAdminPollingService: StreamAdminPollingService?
 
     private let apiClientProvider: APIClientProvider
     private var failureCount: Int = 0
@@ -42,23 +51,20 @@ class StreamAdminViewModel: ObservableObject {
         startStateObserver()
     }
 
-    // MARK: - Phase 7: State Observation
-    /// Starts observing state changes from the actor and syncing to @Published properties
-    /// This bridges structured concurrency (actor) with Combine (@Published) for backward compatibility
+    // MARK: - State Observation
+    /// Observes state changes from the actor and mirrors them into the
+    /// `@Observable`-tracked stored properties above.
     private func startStateObserver() {
         stateObserverTask = Task {
             for await state in stateActor.stateUpdates {
-                // Sync all state changes to @Published properties on main thread
-                await MainActor.run { [weak self] in
-                    self?.syncPublishedProperties(from: state)
-                }
+                syncObservedProperties(from: state)
             }
         }
     }
 
-    /// Synchronizes @Published properties from actor state
-    /// Called whenever the state actor updates
-    private func syncPublishedProperties(from state: StreamAdminStateSnapshot) {
+    /// Synchronizes the observed properties from actor state.
+    /// Called whenever the state actor updates.
+    private func syncObservedProperties(from state: StreamAdminStateSnapshot) {
         self.paths = state.paths
         self.isLoading = state.isLoading
         self.errorMessage = state.errorMessage

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Combine
 
 enum AppTheme: String, CaseIterable {
     case light
@@ -37,8 +36,9 @@ enum AppTheme: String, CaseIterable {
 }
 
 @MainActor
-class ThemeManager: ObservableObject {
-    @Published var currentTheme: AppTheme
+@Observable
+final class ThemeManager {
+    var currentTheme: AppTheme
 
     init() {
         let savedTheme = UserDefaults.standard.string(forKey: "appTheme") ?? AppTheme.auto.rawValue

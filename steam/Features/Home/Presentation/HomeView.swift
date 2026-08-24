@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @EnvironmentObject var coordinator: AppCoordinator
+    @Environment(AppCoordinator.self) var coordinator
 
     var body: some View {
         VStack(spacing: 0) {
@@ -163,5 +163,5 @@ struct MenuCardView: View {
     NavigationStack {
         HomeView()
     }
-    .environmentObject(AppCoordinator())
+    .environment(AppCoordinator())
 }

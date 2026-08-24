@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FullScreenPlayerView: View {
-    @ObservedObject var viewModel: PlaybackViewModel
+    var viewModel: PlaybackViewModel
     @Binding var isPresented: Bool
 
     var body: some View {

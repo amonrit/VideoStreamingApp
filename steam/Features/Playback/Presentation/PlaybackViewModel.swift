@@ -8,21 +8,35 @@
 import Foundation
 import AVFoundation
 import SwiftUI
-import Combine
 import os
 
 private let logger = Logger(subsystem: "amonrit.steam", category: "playback")
 
-class PlaybackViewModel: ObservableObject {
+@MainActor
+@Observable
+final class PlaybackViewModel {
     // MARK: - Core Properties
     let player: AVPlayer
     private let worker: VideoPlayerWorker
-    private var cancellables = Set<AnyCancellable>()
     private let stateActor: DefaultPlaybackStateActor
-    private var stateObserverTask: Task<Void, Never>?
+    // `nonisolated(unsafe)` only to permit reading these from `deinit`, which
+    // runs nonisolated and can't touch @MainActor-isolated storage directly
+    // (plain `nonisolated` isn't accepted on a mutable stored property).
+    // Both types are already Sendable (Task, and ViewerCountPollingService as
+    // an actor), so this doesn't weaken any actual safety — it only opts out
+    // of isolation *checking*. `@ObservationIgnored` because neither is
+    // UI-facing state the way the properties below are.
+    @ObservationIgnored
+    private nonisolated(unsafe) var stateObserverTask: Task<Void, Never>?
+    /// Local, `@Observable`-tracked copy of the actor's state. SwiftUI can only
+    /// observe reads of stored properties on this class, not reads that reach
+    /// through to a separate actor — this is kept in sync by `observeStateChanges()`
+    /// and is what all the `var isLoading`-style computed properties below read from.
+    private var state = PlaybackStateSnapshot()
     private var retryOrchestrator: RetryOrchestrator?
     private let playbackConfiguration: PlaybackConfiguration = .production
-    private var viewerCountPollingService: ViewerCountPollingService?
+    @ObservationIgnored
+    private nonisolated(unsafe) var viewerCountPollingService: ViewerCountPollingService?
     private let apiClientProvider: APIClientProvider
     private var mediaMTXClient: MediaMTXAPIClientProtocol?
     private var mediaMTXPathName: String?
@@ -46,21 +60,18 @@ class PlaybackViewModel: ObservableObject {
         self.apiClientProvider = apiClientProvider
         self.stateActor = stateActor
         self.worker = VideoPlayerWorker()
-        self._volume = Published(initialValue: Double(player.volume))
-        self._playbackRate = Published(initialValue: player.rate)
-        self._showVolumeSlider = Published(initialValue: false)
-        self._showControls = Published(initialValue: true)
+        self.volume = Double(player.volume)
+        self.playbackRate = player.rate
         setupPlayerSettings()
         observeStateChanges()
     }
 
-    /// Observes state changes from actor and notifies SwiftUI views via objectWillChange
+    /// Observes state changes from the actor and mirrors them into `state`,
+    /// the stored property `@Observable` actually tracks.
     private func observeStateChanges() {
         stateObserverTask = Task {
-            for await _ in stateActor.stateUpdates {
-                await MainActor.run { [weak self] in
-                    self?.objectWillChange.send()
-                }
+            for await newState in stateActor.stateUpdates {
+                state = newState
             }
         }
     }
@@ -73,45 +84,45 @@ class PlaybackViewModel: ObservableObject {
         logger.info("✅ AVPlayer configured for HLS streaming with auto-retry strategy")
     }
 
-    // MARK: - State Properties (from Actor)
+    // MARK: - State Properties (from Actor, mirrored via `state`)
     /// Loading state from the playback actor
     var isLoading: Bool {
-        stateActor.currentState.isLoading
+        state.isLoading
     }
 
     /// Playing state from the playback actor
     var isPlaying: Bool {
-        stateActor.currentState.isPlaying
+        state.isPlaying
     }
 
     /// Error message from the playback actor
     var errorMessage: String? {
-        stateActor.currentState.errorMessage
+        state.errorMessage
     }
 
     /// Buffering count from the playback actor
     var bufferingCount: Int {
-        stateActor.currentState.bufferingCount
+        state.bufferingCount
     }
 
     /// Current stream from the playback actor
     var currentStream: VideoStream? {
-        stateActor.currentState.currentStream
+        state.currentStream
     }
 
     /// Connection status from the playback actor
     var connectionStatus: ConnectionStatus {
-        stateActor.currentState.connectionStatus
+        state.connectionStatus
     }
 
     /// Retry attempt count from the playback actor
     var retryAttempt: Int {
-        stateActor.currentState.retryAttempt
+        state.retryAttempt
     }
 
     /// Viewer count from the playback actor
     var viewerCount: Int? {
-        stateActor.currentState.viewerCount
+        state.viewerCount
     }
 
     // MARK: - Stream Loading
@@ -119,7 +130,6 @@ class PlaybackViewModel: ObservableObject {
     func loadStream(_ stream: VideoStream) {
         stopViewerCountPolling()
         player.pause()
-        cancellables.removeAll()
         viewerCountFailureCount = 0
         logger.info("🛑 Stopped playback of previous stream")
 
@@ -518,27 +528,28 @@ class PlaybackViewModel: ObservableObject {
     }
 
     /// Tracks whether volume slider should be visible
-    @Published var showVolumeSlider: Bool = false
+    var showVolumeSlider: Bool = false
 
     /// Current playback volume (0.0 to 1.0)
-    @Published var volume: Double {
+    var volume: Double {
         didSet {
             player.volume = Float(volume)
         }
     }
 
     /// Current playback rate (0.5x to 2.0x)
-    @Published var playbackRate: Float {
+    var playbackRate: Float {
         didSet {
             player.rate = playbackRate
         }
     }
 
     /// Tracks whether player controls should be visible
-    @Published var showControls: Bool = true
+    var showControls: Bool = true
 
     /// Timer task for auto-hiding controls
-    private var hideControlsTask: Task<Void, Never>?
+    @ObservationIgnored
+    private nonisolated(unsafe) var hideControlsTask: Task<Void, Never>?
 
     /// Resets the hide controls timer
     func resetControlsVisibilityTimer() {
@@ -596,7 +607,6 @@ class PlaybackViewModel: ObservableObject {
     deinit {
         stateObserverTask?.cancel()
         hideControlsTask?.cancel()
-        cancellables.removeAll()
         // Capture the service itself, not `self` — by the time this Task runs,
         // `self` has already finished deinitializing, so `[weak self]` would
         // always read nil here and silently skip the cleanup.

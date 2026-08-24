@@ -2,6 +2,7 @@ import XCTest
 @testable import steam
 
 /// Tests for `AppCoordinator`'s navigation state and ViewModel factories.
+@MainActor
 final class AppCoordinatorTests: XCTestCase {
     var coordinator: AppCoordinator!
 

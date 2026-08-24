@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 /// Owns app-level navigation state and dependency injection.
 ///
@@ -7,11 +6,13 @@ import Combine
 /// path and the sole place that constructs feature ViewModels (via `DIContainer`).
 /// Views never create their ViewModels directly — they receive them from the
 /// coordinator, either through `navigationView(for:)` or by reading
-/// `@EnvironmentObject var coordinator: AppCoordinator` and calling `navigate(to:)`.
-class AppCoordinator: ObservableObject {
+/// `@Environment(AppCoordinator.self) var coordinator` and calling `navigate(to:)`.
+@MainActor
+@Observable
+final class AppCoordinator {
     /// The root `NavigationStack`'s path. Appending a route pushes a screen;
     /// removing one pops it.
-    @Published var navigationPath: [AppRoute] = []
+    var navigationPath: [AppRoute] = []
 
     private let diContainer: DIContainer
 
